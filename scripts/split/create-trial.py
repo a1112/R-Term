@@ -29,6 +29,7 @@ def main():
     if output.exists() or output == source or source in output.parents:
         parser.error("output must be a new directory outside the source checkout")
     revision = run("git", "rev-parse", "HEAD", cwd=source)
+    host = next(line.removeprefix("host: ") for line in run("rustc", "-vV", cwd=source).splitlines() if line.startswith("host: "))
     output.mkdir(parents=True)
     ssh, gui = output / "R-SSH", output / "R-Term"
     for repo in (ssh, gui):
@@ -75,7 +76,7 @@ def main():
             write(ssh, "crates/rssh-cli/" + path.relative_to(source / "scripts/split/ssh-cli").as_posix(), path.read_text())
     write(ssh, "README.md", (source / "scripts/split/SSH-README.md").read_text())
     write(ssh, "TRIAL-SOURCE.json", json.dumps({"source_commit": revision, "role": "ssh-only", "certified": False}, indent=2) + "\n")
-    run("cargo", "metadata", "--offline", "--format-version", "1", cwd=ssh)
+    run("cargo", "metadata", "--format-version", "1", "--filter-platform", host, cwd=ssh)
     run("cargo", "fmt", "--all", cwd=ssh)
     run("git", "add", "-A", cwd=ssh)
     run("git", "commit", "-m", "split(trial): isolate SSH backend and command-line client", cwd=ssh)
@@ -124,7 +125,7 @@ workspace = true
     for workflow in (gui / ".github/workflows").glob("*.yml"):
         write(gui, "docs/trial/legacy-workflows/" + workflow.name, workflow.read_text())
         workflow.unlink()
-    run("cargo", "metadata", "--offline", "--format-version", "1", cwd=gui)
+    run("cargo", "metadata", "--format-version", "1", "--filter-platform", host, cwd=gui)
     run("cargo", "fmt", "--all", cwd=gui)
     run("git", "add", "-A", cwd=gui)
     run("git", "commit", "-m", "split(trial): move complete graphical product to R-Term", cwd=gui)
