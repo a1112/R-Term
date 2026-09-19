@@ -1,0 +1,19 @@
+[package]
+name = "rssh-cli"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[[bin]]
+name = "rssh"
+path = "src/main.rs"
+
+[dependencies]
+rssh-ssh = { path = "../rssh-ssh" }
+rssh-types = { path = "../rssh-types" }
+rpassword = "7"
+
+[lints]
+workspace = true
