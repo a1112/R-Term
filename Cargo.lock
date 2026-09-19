@@ -5006,7 +5006,7 @@ dependencies = [
 [[package]]
 name = "rssh-ssh"
 version = "0.1.0"
-source = "git+file:///H:/project/R-SSH-split-trial/R-SSH?rev=5bcbedbc652d1a92844e5bac5ed9a48a013c12a0#5bcbedbc652d1a92844e5bac5ed9a48a013c12a0"
+source = "git+file:///H:/project/R-SSH-split-trial/R-SSH?rev=c2c515df0e532271abe32aac63c62b91fc75864d#c2c515df0e532271abe32aac63c62b91fc75864d"
 dependencies = [
  "rssh-types",
  "russh",
@@ -5042,7 +5042,7 @@ dependencies = [
 [[package]]
 name = "rssh-types"
 version = "0.1.0"
-source = "git+file:///H:/project/R-SSH-split-trial/R-SSH?rev=5bcbedbc652d1a92844e5bac5ed9a48a013c12a0#5bcbedbc652d1a92844e5bac5ed9a48a013c12a0"
+source = "git+file:///H:/project/R-SSH-split-trial/R-SSH?rev=c2c515df0e532271abe32aac63c62b91fc75864d#c2c515df0e532271abe32aac63c62b91fc75864d"
 
 [[package]]
 name = "rssh-web"
