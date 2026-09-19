@@ -21,6 +21,22 @@ def write(root, path, text):
     target.write_text(text, encoding="utf-8", newline="\n")
 
 
+def move_ssh_contract(source, ssh, gui):
+    path = "crates/rssh-app/tests/native_window_e2e.rs"
+    original = (source / path).read_text(encoding="utf-8")
+    start = original.index('    let native_ssh = read_repo_file("crates/rssh-ssh/tests/loopback_native.rs");')
+    end = original.index("\n}\n", start)
+    contract = original[start:end].replace(
+        'read_repo_file("crates/rssh-ssh/tests/loopback_native.rs")',
+        'include_str!("loopback_native.rs").replace("\\r\\n", "\\n")')
+    ssh_path = "crates/rssh-ssh/tests/loopback_native.rs"
+    write(ssh, ssh_path, (ssh / ssh_path).read_text(encoding="utf-8") +
+          '\n#[test]\nfn linux_real_openssh_probe_remains_required_after_extraction() {\n' + contract + '\n}\n')
+    gui_text = (gui / path).read_text(encoding="utf-8")
+    assert original[start:end] in gui_text, "SSH source contract already moved or changed"
+    write(gui, path, gui_text.replace(original[start:end], ""))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
@@ -91,6 +107,7 @@ def main():
         if path.is_file():
             write(ssh, "crates/rssh-cli/" + path.relative_to(source / "scripts/split/ssh-cli").as_posix(), path.read_text())
     write(ssh, "README.md", (source / "scripts/split/SSH-README.md").read_text())
+    move_ssh_contract(source, ssh, gui)
     write(ssh, "TRIAL-SOURCE.json", json.dumps({"source_commit": revision, "role": "ssh-only", "certified": False}, indent=2) + "\n")
     run("cargo", "metadata", "--format-version", "1", "--filter-platform", host, cwd=ssh)
     run("cargo", "fmt", "--all", cwd=ssh)
