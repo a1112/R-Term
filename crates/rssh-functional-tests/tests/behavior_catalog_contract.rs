@@ -140,7 +140,8 @@ fn catalog_is_machine_versioned_and_not_derived_from_test_names() {
 #[test]
 fn mapped_protocol_evidence_is_executed_by_the_contract_job() {
     let root = root();
-    let workflow = fs::read_to_string(root.join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root.join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     let evidence = fs::read_to_string(root.join("functional-tests/evidence-map.toml")).unwrap();
     for identity in [
         "local_adapter_spawns_reads_resizes_and_preserves_exit_status",
@@ -186,7 +187,8 @@ fn tab_session_behaviors_have_explicit_executed_evidence() {
     let root = root();
     let catalog = fs::read_to_string(root.join("functional-tests/behaviors.toml")).unwrap();
     let evidence = fs::read_to_string(root.join("functional-tests/evidence-map.toml")).unwrap();
-    let workflow = fs::read_to_string(root.join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root.join("docs/trial/legacy-workflows/functional.yml")).unwrap();
 
     for behavior in [
         "BHV-WINDOW-TAB-SESSION-LIFECYCLE",

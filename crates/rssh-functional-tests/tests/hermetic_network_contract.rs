@@ -11,7 +11,7 @@ fn application_children_receive_a_loopback_only_proxy_environment() {
 
 #[test]
 fn ci_rejects_external_network_endpoints_before_running_scenarios() {
-    let workflow = include_str!("../../../.github/workflows/functional.yml");
+    let workflow = include_str!("../../../docs/trial/legacy-workflows/functional.yml");
     assert!(workflow.contains("check-functional-hermeticity.py"));
     assert!(workflow.contains("test_check_functional_hermeticity"));
 }

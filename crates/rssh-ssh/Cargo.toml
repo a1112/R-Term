@@ -1,28 +1,24 @@
 [package]
-name = "rssh-ssh"
+name = "rterm-ssh-adapter"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[lib]
+name = "rssh_ssh"
+
 [features]
-runtime-adapter = ["dep:rterm-runtime"]
+runtime-adapter = []
 
 [dependencies]
-russh = { version = "0.61.2", default-features = false, features = ["flate2", "ring"] }
-rterm-runtime = { path = "../rssh-runtime", version = "0.1.0", optional = true }
+ssh-core = { package = "rssh-ssh", git = "file:///H:/project/R-SSH-split-trial/R-SSH", rev = "5bcbedbc652d1a92844e5bac5ed9a48a013c12a0" }
+rterm-runtime = { path = "../rssh-runtime", version = "0.1.0" }
 rterm-types = { path = "../rterm-types", version = "0.1.0" }
-tokio = { version = "1", features = ["io-util", "net", "rt-multi-thread", "time"] }
 
 [dev-dependencies]
 rssh-domain = { path = "../rssh-domain", version = "0.1.0" }
-rssh-test-support = { path = "../rssh-test-support", version = "0.1.0" }
-
-[[test]]
-name = "runtime_adapter"
-path = "tests/runtime_adapter.rs"
-required-features = ["runtime-adapter"]
 
 [lints]
 workspace = true

@@ -118,8 +118,8 @@ fn scorecard_runners_validate_the_checked_in_contract_without_running_benchmarks
 
 #[test]
 fn ssh_gui_absolute_startup_gate_is_isolated_to_the_fixed_release_runner() {
-    let release = read_repo_file(".github/workflows/release.yml");
-    let pull_request_ci = read_repo_file(".github/workflows/ci.yml");
+    let release = read_repo_file("docs/trial/legacy-workflows/release.yml");
+    let pull_request_ci = read_repo_file("docs/trial/legacy-workflows/ci.yml");
     let fixed_performance = release
         .split("  fixed-performance:\n")
         .nth(1)
@@ -148,8 +148,8 @@ fn ssh_gui_absolute_startup_gate_is_isolated_to_the_fixed_release_runner() {
 
 #[test]
 fn rterm_release_comparison_is_protected_structured_and_fixed_runner_only() {
-    let release = read_repo_file(".github/workflows/release.yml");
-    let pull_request_ci = read_repo_file(".github/workflows/ci.yml");
+    let release = read_repo_file("docs/trial/legacy-workflows/release.yml");
+    let pull_request_ci = read_repo_file("docs/trial/legacy-workflows/ci.yml");
     let script = read_repo_file("scripts/ci/run-rterm-release-comparison.ps1");
     let fixed_performance = release
         .split("  fixed-performance:\n")
@@ -202,7 +202,7 @@ fn rterm_release_comparison_is_protected_structured_and_fixed_runner_only() {
 
 #[test]
 fn fixed_runner_evidence_uploads_retry_transient_artifact_endpoint_failures() {
-    let release = read_repo_file(".github/workflows/release.yml");
+    let release = read_repo_file("docs/trial/legacy-workflows/release.yml");
     let fixed_performance = release
         .split("  fixed-performance:\n")
         .nth(1)
@@ -232,7 +232,7 @@ fn fixed_runner_evidence_uploads_retry_transient_artifact_endpoint_failures() {
 
 #[test]
 fn release_package_matrix_prepares_web_and_linux_native_dependencies() {
-    let release = read_repo_file(".github/workflows/release.yml");
+    let release = read_repo_file("docs/trial/legacy-workflows/release.yml");
     let build_package = release
         .split("  build-package:\n")
         .nth(1)
@@ -460,7 +460,7 @@ fn ssh_profile_prompt_policy_has_a_dedicated_mapping_test() {
 
 #[test]
 fn stage0_shared_ci_runs_deterministic_tests_without_absolute_memory_gates() {
-    let ci = read_repo_file(".github/workflows/ci.yml");
+    let ci = read_repo_file("docs/trial/legacy-workflows/ci.yml");
 
     assert!(ci.contains("cargo test --locked -p rssh-diagnostics --all-targets -j1"));
     assert!(!ci.contains("run-stage0-diagnostics.ps1"));
@@ -470,7 +470,7 @@ fn stage0_shared_ci_runs_deterministic_tests_without_absolute_memory_gates() {
 
 #[test]
 fn stage0_fixed_runner_collects_both_scenarios_and_uploads_raw_and_aggregate_json() {
-    let release = read_repo_file(".github/workflows/release.yml");
+    let release = read_repo_file("docs/trial/legacy-workflows/release.yml");
     let fixed_performance = release
         .split("  fixed-performance:\n")
         .nth(1)
@@ -620,7 +620,7 @@ const GPU_BACKEND_MATRIX_RUNNER_CONTRACTS: &[&str] = &[
 #[test]
 fn gpu_backend_memory_matrix_is_report_only_identity_checked_and_not_a_shared_pr_gate() {
     let runner = read_repo_file("scripts/ci/run-gpu-backend-memory-matrix.ps1");
-    let pull_request_ci = read_repo_file(".github/workflows/ci.yml");
+    let pull_request_ci = read_repo_file("docs/trial/legacy-workflows/ci.yml");
     let documentation = read_repo_file("docs/release-console.md");
 
     for contract in GPU_BACKEND_MATRIX_RUNNER_CONTRACTS {
@@ -737,8 +737,8 @@ fn stage0_documentation_freezes_metric_semantics_schema_and_gate_status() {
 
 #[test]
 fn stage4_snapshot_cache_gate_runs_only_on_the_fixed_release_runner() {
-    let release = read_repo_file(".github/workflows/release.yml");
-    let pull_request_ci = read_repo_file(".github/workflows/ci.yml");
+    let release = read_repo_file("docs/trial/legacy-workflows/release.yml");
+    let pull_request_ci = read_repo_file("docs/trial/legacy-workflows/ci.yml");
     let runner = read_repo_file("scripts/ci/run-stage4-snapshot-cache.ps1");
     let core_manifest = read_repo_file("crates/rterm-render-core/Cargo.toml");
 

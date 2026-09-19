@@ -30,7 +30,8 @@ fn tauri_scenario_uses_os_input_and_the_shared_observer_driver() {
 fn tauri_full_matrix_routes_macos_accessibility_through_a_manual_self_hosted_job() {
     let root = root();
     let matrix = fs::read_to_string(root.join("functional-tests/matrix.toml")).unwrap();
-    let workflow = fs::read_to_string(root.join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root.join("docs/trial/legacy-workflows/functional.yml")).unwrap();
 
     let tauri_run = matrix
         .split("[[scenario_runs]]")

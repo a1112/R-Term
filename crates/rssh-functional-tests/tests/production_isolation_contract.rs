@@ -34,7 +34,8 @@ fn production_isolation_gate_checks_tree_markers_and_startup_probe() {
 
 #[test]
 fn web_and_tauri_production_jobs_use_real_startup_probes_for_their_binary_shape() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     assert!(workflow.contains("--package rssh-web --startup-probe web-server"));
     assert!(workflow.contains("--package rssh-tauri --startup-probe gui"));
     assert!(!workflow.contains("npm --prefix tauri run build -- --no-bundle"));
@@ -43,7 +44,8 @@ fn web_and_tauri_production_jobs_use_real_startup_probes_for_their_binary_shape(
 
 #[test]
 fn linux_tauri_isolation_probe_runs_inside_the_private_x11_seat() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     let job = workflow
         .split("  production-tauri-bundle-smoke:")
         .nth(1)
@@ -72,8 +74,9 @@ fn linux_tauri_isolation_probe_runs_inside_the_private_x11_seat() {
 
 #[test]
 fn ci_runs_production_isolation_for_prs_and_release_packages() {
-    let ci = fs::read_to_string(root().join(".github/workflows/ci.yml")).unwrap();
-    let release = fs::read_to_string(root().join(".github/workflows/release.yml")).unwrap();
+    let ci = fs::read_to_string(root().join("docs/trial/legacy-workflows/ci.yml")).unwrap();
+    let release =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/release.yml")).unwrap();
     assert!(ci.contains("check-functional-observer-isolation.py"));
     assert!(release.contains("check-functional-observer-isolation.py"));
 }
@@ -82,7 +85,8 @@ fn ci_runs_production_isolation_for_prs_and_release_packages() {
 fn production_artifact_has_no_functional_observer() {
     let gate = fs::read_to_string(root().join("scripts/ci/check-functional-observer-isolation.py"))
         .unwrap();
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     for contract in [
         "cargo tree",
         "PROTOCOL_MARKERS",

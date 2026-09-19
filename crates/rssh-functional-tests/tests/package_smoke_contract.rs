@@ -6,7 +6,8 @@ fn root() -> PathBuf {
 
 #[test]
 fn pr_smoke_assembles_unsigned_packages_and_executes_the_unpacked_binary() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     for contract in [
         "package-native.ps1",
         "package-native.sh",
@@ -26,7 +27,8 @@ fn pr_smoke_assembles_unsigned_packages_and_executes_the_unpacked_binary() {
 
 #[test]
 fn production_web_and_tauri_artifacts_have_black_box_smoke_jobs() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     let tauri_smoke =
         fs::read_to_string(root().join("scripts/functional/smoke-production-tauri.ps1")).unwrap();
     assert!(workflow.contains("production-web-smoke"));
@@ -60,7 +62,8 @@ fn functional_local_socket_dependencies_use_an_explicitly_allowed_license() {
 
 #[test]
 fn production_tauri_bundles_run_black_box_input_and_cleanup_on_every_pr_platform() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     let job = workflow
         .split("  production-tauri-bundle-smoke:")
         .nth(1)

@@ -15,7 +15,7 @@ const ARTIFACTS: [(&str, &str, &str); 6] = [
 
 #[test]
 fn release_declares_six_stable_native_artifacts_and_runtime_identities() {
-    let workflow = read_repo_file(".github/workflows/release.yml");
+    let workflow = read_repo_file("docs/trial/legacy-workflows/release.yml");
 
     for (artifact, target, pty_backend) in ARTIFACTS {
         assert!(
@@ -35,7 +35,7 @@ fn release_declares_six_stable_native_artifacts_and_runtime_identities() {
 
 #[test]
 fn package_smoke_and_machine_readable_manifests_are_mandatory() {
-    let workflow = read_repo_file(".github/workflows/release.yml");
+    let workflow = read_repo_file("docs/trial/legacy-workflows/release.yml");
     let info_plist = read_repo_file("packaging/Info.plist");
 
     for path in [
@@ -91,7 +91,7 @@ fn package_smoke_and_machine_readable_manifests_are_mandatory() {
 fn diagnostic_font_mode_is_excluded_from_the_production_package_feature_graph() {
     let app_manifest = read_repo_file("crates/rssh-app/Cargo.toml");
     let fonts_manifest = read_repo_file("crates/rterm-fonts/Cargo.toml");
-    let release = read_repo_file(".github/workflows/release.yml");
+    let release = read_repo_file("docs/trial/legacy-workflows/release.yml");
     let production_gui = app_manifest
         .lines()
         .find(|line| line.starts_with("production-gui ="))
@@ -117,8 +117,8 @@ fn diagnostic_font_mode_is_excluded_from_the_production_package_feature_graph() 
 
 #[test]
 fn linux_release_jobs_guard_openssh_server_installation() {
-    let workflow = read_repo_file(".github/workflows/release.yml");
-    let ci = read_repo_file(".github/workflows/ci.yml");
+    let workflow = read_repo_file("docs/trial/legacy-workflows/release.yml");
+    let ci = read_repo_file("docs/trial/legacy-workflows/ci.yml");
     let build = job_section(&workflow, "build-package", "sign-windows");
     let sign_linux = job_section(&workflow, "sign-linux", "sign-macos");
     let native_e2e = ci
@@ -145,8 +145,8 @@ fn linux_release_jobs_guard_openssh_server_installation() {
 
 #[test]
 fn linux_release_smoke_installs_the_xkb_x11_runtime() {
-    let workflow = read_repo_file(".github/workflows/release.yml");
-    let ci = read_repo_file(".github/workflows/ci.yml");
+    let workflow = read_repo_file("docs/trial/legacy-workflows/release.yml");
+    let ci = read_repo_file("docs/trial/legacy-workflows/ci.yml");
     let build = job_section(&workflow, "build-package", "sign-windows");
     let sign_linux = job_section(&workflow, "sign-linux", "sign-macos");
     let native_e2e = ci
@@ -196,7 +196,7 @@ jobs:
 
 #[test]
 fn tag_publication_requires_protected_signing_smoke_and_attestation() {
-    let workflow = read_repo_file(".github/workflows/release.yml");
+    let workflow = read_repo_file("docs/trial/legacy-workflows/release.yml");
 
     for contract in [
         "release-windows-signing",
@@ -225,7 +225,7 @@ fn tag_publication_requires_protected_signing_smoke_and_attestation() {
 
 #[test]
 fn build_matrix_maps_each_native_runner_without_secrets_or_write_permissions() {
-    let workflow = read_repo_file(".github/workflows/release.yml");
+    let workflow = read_repo_file("docs/trial/legacy-workflows/release.yml");
     let build = job_section(&workflow, "build-package", "sign-windows");
     for mapping in [
         (
@@ -328,7 +328,7 @@ fn build_matrix_maps_each_native_runner_without_secrets_or_write_permissions() {
 
 #[test]
 fn release_package_matrix_compiles_tests_before_platform_runtime_smoke() {
-    let workflow = read_repo_file(".github/workflows/release.yml");
+    let workflow = read_repo_file("docs/trial/legacy-workflows/release.yml");
     let build = job_section(&workflow, "build-package", "sign-windows");
 
     assert!(build.contains("name: Compile all workspace test targets"));
@@ -341,7 +341,7 @@ fn release_package_matrix_compiles_tests_before_platform_runtime_smoke() {
 
 #[test]
 fn protected_jobs_are_scoped_and_publication_has_a_complete_dag() {
-    let workflow = read_repo_file(".github/workflows/release.yml");
+    let workflow = read_repo_file("docs/trial/legacy-workflows/release.yml");
     let windows = job_section(&workflow, "sign-windows", "sign-linux");
     let linux = job_section(&workflow, "sign-linux", "sign-macos");
     let macos = job_section(&workflow, "sign-macos", "attest-release");

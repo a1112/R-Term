@@ -1204,7 +1204,7 @@ mod tests {
 
     #[test]
     fn hosted_workflow_encodes_deterministic_performance_contract() {
-        let ci = include_str!("../../../.github/workflows/ci.yml");
+        let ci = include_str!("../../../docs/trial/legacy-workflows/ci.yml");
         for required in [
             "Invoke-QueryBench 512",
             "Invoke-QueryBench 16384",
@@ -1245,7 +1245,7 @@ mod tests {
 
     #[test]
     fn release_workflow_encodes_fixed_runner_performance_contract() {
-        let release = include_str!("../../../.github/workflows/release.yml");
+        let release = include_str!("../../../docs/trial/legacy-workflows/release.yml");
         for required in [
             "runs-on: [self-hosted, Windows, X64, rssh-performance]",
             "environment: performance",

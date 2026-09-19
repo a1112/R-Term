@@ -7,6 +7,7 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
+rssh-types = { git = "file:///H:/project/R-SSH-split-trial/R-SSH", rev = "5bcbedbc652d1a92844e5bac5ed9a48a013c12a0" }
 
 [lints]
 workspace = true

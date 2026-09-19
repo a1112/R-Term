@@ -37,7 +37,7 @@ fn web_scenario_leaves_browser_selection_to_the_fixed_matrix() {
 
 #[test]
 fn every_browser_writes_a_distinct_evidence_artifact() {
-    let workflow = repo_file(".github/workflows/functional.yml");
+    let workflow = repo_file("docs/trial/legacy-workflows/functional.yml");
     assert!(workflow.contains("web.${{ matrix.browser }}.playwright.json"));
     assert!(workflow.contains("RSSH_PLAYWRIGHT_EVIDENCE"));
 }
@@ -75,7 +75,7 @@ fn web_functional_test_still_uses_browser_keyboard_pointer_and_clipboard_apis() 
 
 #[test]
 fn baseline_web_ci_builds_functional_assets_for_its_installed_chromium_project() {
-    let workflow = repo_file(".github/workflows/ci.yml");
+    let workflow = repo_file("docs/trial/legacy-workflows/ci.yml");
     assert!(workflow.contains("npm --prefix web run build:functional"));
     assert_eq!(
         workflow

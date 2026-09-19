@@ -399,8 +399,8 @@ fn packaged_or_cargo_app_executable() -> PathBuf {
 
 #[test]
 fn workflow_contract_has_exact_pr_and_supplemental_runner_sets() {
-    let ci = read_repo_file(".github/workflows/ci.yml");
-    let nightly = read_repo_file(".github/workflows/nightly.yml");
+    let ci = read_repo_file("docs/trial/legacy-workflows/ci.yml");
+    let nightly = read_repo_file("docs/trial/legacy-workflows/nightly.yml");
 
     assert_eq!(
         runner_labels(&ci),
@@ -482,8 +482,8 @@ fn windows_native_runner_retries_each_heavy_scenario_once_after_bounded_cleanup(
 
 #[test]
 fn linux_display_and_strict_script_contracts_are_explicit() {
-    let ci = read_repo_file(".github/workflows/ci.yml");
-    let nightly = read_repo_file(".github/workflows/nightly.yml");
+    let ci = read_repo_file("docs/trial/legacy-workflows/ci.yml");
+    let nightly = read_repo_file("docs/trial/legacy-workflows/nightly.yml");
     let powershell = format!(
         "{}\n{}",
         read_repo_file("scripts/ci/run-native-window.ps1"),

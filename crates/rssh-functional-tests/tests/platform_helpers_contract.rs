@@ -188,7 +188,7 @@ fn wayland_harness_is_nested_weston_x11_not_headless_input_emulation() {
 
 #[test]
 fn native_wayland_forced_close_uses_a_shell_with_close_bindings() {
-    let workflow = repo_file(".github/workflows/functional.yml");
+    let workflow = repo_file("docs/trial/legacy-workflows/functional.yml");
     let forced_close = workflow
         .lines()
         .find(|line| {
@@ -230,7 +230,7 @@ fn x11_harness_owns_runtime_dbus_display_and_window_manager_lifetimes() {
         "Xvfb must publish DISPLAY before D-Bus captures the activation environment"
     );
 
-    let workflow = repo_file(".github/workflows/functional.yml");
+    let workflow = repo_file("docs/trial/legacy-workflows/functional.yml");
     let openbox_install_steps = workflow
         .lines()
         .filter(|line| line.contains("apt-get install") && line.contains("openbox"))

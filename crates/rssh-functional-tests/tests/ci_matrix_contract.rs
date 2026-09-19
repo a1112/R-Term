@@ -6,7 +6,8 @@ fn root() -> PathBuf {
 
 #[test]
 fn pr_functional_workflow_has_the_fixed_required_matrix_and_hard_deadlines() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     for contract in [
         "contract-catalog",
         "cli-transport",
@@ -48,7 +49,8 @@ fn pr_functional_workflow_has_the_fixed_required_matrix_and_hard_deadlines() {
 
 #[test]
 fn cli_transport_matrix_executes_runner_owned_lpt_shards() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     assert!(
         workflow.contains("run-shard --count 2 --index"),
         "the PR CLI/transport matrix must execute stable runner-owned LPT shards"
@@ -63,7 +65,8 @@ fn cli_transport_matrix_executes_runner_owned_lpt_shards() {
 
 #[test]
 fn wayland_job_routes_xtest_through_a_nested_weston_x11_seat() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     assert!(workflow.contains("scripts/functional/run-wayland-seat.sh"));
     assert!(workflow.contains("RSSH_FUNCTIONAL_WESTON_BACKEND"));
     assert!(workflow.contains("weston"));
@@ -73,7 +76,8 @@ fn wayland_job_routes_xtest_through_a_nested_weston_x11_seat() {
 
 #[test]
 fn native_x11_job_runs_with_an_ewmh_window_manager() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     let job = workflow
         .split("  native-x11:")
         .nth(1)
@@ -92,7 +96,8 @@ fn native_x11_job_runs_with_an_ewmh_window_manager() {
 
 #[test]
 fn windows_input_jobs_use_powershell_core_for_bounded_helper_startup() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     for (job, next_job) in [
         ("  native-windows:", "  host-terminal-windows:"),
         ("  tauri-platform:", "  tauri-platform-macos:"),
@@ -112,7 +117,8 @@ fn windows_input_jobs_use_powershell_core_for_bounded_helper_startup() {
 
 #[test]
 fn linux_graphics_jobs_install_a_software_adapter_and_use_private_x11_sessions() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     let x11 = fs::read_to_string(root().join("scripts/functional/run-x11-seat.sh")).unwrap();
 
     for package in ["mesa-vulkan-drivers", "libvulkan1", "libgl1-mesa-dri"] {
@@ -139,7 +145,8 @@ fn linux_graphics_jobs_install_a_software_adapter_and_use_private_x11_sessions()
 
 #[test]
 fn contract_catalog_builds_runtime_entries_before_functional_contracts() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     let job = workflow
         .split("  contract-catalog:")
         .nth(1)
@@ -158,7 +165,8 @@ fn contract_catalog_builds_runtime_entries_before_functional_contracts() {
 
 #[test]
 fn linux_tauri_x11_probes_disable_the_webkit_dmabuf_path() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     let x11 = fs::read_to_string(root().join("scripts/functional/run-x11-seat.sh")).unwrap();
     for (job, next_job) in [
         ("  tauri-platform:", "  tauri-platform-macos:"),
@@ -182,7 +190,8 @@ fn linux_tauri_x11_probes_disable_the_webkit_dmabuf_path() {
 
 #[test]
 fn xterm_host_smoke_installs_its_bitmap_font_dependency() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     let job = workflow
         .split("  host-terminal-linux:")
         .nth(1)
@@ -195,7 +204,7 @@ fn xterm_host_smoke_installs_its_bitmap_font_dependency() {
 
 #[test]
 fn coverage_builds_transport_runtime_outside_llvm_covs_isolated_target() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/ci.yml")).unwrap();
+    let workflow = fs::read_to_string(root().join("docs/trial/legacy-workflows/ci.yml")).unwrap();
     let job = workflow
         .split("  coverage:")
         .nth(1)
@@ -212,7 +221,8 @@ fn coverage_builds_transport_runtime_outside_llvm_covs_isolated_target() {
 
 #[test]
 fn functional_workflow_has_no_expression_inside_an_inline_yaml_map() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     assert!(
         !workflow
             .lines()
@@ -223,7 +233,8 @@ fn functional_workflow_has_no_expression_inside_an_inline_yaml_map() {
 
 #[test]
 fn privileged_self_hosted_jobs_run_only_on_manual_dispatch() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     for (job, next_job) in [
         ("  native-macos-accessibility:", "  web-browser:"),
         ("  tauri-platform-macos:", "  production-package-smoke:"),
@@ -248,7 +259,8 @@ fn privileged_self_hosted_jobs_run_only_on_manual_dispatch() {
 
 #[test]
 fn pull_requests_never_wait_for_privileged_self_hosted_macos_jobs() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     for (job, next_job) in [
         ("  native-macos-accessibility:", "  web-browser:"),
         ("  tauri-platform-macos:", "  production-package-smoke:"),
@@ -288,7 +300,8 @@ fn pull_requests_never_wait_for_privileged_self_hosted_macos_jobs() {
 
 #[test]
 fn pull_requests_keep_hosted_tauri_rows_and_an_exact_hosted_aggregate() {
-    let workflow = fs::read_to_string(root().join(".github/workflows/functional.yml")).unwrap();
+    let workflow =
+        fs::read_to_string(root().join("docs/trial/legacy-workflows/functional.yml")).unwrap();
     for (job, next_job) in [
         ("  tauri-platform:", "  tauri-platform-macos:"),
         (

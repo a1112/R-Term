@@ -261,7 +261,7 @@ fn remove_fixture(root: &Path) {
 
 #[test]
 fn release_packaging_builds_the_explicit_minimal_gui_feature_set() {
-    let release = read_repository_file(".github/workflows/release.yml");
+    let release = read_repository_file("docs/trial/legacy-workflows/release.yml");
     let windows_smoke = read_repository_file("scripts/ci/package-smoke.ps1");
     let unix_smoke = read_repository_file("scripts/ci/package-smoke.sh");
     let package_job = release
