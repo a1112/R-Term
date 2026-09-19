@@ -6,7 +6,9 @@ Web UI, Tauri application, graphical configuration and graphical diagnostics.
 Existing `rssh-*` GUI package names are retained for this first trial.
 
 `cargo build --locked -p rssh-app` builds the native graphical application.
-The Web and Tauri sources remain in `web/` and `tauri/`.
+The Web and Tauri sources remain in `web/` and `tauri/`. Before checking/building
+the entire workspace, run `npm --prefix web ci` and `npm --prefix web run build`;
+Tauri embeds the resulting Web assets.
 
 SSH transport comes from the separate R-SSH repository, pinned to an immutable
 local Git commit in Cargo.toml/Cargo.lock. There are no sibling path dependencies.

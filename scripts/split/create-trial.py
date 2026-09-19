@@ -5,6 +5,7 @@ release extraction and does not advance the Stage 7 certification gate.
 """
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -25,10 +26,13 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     source = Path(__file__).resolve().parents[2]
+    os.environ.setdefault("CARGO_NET_GIT_FETCH_WITH_CLI", "true")
     output = args.output.resolve()
     if output.exists() or output == source or source in output.parents:
         parser.error("output must be a new directory outside the source checkout")
     revision = run("git", "rev-parse", "HEAD", cwd=source)
+    if run("git", "status", "--porcelain", "--untracked-files=no", cwd=source):
+        parser.error("commit tracked source changes before extracting an immutable trial")
     host = next(line.removeprefix("host: ") for line in run("rustc", "-vV", cwd=source).splitlines() if line.startswith("host: "))
     output.mkdir(parents=True)
     ssh, gui = output / "R-SSH", output / "R-Term"
@@ -43,7 +47,7 @@ def main():
     run("git", "checkout-index", "--all", cwd=gui)
     owned = ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "LICENSE", "NOTICE",
              ".gitignore", ".gitattributes", ".editorconfig", "crates/rssh-ssh",
-             "crates/rssh-test-support"]
+             "crates/rssh-test-support", "scripts/ci/openssh-sshd.sh"]
     run("git", "restore", "--source", revision, "--worktree", "--", *owned, cwd=ssh)
     root_manifest = (ssh / "Cargo.toml").read_text(encoding="utf-8")
     root_manifest = re.sub(r"members = \[.*?\]", 'members = ["crates/rssh-types", "crates/rssh-ssh", "crates/rssh-test-support", "crates/rssh-cli"]', root_manifest, count=1, flags=re.S)
@@ -71,6 +75,18 @@ def main():
     # These files belong to the GUI-owned transport adapter, not the SSH backend.
     for path in ["crates/rssh-ssh/src/runtime_adapter.rs", "crates/rssh-ssh/tests/runtime_adapter.rs"]:
         (ssh / path).unlink()
+    support = "crates/rssh-test-support/"
+    for path in (ssh / (support + "src/windows")).glob("*.rs"):
+        path.unlink()
+    (ssh / (support + "tests/windows_window_probe.rs")).unlink()
+    text = (ssh / (support + "src/lib.rs")).read_text()
+    text = text.replace('#[cfg(target_os = "windows")]\npub mod windows;\n', '')
+    text = text.replace('pub use marker::{platform_marker_command, platform_marker_command_for_window_frames};', 'pub use marker::platform_marker_command;')
+    write(ssh, support + "src/lib.rs", text)
+    text = (ssh / (support + "src/marker.rs")).read_text()
+    start = text.index('/// Builds a native command that writes `marker` as exact UTF-8 bytes to stdout\n/// and remains')
+    end = text.index('fn platform_marker_command_with_delay', start)
+    write(ssh, support + "src/marker.rs", text[:start] + text[end:])
     for path in (source / "scripts/split/ssh-cli").rglob("*"):
         if path.is_file():
             write(ssh, "crates/rssh-cli/" + path.relative_to(source / "scripts/split/ssh-cli").as_posix(), path.read_text())
@@ -125,6 +141,12 @@ workspace = true
     for workflow in (gui / ".github/workflows").glob("*.yml"):
         write(gui, "docs/trial/legacy-workflows/" + workflow.name, workflow.read_text())
         workflow.unlink()
+    # Monolith contract tests embed old workflow text at compile time. Keep
+    # those historical checks readable without installing obsolete workflows.
+    for path in (gui / "crates").rglob("*.rs"):
+        text = path.read_text(encoding="utf-8")
+        if ".github/workflows/" in text:
+            write(gui, path.relative_to(gui), text.replace(".github/workflows/", "docs/trial/legacy-workflows/"))
     run("cargo", "metadata", "--format-version", "1", "--filter-platform", host, cwd=gui)
     run("cargo", "fmt", "--all", cwd=gui)
     run("git", "add", "-A", cwd=gui)

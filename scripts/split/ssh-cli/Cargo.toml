@@ -15,5 +15,8 @@ rssh-ssh = { path = "../rssh-ssh" }
 rssh-types = { path = "../rssh-types" }
 rpassword = "7"
 
+[dev-dependencies]
+rssh-test-support = { path = "../rssh-test-support" }
+
 [lints]
 workspace = true
