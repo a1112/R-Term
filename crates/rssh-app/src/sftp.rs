@@ -16,7 +16,7 @@ pub fn run(options: &SftpOptions) -> Result<PtyExitStatus, Box<dyn Error>> {
 
 fn local_options_for_options(options: &SftpOptions) -> Result<LocalOptions, Box<dyn Error>> {
     let size = match &options.target {
-        SshTarget::Direct(request) => request.config.initial_size,
+        SshTarget::Direct(request) => request.config.initial_size.into(),
         SshTarget::OpenSsh(target) => target.initial_size,
     };
 
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn sftp_command_uses_direct_host_user_and_sftp_port_flag() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 2222, "ops", TerminalSize::new(80, 24))
+            SshSessionConfig::try_new("example.com", 2222, "ops", TerminalSize::new(80, 24).into())
                 .unwrap(),
         );
 

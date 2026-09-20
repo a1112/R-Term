@@ -34,6 +34,7 @@
         );
     }
 
+    #[cfg(feature = "image-gif")]
     #[test]
     fn window_app_advances_inline_gif_frame_between_native_renders() {
         const RED_GREEN_SLOW_GIF_SEQUENCE: &[u8] = b"\x1b[?25l\x1b]1337;File=inline=1;width=1;height=1:R0lGODlhAQABAIEAAP8AAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQICgAAACwAAAAAAQABAAAIBAABBAQAIfkECPQBAAAsAAAAAAEAAQCBAP8AAAAAAAAAAAAACAQAAQQEADs=\x07";

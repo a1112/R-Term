@@ -1,46 +1,46 @@
 # Example R-SSH profile file.
 #
 # Create a starter profile file:
-#   cargo run -p rssh-app -- profile --init --file rssh-profiles.toml
+#   rterm profile --init --file rssh-profiles.toml
 #
 # Validate all profiles:
-#   cargo run -p rssh-app -- profile --check --file examples/rssh-profiles.toml
+#   rterm profile --check --file examples/rssh-profiles.toml
 #
 # Validate all profiles as a machine-readable report:
-#   cargo run -p rssh-app -- profile --check --json --file examples/rssh-profiles.toml
+#   rterm profile --check --json --file examples/rssh-profiles.toml
 #
 # List available profiles:
-#   cargo run -p rssh-app -- profile --list --file examples/rssh-profiles.toml
+#   rterm profile --list --file examples/rssh-profiles.toml
 #
 # List available profiles with resolved startup commands:
-#   cargo run -p rssh-app -- profile --list --verbose --file examples/rssh-profiles.toml
+#   rterm profile --list --verbose --file examples/rssh-profiles.toml
 #
 # List available profiles as machine-readable JSON:
-#   cargo run -p rssh-app -- profile --list --json --file examples/rssh-profiles.toml
+#   rterm profile --list --json --file examples/rssh-profiles.toml
 #
 # Preview a profile as the resolved startup command:
-#   cargo run -p rssh-app -- profile --show prod-shell --file examples/rssh-profiles.toml
+#   rterm profile --show prod-shell --file examples/rssh-profiles.toml
 #
 # Preview a profile as a machine-readable launch plan:
-#   cargo run -p rssh-app -- profile --show prod-shell --json --file examples/rssh-profiles.toml
+#   rterm profile --show prod-shell --json --file examples/rssh-profiles.toml
 #
 # Run the local smoke profile:
-#   cargo run -p rssh-app -- profile local-smoke --file examples/rssh-profiles.toml
+#   rterm profile local-smoke --file examples/rssh-profiles.toml
 #
 # Run the native window smoke profile:
-#   cargo run -p rssh-app -- profile window-smoke --file examples/rssh-profiles.toml
+#   rterm profile window-smoke --file examples/rssh-profiles.toml
 #
 # Run an SSH profile after defining the matching Host in ~/.ssh/config:
-#   cargo run -p rssh-app -- profile prod-shell --file examples/rssh-profiles.toml
+#   rterm profile prod-shell --file examples/rssh-profiles.toml
 #
 # Run a native russh SSH profile after defining the matching Host in ~/.ssh/config:
-#   cargo run -p rssh-app -- profile native-prod-shell --file examples/rssh-profiles.toml
+#   rterm profile native-prod-shell --file examples/rssh-profiles.toml
 #
 # Run an SFTP profile after defining the matching Host in ~/.ssh/config:
-#   cargo run -p rssh-app -- profile prod-files --file examples/rssh-profiles.toml
+#   rterm profile prod-files --file examples/rssh-profiles.toml
 #
 # Run an SCP upload profile after defining the matching Host in ~/.ssh/config:
-#   cargo run -p rssh-app -- profile prod-upload --file examples/rssh-profiles.toml
+#   rterm profile prod-upload --file examples/rssh-profiles.toml
 
 [profiles.local-smoke]
 kind = "local"

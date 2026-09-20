@@ -31,7 +31,40 @@ impl SessionId {
     }
 }
 
-pub use rssh_types::TerminalSize;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TerminalSize {
+    pub columns: u16,
+    pub rows: u16,
+}
+
+impl TerminalSize {
+    #[must_use]
+    pub const fn new(columns: u16, rows: u16) -> Self {
+        Self { columns, rows }
+    }
+
+    #[must_use]
+    pub const fn cells(self) -> usize {
+        self.columns as usize * self.rows as usize
+    }
+}
+
+#[cfg(feature = "ssh")]
+pub use rssh_types::TerminalSize as SshTerminalSize;
+
+#[cfg(feature = "ssh")]
+impl From<TerminalSize> for rssh_types::TerminalSize {
+    fn from(size: TerminalSize) -> Self {
+        Self::new(size.columns, size.rows)
+    }
+}
+
+#[cfg(feature = "ssh")]
+impl From<rssh_types::TerminalSize> for TerminalSize {
+    fn from(size: rssh_types::TerminalSize) -> Self {
+        Self::new(size.columns, size.rows)
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DamageRegion {

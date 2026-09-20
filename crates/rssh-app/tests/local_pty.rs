@@ -21,7 +21,7 @@ const QUICK_EXIT_P99_BUDGET: Duration = Duration::from_secs(5);
 
 #[test]
 fn retired_runtime_selector_is_ignored_and_does_not_change_public_cli() {
-    let output = Command::new(env!("CARGO_BIN_EXE_rssh-app"))
+    let output = Command::new(env!("CARGO_BIN_EXE_rterm"))
         .arg("help")
         .output()
         .expect("run help");
@@ -37,7 +37,7 @@ fn retired_runtime_selector_is_ignored_and_does_not_change_public_cli() {
         Some("auto"),
         Some("unknown"),
     ] {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_rssh-app"));
+        let mut command = Command::new(env!("CARGO_BIN_EXE_rterm"));
         command
             .args(["-n", "window", "--state-json"])
             .env_remove("RSSH_INTERNAL_RUNTIME");
@@ -177,7 +177,7 @@ fn run_quick_exit_attempt(
         !remaining.is_zero(),
         "quick-exit exceeded absolute {total_budget:?} budget before group {group} attempt {attempt}"
     );
-    let mut command = Command::new(env!("CARGO_BIN_EXE_rssh-app"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_rterm"));
     command.env("RSSH_LOCAL_PTY_TRACE", "1");
     command.env("RSSH_LOCAL_PTY_TRACE_MARKER", marker);
     command.args(["local", "--mouse", "--"]);
@@ -440,11 +440,11 @@ fn console_process_is_owned(process: &ConsoleProcess, attempts: &[QuickExitAttem
         // PID and parent PID alone can refer to a different process generation.
         // A retained child must have been created during its owner's attempt.
         (attempt.started_ticks..=attempt.finished_ticks).contains(&process.created_ticks)
-            && ((process.pid == attempt.app_process_id && process.name == "rssh-app.exe")
+            && ((process.pid == attempt.app_process_id && process.name == "rterm.exe")
                 || ([attempt.app_process_id, attempt.pty_child_id].contains(&process.parent_pid)
                     && matches!(
                         process.name.as_str(),
-                        "rssh-app.exe" | "cmd.exe" | "conhost.exe" | "OpenConsole.exe"
+                        "rterm.exe" | "cmd.exe" | "conhost.exe" | "OpenConsole.exe"
                     )))
     })
 }
@@ -459,7 +459,7 @@ fn console_process_ownership_rejects_reused_pids_but_detects_retained_children()
         finished_ticks: 2000,
     }];
     for (pid, parent_pid, name) in [
-        (10, 1, "rssh-app.exe"),
+        (10, 1, "rterm.exe"),
         (20, 10, "cmd.exe"),
         (30, 20, "conhost.exe"),
         (31, 10, "OpenConsole.exe"),
@@ -500,7 +500,7 @@ fn assert_no_owned_console_processes(attempts: &[QuickExitAttempt]) {
             r"
             $ErrorActionPreference='Stop'
             $rows=@(Get-CimInstance Win32_Process | Where-Object {
-                $_.Name -in @('rssh-app.exe','cmd.exe','conhost.exe','OpenConsole.exe')
+                $_.Name -in @('rterm.exe','cmd.exe','conhost.exe','OpenConsole.exe')
             } | ForEach-Object {
                 if ($null -eq $_.CreationDate) { throw 'Missing process creation time' }
                 [pscustomobject]@{

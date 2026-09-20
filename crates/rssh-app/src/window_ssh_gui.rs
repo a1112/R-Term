@@ -43,7 +43,7 @@ fn attach_native_ssh_writer_cancellable(
         return Ok(false);
     }
     if let Some(size) = pending_resize.take() {
-        match writer.resize_cancellable(size, cancelled) {
+        match writer.resize_cancellable(size.into(), cancelled) {
             Ok(Some(())) => {}
             Ok(None) => return Ok(false),
             Err(error) => {
@@ -76,7 +76,7 @@ fn resize_native_ssh_writer_cancellable(
         return Ok(false);
     }
     if let Some(writer) = remote_writer.as_mut() {
-        Ok(writer.resize_cancellable(size, cancelled)?.is_some())
+        Ok(writer.resize_cancellable(size.into(), cancelled)?.is_some())
     } else {
         *pending_resize = Some(size);
         Ok(true)
@@ -974,8 +974,8 @@ mod tests {
             Ok(bytes.len())
         }
 
-        fn resize(&mut self, size: TerminalSize) -> Result<(), SshSessionError> {
-            self.resizes.lock().unwrap().push(size);
+        fn resize(&mut self, size: rssh_ssh::SshTerminalSize) -> Result<(), SshSessionError> {
+            self.resizes.lock().unwrap().push(size.into());
             Ok(())
         }
 

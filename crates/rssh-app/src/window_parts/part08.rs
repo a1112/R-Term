@@ -574,7 +574,9 @@ impl NativeWindowApp {
                     diagnostic_gpu_backend: None,
                 },
                 transport_start_requested: false,
+                #[cfg(feature = "ssh")]
                 ssh_host_key_prompts: HashMap::new(),
+                #[cfg(feature = "ssh")]
                 ssh_secret_prompts: HashMap::new(),
                 ssh_connection_states: HashMap::new(),
                 gpu_owners: crate::window_gpu::WindowGpuOwners::default(),
@@ -617,6 +619,7 @@ impl NativeWindowApp {
                 writer: None,
                 ssh_writer_senders: HashMap::new(),
                 ssh_writer_cancellations: HashMap::new(),
+                #[cfg(feature = "ssh")]
                 ssh_connection_cancellations: HashMap::new(),
                 session_log: None,
                 reader_thread: None,
@@ -2081,6 +2084,7 @@ impl NativeWindowApp {
                 report_pane_pty_cleanup("retired pane PTY cleanup", &cleanup);
             }
         }
+        #[cfg(feature = "ssh")]
         let retired_ssh_panes = self
             .ssh_connection_states
             .keys()
@@ -2090,6 +2094,7 @@ impl NativeWindowApp {
             .filter(|pane_id| !valid_pane_ids.contains(pane_id))
             .copied()
             .collect::<HashSet<_>>();
+        #[cfg(feature = "ssh")]
         for pane_id in retired_ssh_panes {
             self.cancel_ssh_runtime(pane_id);
             self.retire_ssh_connection_state(pane_id);

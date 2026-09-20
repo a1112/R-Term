@@ -5,6 +5,7 @@ struct ProductGuiProbe {
     hold_duration: Duration,
 }
 
+#[cfg(feature = "ssh")]
 fn install_product_gui_probe(
     app: &mut NativeWindowApp,
     options: &SshOptions,

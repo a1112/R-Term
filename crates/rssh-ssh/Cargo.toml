@@ -15,7 +15,7 @@ runtime-adapter = []
 [dependencies]
 ssh-core = { package = "rssh-ssh", git = "file:///H:/project/R-SSH-split-trial/R-SSH", rev = "c2c515df0e532271abe32aac63c62b91fc75864d" }
 rterm-runtime = { path = "../rssh-runtime", version = "0.1.0" }
-rterm-types = { path = "../rterm-types", version = "0.1.0" }
+rterm-types = { path = "../rterm-types", version = "0.1.0", features = ["ssh"] }
 
 [dev-dependencies]
 rssh-domain = { path = "../rssh-domain", version = "0.1.0" }

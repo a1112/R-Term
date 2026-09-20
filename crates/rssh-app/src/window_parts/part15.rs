@@ -3388,6 +3388,7 @@ impl ApplicationHandler<WindowUserEvent> for NativeWindowApp {
                     event_loop.exit();
                 }
             }
+            #[cfg(feature = "ssh")]
             WindowUserEvent::SshState {
                 pane_id,
                 runtime_generation,
@@ -3402,6 +3403,7 @@ impl ApplicationHandler<WindowUserEvent> for NativeWindowApp {
                     window.request_redraw();
                 }
             }
+            #[cfg(feature = "ssh")]
             WindowUserEvent::HostKeyPrompt {
                 pane_id,
                 runtime_generation,
@@ -3419,6 +3421,7 @@ impl ApplicationHandler<WindowUserEvent> for NativeWindowApp {
                     window.request_redraw();
                 }
             }
+            #[cfg(feature = "ssh")]
             WindowUserEvent::SecretPrompt {
                 pane_id,
                 runtime_generation,
@@ -3630,6 +3633,7 @@ fn app_shell_from_pty_command(
     }
 }
 
+#[cfg(feature = "ssh")]
 fn ssh_request_from_pane_launch(
     launch: &SshPaneLaunch,
     pty_size: PtySize,
@@ -3639,7 +3643,7 @@ fn ssh_request_from_pane_launch(
         SshTargetKind::OpenSsh => resolve_ssh_gui_openssh_target(launch)?,
     };
     let initial_size = TerminalSize::new(pty_size.columns(), pty_size.rows());
-    let config = SshSessionConfig::try_new(host, port, username, initial_size)?;
+    let config = SshSessionConfig::try_new(host, port, username, initial_size.into())?;
     let auth = match launch.auth() {
         SshAuthDescription::Agent => SshAuthMethod::Agent,
         SshAuthDescription::PasswordPrompt => SshAuthMethod::PasswordPrompt,
@@ -3765,6 +3769,7 @@ fn parse_ssh_gui_target(target: &str) -> Result<(String, String, u16), Box<dyn E
     Ok((username, host, port))
 }
 
+#[cfg(feature = "ssh")]
 fn russh_host_key_policy(policy: SshKnownHostsPolicy) -> RusshHostKeyPolicy {
     match policy {
         SshKnownHostsPolicy::RejectUnknown => RusshHostKeyPolicy::RejectUnknown,
@@ -3774,6 +3779,7 @@ fn russh_host_key_policy(policy: SshKnownHostsPolicy) -> RusshHostKeyPolicy {
     }
 }
 
+#[cfg(feature = "ssh")]
 fn ssh_known_hosts_path() -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
     let home = std::env::var_os("USERPROFILE");
@@ -4061,6 +4067,7 @@ mod window_inspect_pane_tests;
 
 #[path = "../window_runtime_v2.rs"]
 mod window_runtime_v2;
+#[cfg(feature = "ssh")]
 #[path = "../window_ssh_gui.rs"]
 mod window_ssh_gui;
 #[path = "../window_runtime_exit.rs"]
@@ -4068,3 +4075,9 @@ mod window_runtime_exit;
 
 #[path = "../window_state_report.rs"]
 mod window_state_report;
+
+#[cfg(not(feature = "ssh"))]
+#[path = "../window_without_ssh.rs"]
+mod window_without_ssh;
+#[cfg(not(feature = "ssh"))]
+pub(crate) use window_without_ssh::run_ssh_gui;

@@ -46,12 +46,16 @@ pub fn version_text_lines() -> Vec<String> {
 
 fn version_report() -> VersionReport {
     VersionReport {
-        name: "rssh-app",
+        name: "rterm",
         version: env!("CARGO_PKG_VERSION"),
         target: format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
         console: true,
         pty_backend: pty_backend_name(PtyBackend::current_platform()),
-        native_ssh_backend: "russh",
+        native_ssh_backend: if cfg!(feature = "ssh") {
+            "russh"
+        } else {
+            "disabled"
+        },
     }
 }
 
@@ -69,7 +73,7 @@ mod tests {
         let json = super::version_report_json().unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(value["name"], "rssh-app");
+        assert_eq!(value["name"], "rterm");
         assert_eq!(value["version"], env!("CARGO_PKG_VERSION"));
         assert_eq!(value["console"], true);
         let expected_pty_backend = if cfg!(windows) {
@@ -79,7 +83,14 @@ mod tests {
         };
 
         assert_eq!(value["pty_backend"], expected_pty_backend);
-        assert_eq!(value["native_ssh_backend"], "russh");
+        assert_eq!(
+            value["native_ssh_backend"],
+            if cfg!(feature = "ssh") {
+                "russh"
+            } else {
+                "disabled"
+            }
+        );
         assert!(!value["target"].as_str().unwrap().is_empty());
     }
 
@@ -87,13 +98,17 @@ mod tests {
     fn version_text_includes_version_and_backends() {
         let lines = super::version_text_lines();
 
-        assert!(lines.iter().any(|line| line.contains("rssh-app")));
+        assert!(lines.iter().any(|line| line.contains("rterm")));
         assert!(lines.iter().any(|line| line.contains("version=")));
         assert!(lines.iter().any(|line| line.contains("pty_backend=")));
         assert!(
             lines
                 .iter()
-                .any(|line| line.contains("native_ssh_backend=russh"))
+                .any(|line| line.contains(if cfg!(feature = "ssh") {
+                    "native_ssh_backend=russh"
+                } else {
+                    "native_ssh_backend=disabled"
+                }))
         );
     }
 }

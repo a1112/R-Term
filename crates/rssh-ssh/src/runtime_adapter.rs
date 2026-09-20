@@ -187,7 +187,7 @@ impl SshShellWriter for SshWriter {
         lock(&self.writer).write_cancellable(bytes, cancelled)
     }
 
-    fn resize(&mut self, size: TerminalSize) -> Result<(), SshSessionError> {
+    fn resize(&mut self, size: rterm_types::SshTerminalSize) -> Result<(), SshSessionError> {
         lock(&self.writer).resize(size)
     }
 
@@ -215,7 +215,7 @@ pub struct SshControl {
 impl SessionControl for SshControl {
     fn resize(&mut self, size: TerminalSize) -> io::Result<()> {
         lock(&self.writer)
-            .resize(size)
+            .resize(size.into())
             .map_err(|error| ssh_io_error(&error))
     }
 

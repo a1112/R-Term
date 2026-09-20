@@ -14,6 +14,7 @@ use rssh_native::{
     input::{PendingPaneCommand, PendingPaneCommandQueue},
 };
 use rssh_pty::{LocalPtyTransport, PtySession};
+#[cfg(feature = "ssh")]
 use rssh_ssh::LazyRusshRuntime;
 use rssh_terminal::Terminal;
 use rterm_runtime::{
@@ -36,6 +37,7 @@ type AdoptLocalSession = fn(
 #[derive(Debug, Clone)]
 pub(crate) struct RuntimeComposition {
     adopt_local_session: AdoptLocalSession,
+    #[cfg(feature = "ssh")]
     ssh_runtime: Arc<LazyRusshRuntime>,
 }
 
@@ -55,20 +57,24 @@ impl RuntimeComposition {
     pub(crate) fn new() -> Self {
         Self {
             adopt_local_session: WindowPaneRuntime::adopt_local_session,
+            #[cfg(feature = "ssh")]
             ssh_runtime: Arc::new(LazyRusshRuntime::new()),
         }
     }
 
+    #[cfg(feature = "ssh")]
     pub(crate) fn ssh_runtime_owner(&self) -> Arc<LazyRusshRuntime> {
         Arc::clone(&self.ssh_runtime)
     }
 
     #[cfg(test)]
+    #[cfg(feature = "ssh")]
     pub(crate) fn ssh_runtime_initialized(&self) -> bool {
         self.ssh_runtime.is_initialized()
     }
 
     #[cfg(test)]
+    #[cfg(feature = "ssh")]
     pub(crate) fn ssh_runtime_handle(
         &self,
     ) -> Result<rssh_ssh::RusshRuntimeHandle, rssh_ssh::SshSessionError> {
@@ -922,11 +928,12 @@ mod tests {
         testing::{ReadAction, ScriptedTransport, WriteAction},
     };
 
-    use super::{
-        PaneCapturePolicy, PaneRuntimeRoute, RuntimeComposition, TerminalSize, WindowPaneRuntime,
-    };
+    #[cfg(feature = "ssh")]
+    use super::RuntimeComposition;
+    use super::{PaneCapturePolicy, PaneRuntimeRoute, TerminalSize, WindowPaneRuntime};
 
     #[test]
+    #[cfg(feature = "ssh")]
     fn cloned_compositions_share_one_lazy_ssh_runtime_without_initializing_it() {
         let first = RuntimeComposition::new();
         let second = first.clone();

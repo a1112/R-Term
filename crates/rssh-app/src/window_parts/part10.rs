@@ -2636,7 +2636,9 @@ impl NativeWindowApp {
             title.push(']');
         }
 
+        #[cfg(feature = "ssh")]
         let active_pane_id = self.app_shell.active_pane_id();
+        #[cfg(feature = "ssh")]
         if let Some(prompt) = self.ssh_secret_prompts.get(&active_pane_id) {
             title.push_str(" - SSH ");
             title.push_str(match prompt.prompt.kind {

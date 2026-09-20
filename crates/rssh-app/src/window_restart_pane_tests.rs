@@ -161,6 +161,7 @@ fn window_app_restart_pane_installs_fresh_runtime_without_touching_other_owner()
     assert_eq!(app.active_pane_id(), active);
 }
 
+#[cfg(feature = "ssh")]
 #[test]
 fn ssh_retry_preserves_terminal_presentation_and_allocates_a_new_generation() {
     let mut app = NativeWindowApp::new(None);
@@ -190,6 +191,7 @@ fn ssh_retry_preserves_terminal_presentation_and_allocates_a_new_generation() {
     assert_eq!(app.active_runtime_generation, 44_002);
 }
 
+#[cfg(feature = "ssh")]
 #[test]
 fn window_manager_ignores_events_from_retired_pane_runtime_generation() {
     let mut app = NativeWindowApp::new(None);

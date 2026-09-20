@@ -1,0 +1,8 @@
+# R-Term local profiles. Validate with: rterm profile --check --file <this-file>
+# Run with: rterm profile local-smoke --file <this-file>
+
+[profiles.local-smoke]
+kind = "local"
+
+[profiles.local-window]
+kind = "window"

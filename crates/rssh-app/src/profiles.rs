@@ -7,7 +7,10 @@ use crate::cli::{
     ProfileShowOptions,
 };
 
+#[cfg(feature = "ssh")]
 const PROFILE_TEMPLATE: &str = include_str!("../../../examples/rssh-profiles.toml");
+#[cfg(not(feature = "ssh"))]
+const PROFILE_TEMPLATE: &str = include_str!("../../../examples/rterm-profiles-local.toml");
 const PROFILE_NAME_ENV: &str = "RSSH_PROFILE";
 
 #[derive(Deserialize)]
@@ -343,7 +346,7 @@ impl ProfileDefinition {
     }
 
     fn to_args(&self) -> Result<Vec<String>, String> {
-        let mut args = vec!["rssh-app".to_owned()];
+        let mut args = vec!["rterm".to_owned()];
         if self.kind != "ssh"
             && (self.gui.is_some()
                 || self.renderer.is_some()
@@ -618,13 +621,16 @@ mod tests {
         path::{Path, PathBuf},
     };
 
+    #[cfg(feature = "ssh")]
     use rssh_core::TerminalSize;
+    #[cfg(feature = "ssh")]
     use rssh_ssh::SshAuthMethod;
 
     use crate::cli::{
-        AppCommand, LocalOptions, NativeHostKeyPolicy, OpenSshTarget, ProfileOptions, SftpOptions,
-        SshForward, SshTarget, WindowConfigOptions, WindowOptions,
+        AppCommand, LocalOptions, ProfileOptions, WindowConfigOptions, WindowOptions,
     };
+    #[cfg(feature = "ssh")]
+    use crate::cli::{NativeHostKeyPolicy, OpenSshTarget, SftpOptions, SshForward, SshTarget};
 
     fn temp_profile_file(name: &str, contents: &str) -> PathBuf {
         let mut path = std::env::temp_dir();
@@ -637,6 +643,7 @@ mod tests {
         let _ = fs::remove_file(path);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn loads_ssh_profile_from_toml_file() {
         let file = temp_profile_file(
@@ -731,6 +738,7 @@ command = ["pwsh", "-NoLogo"]
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn loads_sftp_profile_from_toml_file() {
         let file = temp_profile_file(
@@ -775,6 +783,7 @@ log = "sftp.log"
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn loads_scp_upload_profile_from_toml_file() {
         let file = temp_profile_file(
@@ -820,6 +829,7 @@ log = "scp.log"
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn console_profiles_can_enable_preflight() {
         let contents = r#"
@@ -846,20 +856,20 @@ upload = ["local", "/tmp/remote"]
 
         assert_eq!(
             super::args_from_toml("local-dev", contents).unwrap(),
-            ["rssh-app", "local", "--preflight"]
+            ["rterm", "local", "--preflight"]
         );
         assert_eq!(
             super::args_from_toml("prod-shell", contents).unwrap(),
-            ["rssh-app", "ssh", "--target", "prod", "--preflight"]
+            ["rterm", "ssh", "--target", "prod", "--preflight"]
         );
         assert_eq!(
             super::args_from_toml("prod-files", contents).unwrap(),
-            ["rssh-app", "sftp", "--target", "prod", "--preflight"]
+            ["rterm", "sftp", "--target", "prod", "--preflight"]
         );
         assert_eq!(
             super::args_from_toml("prod-upload", contents).unwrap(),
             [
-                "rssh-app",
+                "rterm",
                 "scp",
                 "--target",
                 "prod",
@@ -871,6 +881,7 @@ upload = ["local", "/tmp/remote"]
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn console_profiles_can_enable_metrics() {
         let contents = r#"
@@ -897,20 +908,20 @@ upload = ["local", "/tmp/remote"]
 
         assert_eq!(
             super::args_from_toml("local-dev", contents).unwrap(),
-            ["rssh-app", "local", "--metrics"]
+            ["rterm", "local", "--metrics"]
         );
         assert_eq!(
             super::args_from_toml("prod-shell", contents).unwrap(),
-            ["rssh-app", "ssh", "--target", "prod", "--metrics"]
+            ["rterm", "ssh", "--target", "prod", "--metrics"]
         );
         assert_eq!(
             super::args_from_toml("prod-files", contents).unwrap(),
-            ["rssh-app", "sftp", "--target", "prod", "--metrics"]
+            ["rterm", "sftp", "--target", "prod", "--metrics"]
         );
         assert_eq!(
             super::args_from_toml("prod-upload", contents).unwrap(),
             [
-                "rssh-app",
+                "rterm",
                 "scp",
                 "--target",
                 "prod",
@@ -937,14 +948,15 @@ metrics = "json"
 
         assert_eq!(
             super::args_from_toml("local-dev", contents).unwrap(),
-            ["rssh-app", "local", "--metrics-json"]
+            ["rterm", "local", "--metrics-json"]
         );
         assert_eq!(
             super::args_from_toml("prod-shell", contents).unwrap(),
-            ["rssh-app", "ssh", "--target", "prod", "--metrics-json"]
+            ["rterm", "ssh", "--target", "prod", "--metrics-json"]
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn ssh_profiles_can_select_native_backend_and_host_key_policy() {
         let contents = r#"
@@ -960,7 +972,7 @@ metrics = "json"
         assert_eq!(
             super::args_from_toml("native-prod", contents).unwrap(),
             [
-                "rssh-app",
+                "rterm",
                 "ssh",
                 "--target",
                 "prod",
@@ -972,6 +984,7 @@ metrics = "json"
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn ssh_profiles_reject_invalid_host_key_policy() {
         let contents = r#"
@@ -1100,6 +1113,7 @@ metrics = "json"
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn lists_profile_names_and_kinds_from_toml_file() {
         let file = temp_profile_file(
@@ -1140,6 +1154,7 @@ command = ["pwsh", "-NoLogo"]
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn lists_verbose_profile_lines_with_resolved_commands() {
         let file = temp_profile_file(
@@ -1168,12 +1183,13 @@ command = ["pwsh", "-NoLogo"]
         assert_eq!(
             lines,
             vec![
-                "local-smoke\tlocal\trssh-app local -- pwsh -NoLogo".to_owned(),
-                "prod-shell\tssh\trssh-app ssh --target prod --agent".to_owned(),
+                "local-smoke\tlocal\trterm local -- pwsh -NoLogo".to_owned(),
+                "prod-shell\tssh\trterm ssh --target prod --agent".to_owned(),
             ]
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn lists_profiles_as_json_with_resolved_commands() {
         let file = temp_profile_file(
@@ -1201,10 +1217,11 @@ command = ["pwsh", "-NoLogo"]
 
         assert_eq!(
             json,
-            "[{\"name\":\"local-smoke\",\"kind\":\"local\",\"command\":\"rssh-app local -- pwsh -NoLogo\",\"argv\":[\"rssh-app\",\"local\",\"--\",\"pwsh\",\"-NoLogo\"]},{\"name\":\"prod-shell\",\"kind\":\"ssh\",\"command\":\"rssh-app ssh --target prod --agent\",\"argv\":[\"rssh-app\",\"ssh\",\"--target\",\"prod\",\"--agent\"]}]"
+            "[{\"name\":\"local-smoke\",\"kind\":\"local\",\"command\":\"rterm local -- pwsh -NoLogo\",\"argv\":[\"rterm\",\"local\",\"--\",\"pwsh\",\"-NoLogo\"]},{\"name\":\"prod-shell\",\"kind\":\"ssh\",\"command\":\"rterm ssh --target prod --agent\",\"argv\":[\"rterm\",\"ssh\",\"--target\",\"prod\",\"--agent\"]}]"
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn checks_all_profiles_and_reports_invalid_entries() {
         let file = temp_profile_file(
@@ -1234,6 +1251,7 @@ auth = "agent"
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn checks_profiles_as_json_with_per_profile_results() {
         let file = temp_profile_file(
@@ -1279,8 +1297,12 @@ auth = "agent"
         remove_file(&file);
 
         assert!(contents.contains("[profiles.local-smoke]"));
-        assert!(contents.contains("[profiles.prod-shell]"));
-        assert!(contents.contains("cargo run -p rssh-app -- profile --check"));
+        assert_eq!(
+            contents.contains("[profiles.prod-shell]"),
+            cfg!(feature = "ssh")
+        );
+        assert!(contents.contains("rterm profile --check"));
+        super::validate_profiles_from_toml(&contents).expect("generated profiles match this build");
     }
 
     #[test]
@@ -1306,6 +1328,7 @@ auth = "agent"
         assert_eq!(contents, "existing");
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn shows_profile_as_resolved_command_line_from_toml_file() {
         let file = temp_profile_file(
@@ -1330,10 +1353,11 @@ log = "prod.log"
 
         assert_eq!(
             command_line,
-            "rssh-app ssh --target prod --agent --log prod.log"
+            "rterm ssh --target prod --agent --log prod.log"
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn shows_profile_as_json_with_resolved_command() {
         let file = temp_profile_file(
@@ -1358,10 +1382,11 @@ log = "prod.log"
 
         assert_eq!(
             json,
-            "{\"name\":\"prod\",\"kind\":\"ssh\",\"command\":\"rssh-app ssh --target prod --agent --log prod.log\",\"argv\":[\"rssh-app\",\"ssh\",\"--target\",\"prod\",\"--agent\",\"--log\",\"prod.log\"]}"
+            "{\"name\":\"prod\",\"kind\":\"ssh\",\"command\":\"rterm ssh --target prod --agent --log prod.log\",\"argv\":[\"rterm\",\"ssh\",\"--target\",\"prod\",\"--agent\",\"--log\",\"prod.log\"]}"
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn ssh_profile_gui_true_maps_to_native_gui_renderer_options() {
         let contents = r#"
@@ -1377,7 +1402,7 @@ auth = "agent"
         assert_eq!(
             super::args_from_toml("gui-prod", contents).unwrap(),
             [
-                "rssh-app",
+                "rterm",
                 "ssh",
                 "--target",
                 "prod",
@@ -1397,6 +1422,7 @@ auth = "agent"
         assert!(options.native);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn gui_ssh_profile_prompt_policy_maps_to_interactive_verification() {
         let contents = r#"
@@ -1410,7 +1436,7 @@ auth = "agent"
 
         assert_eq!(
             super::args_from_toml("gui-prod", contents).unwrap(),
-            ["rssh-app", "ssh", "--target", "prod", "--gui", "--agent"]
+            ["rterm", "ssh", "--target", "prod", "--gui", "--agent"]
         );
 
         let AppCommand::Ssh(options) = super::command_from_toml("gui-prod", contents).unwrap()
@@ -1426,6 +1452,7 @@ auth = "agent"
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn gui_ssh_profile_rejects_forwarding_and_no_shell() {
         for extra in [

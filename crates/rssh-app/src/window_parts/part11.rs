@@ -18,6 +18,7 @@ impl Drop for NativeWindowApp {
     }
 }
 impl NativeWindowApp {
+    #[cfg(feature = "ssh")]
     fn cancel_ssh_runtime(&mut self, pane_id: rssh_core::PaneId) {
         self.resolve_host_key_prompt_for_pane(pane_id, HostKeyDecision::Cancel);
         self.resolve_secret_prompt_for_pane(pane_id, None);

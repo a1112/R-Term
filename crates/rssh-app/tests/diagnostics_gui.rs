@@ -11,7 +11,7 @@ use std::{
 
 use rssh_test_support::ChildGuard;
 
-const RSSH_APP_EXECUTABLE: &str = env!("CARGO_BIN_EXE_rssh-app");
+const RSSH_APP_EXECUTABLE: &str = env!("CARGO_BIN_EXE_rterm");
 const MARKER_PREFIX: &str = "rssh_diagnostic ";
 static DIAGNOSTIC_GUI_TEST_LOCK: Mutex<()> = Mutex::new(());
 

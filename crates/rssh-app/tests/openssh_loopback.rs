@@ -24,7 +24,7 @@ const PROCESS_DEADLINE: Duration = Duration::from_secs(15);
 
 fn packaged_or_cargo_app_executable() -> std::path::PathBuf {
     env::var_os("RSSH_TEST_APP_EXECUTABLE").map_or_else(
-        || std::path::PathBuf::from(env!("CARGO_BIN_EXE_rssh-app")),
+        || std::path::PathBuf::from(env!("CARGO_BIN_EXE_rterm")),
         std::path::PathBuf::from,
     )
 }

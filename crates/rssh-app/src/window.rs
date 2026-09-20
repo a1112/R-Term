@@ -1,3 +1,7 @@
+#[cfg(feature = "ssh")]
+use crate::cli::{NativeHostKeyPolicy, SshTarget};
+#[cfg(feature = "ssh")]
+use rssh_core::app_shell::SshTargetKind;
 use std::{
     any::Any,
     borrow::Cow,
@@ -28,7 +32,7 @@ use rssh_core::{
         AppAction, AppShell, AppShellError, ClosedTabEntry, ClosedTabHistory,
         CloseTabSelection, PaneDirection, PaneLaunch, PaneLaunchDomain, PaneProgress,
         PaneRotationDirection, ResizeDirection, SplitDirection, SshAuthDescription,
-        SshKnownHostsPolicy, SshPaneLaunch, SshTargetKind,
+        SshKnownHostsPolicy, SshPaneLaunch,
     },
 };
 use rssh_native::input::{
@@ -39,8 +43,10 @@ use rssh_pty::{
     LocalPtyTransport, PtyCommand, PtyExitStatus, PtyMasterClose, PtyMasterCloseStatus, PtySession,
     PtySize,
 };
+#[cfg(feature = "ssh")]
 use rssh_ssh::SshAuthMethod;
 use rterm_runtime::{PaneWorkerConfig, SessionTransport};
+#[cfg(feature = "ssh")]
 use rssh_ssh::{
     HostKeyChallenge, HostKeyDecision, HostKeyVerifier, RusshChannelOpener, RusshHostKeyPolicy,
     SecretPrompt, SecretPromptKind, SecretProvider, SshChannelConnector, SshConnectionPhase,
@@ -91,8 +97,8 @@ use winit::{
 
 use crate::{
     cli::{
-        DiagnosticGuiOptions, NativeHostKeyPolicy, Osc52Policy, RendererMode, SshOptions,
-        SshTarget, WindowOptions, WindowPosition, WindowPositionOrigin,
+        DiagnosticGuiOptions, Osc52Policy, RendererMode, SshOptions,
+        WindowOptions, WindowPosition, WindowPositionOrigin,
     },
     config_lifecycle::{
         ConfigDiscoveryInputs, NativeConfigLoadError, bind_native_config_projection,
@@ -755,6 +761,7 @@ pub fn run(
 /// work on the CLI thread.  The app is intentionally created from the small
 /// default projection first; its CPU bootstrap frame is presented before the
 /// SSH transport (and any future deferred configuration work) is started.
+#[cfg(feature = "ssh")]
 pub fn run_ssh_gui(
     options: &SshOptions,
     process_started_at: Instant,
@@ -817,9 +824,10 @@ pub fn run_ssh_gui(
 }
 
 
+#[cfg(feature = "ssh")]
 fn configure_ssh_gui_initial_size(app: &mut NativeWindowApp, options: &SshOptions) {
     let size = match &options.target {
-        SshTarget::Direct(request) => request.config.initial_size,
+        SshTarget::Direct(request) => request.config.initial_size.into(),
         SshTarget::OpenSsh(target) => target.initial_size,
     };
     app.initial_cols = size.columns;
@@ -832,6 +840,7 @@ fn configure_ssh_gui_initial_size(app: &mut NativeWindowApp, options: &SshOption
     app.window_frame.set_size(frame_size);
 }
 
+#[cfg(feature = "ssh")]
 fn pane_launch_from_ssh_options(options: &SshOptions) -> PaneLaunch {
     let (target, auth, kind) = match &options.target {
         SshTarget::Direct(request) => (
@@ -867,6 +876,7 @@ fn pane_launch_from_ssh_options(options: &SshOptions) -> PaneLaunch {
     )
 }
 
+#[cfg(feature = "ssh")]
 fn format_ssh_gui_target(user: &str, host: &str, port: u16) -> String {
     let host = if host.contains(':') && !host.starts_with('[') {
         format!("[{host}]")
@@ -880,6 +890,7 @@ fn format_ssh_gui_target(user: &str, host: &str, port: u16) -> String {
     }
 }
 
+#[cfg(feature = "ssh")]
 fn ssh_auth_description(auth: &SshAuthMethod) -> SshAuthDescription {
     match auth {
         SshAuthMethod::Agent => SshAuthDescription::Agent,
@@ -7807,7 +7818,7 @@ include!("window_parts/tab_session.rs");
 include!("window_parts/runtime_helpers.rs");
 include!("window_parts/functional_observer.rs");
 
-#[cfg(test)]
+#[cfg(all(test, feature = "ssh"))]
 mod ssh_gui_startup_contract_tests {
     use super::*;
     use rssh_diagnostics::DiagnosticGpuBackend;

@@ -62,9 +62,9 @@ impl SshShellWriter for Writer {
         Ok(count)
     }
 
-    fn resize(&mut self, size: TerminalSize) -> Result<(), SshSessionError> {
+    fn resize(&mut self, size: rssh_ssh::SshTerminalSize) -> Result<(), SshSessionError> {
         let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
-        state.resizes.push(size);
+        state.resizes.push(size.into());
         state.events.push("resize");
         Ok(())
     }
@@ -99,7 +99,7 @@ impl SshShellSession for Session {
         self.writer.write(bytes)
     }
 
-    fn resize(&mut self, size: TerminalSize) -> Result<(), SshSessionError> {
+    fn resize(&mut self, size: rssh_ssh::SshTerminalSize) -> Result<(), SshSessionError> {
         self.writer.resize(size)
     }
 
@@ -162,7 +162,7 @@ impl SshShellSession for InterruptibleSession {
         self.writer.write(bytes)
     }
 
-    fn resize(&mut self, size: TerminalSize) -> Result<(), SshSessionError> {
+    fn resize(&mut self, size: rssh_ssh::SshTerminalSize) -> Result<(), SshSessionError> {
         self.writer.resize(size)
     }
 
@@ -184,7 +184,7 @@ fn request() -> SshConnectRequest {
         "loopback",
         22,
         "tester",
-        TerminalSize::new(80, 24),
+        TerminalSize::new(80, 24).into(),
     ))
 }
 

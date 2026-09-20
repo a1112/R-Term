@@ -12,7 +12,7 @@ use rssh_test_support::{ChildGuard, ChildOutput};
 use rterm_render_wgpu::gpu::should_abandon_recovered_window_surface;
 
 const PROCESS_DEADLINE: Duration = Duration::from_secs(30);
-const RSSH_APP_EXECUTABLE: &str = env!("CARGO_BIN_EXE_rssh-app");
+const RSSH_APP_EXECUTABLE: &str = env!("CARGO_BIN_EXE_rterm");
 const DIRECT_GPU_TEXT_SPECIMEN: &str = "office 中 مرحبا नमस्ते שלום 😀 █";
 const PTY_LINK_BEGIN: &str = "RSSH-LINK-BEGIN|";
 const PTY_LINK_END: &str = "|RSSH-LINK-END";

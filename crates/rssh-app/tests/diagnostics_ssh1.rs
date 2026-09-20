@@ -12,7 +12,7 @@ use rssh_test_support::{
     ssh::{HermeticSshServer, SshEvent},
 };
 
-const RSSH_APP_EXECUTABLE: &str = env!("CARGO_BIN_EXE_rssh-app");
+const RSSH_APP_EXECUTABLE: &str = env!("CARGO_BIN_EXE_rterm");
 const DEADLINE: Duration = Duration::from_secs(20);
 
 #[test]

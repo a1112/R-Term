@@ -1465,10 +1465,12 @@ struct NativeWindowApp {
     transport_start_requested: bool,
     // Prompts are keyed by pane so a slow host-key or secret decision in one
     // SSH pane cannot overwrite another pane's independent connection.
+    #[cfg(feature = "ssh")]
     ssh_host_key_prompts: HashMap<
         rssh_core::PaneId,
         (HostKeyChallenge, mpsc::SyncSender<HostKeyDecision>),
     >,
+    #[cfg(feature = "ssh")]
     ssh_secret_prompts: HashMap<rssh_core::PaneId, SshSecretPromptState>,
     ssh_connection_states: HashMap<rssh_core::PaneId, ConnectionState>,
     gpu_owners: crate::window_gpu::WindowGpuOwners,
@@ -1502,6 +1504,7 @@ struct NativeWindowApp {
     ssh_writer_senders: HashMap<rssh_core::PaneId, mpsc::Sender<NativeSshCommand>>,
     ssh_writer_cancellations:
         HashMap<rssh_core::PaneId, Arc<std::sync::atomic::AtomicBool>>,
+    #[cfg(feature = "ssh")]
     ssh_connection_cancellations:
         HashMap<rssh_core::PaneId, rssh_ssh::RusshConnectionCancellation>,
     session_log: Option<Box<dyn Write + Send>>,
@@ -2023,6 +2026,8 @@ impl NativeWindowManager {
         let source_active_pane = source.app_shell.active_pane_id();
         let mut moved_runtimes = HashMap::new();
         let mut moved_bells = HashMap::new();
+        // Disabled SSH has no auxiliary payload; preserve the shared transfer flow.
+        #[cfg_attr(not(feature = "ssh"), allow(clippy::zero_sized_map_values))]
         let mut moved_ssh_auxiliary = HashMap::new();
         for pane_id in &moved_pane_ids {
             let runtime = if *pane_id == source_active_pane {
@@ -2618,6 +2623,11 @@ impl NativeWindowManager {
         self.retired_apps.clear();
     }
 
+    #[cfg(feature = "ssh")]
+    fn redraw_after_ssh_event(app: &NativeWindowApp) {
+        if let Some(window) = &app.window { window.request_redraw(); }
+    }
+
     fn dispatch_user_event_to_app(
         app: &mut NativeWindowApp,
         event: WindowUserEvent,
@@ -2689,14 +2699,14 @@ impl NativeWindowManager {
                 let (pane_id, _) = pane_identity.expect("pane error carries a pane identity");
                 app.handle_pane_runtime_write_error(pane_id, &error)
             }
+            #[cfg(feature = "ssh")]
             WindowUserEvent::SshState { state, .. } => {
                 let (pane_id, _) = pane_identity.expect("SSH state carries a pane identity");
                 app.handle_ssh_state(pane_id, state);
-                if let Some(window) = &app.window {
-                    window.request_redraw();
-                }
+                Self::redraw_after_ssh_event(app);
                 false
             }
+            #[cfg(feature = "ssh")]
             WindowUserEvent::HostKeyPrompt {
                 challenge,
                 decision,
@@ -2704,11 +2714,10 @@ impl NativeWindowManager {
             } => {
                 let (pane_id, _) = pane_identity.expect("host-key prompt carries a pane identity");
                 app.handle_host_key_prompt(pane_id, challenge, decision);
-                if let Some(window) = &app.window {
-                    window.request_redraw();
-                }
+                Self::redraw_after_ssh_event(app);
                 false
             }
+            #[cfg(feature = "ssh")]
             WindowUserEvent::SecretPrompt {
                 prompt,
                 response,
@@ -2716,9 +2725,7 @@ impl NativeWindowManager {
             } => {
                 let (pane_id, _) = pane_identity.expect("secret prompt carries a pane identity");
                 app.handle_secret_prompt(pane_id, prompt, response);
-                if let Some(window) = &app.window {
-                    window.request_redraw();
-                }
+                Self::redraw_after_ssh_event(app);
                 false
             }
         }
@@ -3076,12 +3083,14 @@ impl NativeWindowManager {
 
 #[allow(dead_code)]
 enum NativeSshCommand {
+    #[cfg(feature = "ssh")]
     Attach(Box<dyn SshShellWriter>),
     Data(Vec<u8>),
     Resize(TerminalSize),
     Cancel,
 }
 
+#[cfg(feature = "ssh")]
 struct SshSecretPromptState {
     prompt: SecretPrompt,
     response: mpsc::SyncSender<Option<String>>,
@@ -3089,6 +3098,7 @@ struct SshSecretPromptState {
 }
 
 #[derive(Default)]
+#[cfg(feature = "ssh")]
 struct SshPaneAuxiliaryState {
     writer_sender: Option<mpsc::Sender<NativeSshCommand>>,
     writer_cancellation: Option<Arc<std::sync::atomic::AtomicBool>>,
@@ -3192,12 +3202,14 @@ pub(crate) enum WindowUserEvent {
         runtime_generation: u64,
         error: String,
     },
+    #[cfg(feature = "ssh")]
     SshState {
         window_id: rssh_core::WindowId,
         pane_id: rssh_core::PaneId,
         runtime_generation: u64,
         state: ConnectionState,
     },
+    #[cfg(feature = "ssh")]
     HostKeyPrompt {
         window_id: rssh_core::WindowId,
         pane_id: rssh_core::PaneId,
@@ -3205,6 +3217,7 @@ pub(crate) enum WindowUserEvent {
         challenge: HostKeyChallenge,
         decision: mpsc::SyncSender<HostKeyDecision>,
     },
+    #[cfg(feature = "ssh")]
     SecretPrompt {
         window_id: rssh_core::WindowId,
         pane_id: rssh_core::PaneId,
@@ -3239,7 +3252,9 @@ impl WindowUserEvent {
             | Self::WriteError {
                 window_id, pane_id, ..
             }
-            | Self::SshState {
+            => Some((*window_id, *pane_id)),
+            #[cfg(feature = "ssh")]
+            Self::SshState {
                 window_id, pane_id, ..
             }
             | Self::HostKeyPrompt {
@@ -3275,7 +3290,9 @@ impl WindowUserEvent {
             | Self::WriteError {
                 runtime_generation, ..
             }
-            | Self::SshState {
+            => Some(*runtime_generation),
+            #[cfg(feature = "ssh")]
+            Self::SshState {
                 runtime_generation, ..
             }
             | Self::HostKeyPrompt {

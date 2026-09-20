@@ -927,6 +927,7 @@
         let _ = std::fs::remove_file(image_path);
     }
 
+    #[cfg(feature = "image-legacy")]
     #[test]
     fn window_app_renders_wezterm_background_ico_file_layer() {
         let image_path = write_test_ico_file("wezterm-background-file-layer.ico");
@@ -963,6 +964,7 @@
         let _ = std::fs::remove_file(image_path);
     }
 
+    #[cfg(feature = "image-legacy")]
     #[test]
     fn window_app_renders_wezterm_background_tiff_file_layer() {
         let image_path = write_test_tiff_file("wezterm-background-file-layer.tiff");
@@ -999,6 +1001,7 @@
         let _ = std::fs::remove_file(image_path);
     }
 
+    #[cfg(feature = "image-legacy")]
     #[test]
     fn window_app_renders_wezterm_background_dds_file_layer() {
         let image_path = write_test_dds_file("wezterm-background-file-layer.dds");
@@ -1035,6 +1038,7 @@
         let _ = std::fs::remove_file(image_path);
     }
 
+    #[cfg(feature = "image-legacy")]
     #[test]
     fn window_app_renders_wezterm_background_pnm_file_layer() {
         let image_path = write_test_ppm_file("wezterm-background-file-layer.ppm");
@@ -1071,6 +1075,7 @@
         let _ = std::fs::remove_file(image_path);
     }
 
+    #[cfg(feature = "image-legacy")]
     #[test]
     fn window_app_renders_wezterm_background_tga_file_layer() {
         let image_path = write_test_tga_file("wezterm-background-file-layer.tga");
@@ -1107,6 +1112,7 @@
         let _ = std::fs::remove_file(image_path);
     }
 
+    #[cfg(feature = "image-legacy")]
     #[test]
     fn window_app_renders_wezterm_background_farbfeld_file_layer() {
         let image_path = write_test_farbfeld_file("wezterm-background-file-layer.ff");

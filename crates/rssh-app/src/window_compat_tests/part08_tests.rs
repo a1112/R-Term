@@ -493,6 +493,7 @@
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn window_app_pending_ssh_window_moves_all_auxiliary_ownership() {
         let mut source = NativeWindowApp::new(None);
@@ -6481,6 +6482,7 @@
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn window_manager_remaps_ssh_auxiliary_ownership_with_a_live_tab() {
         let mut source = NativeWindowApp::new(None);
@@ -6542,6 +6544,7 @@
         ));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn window_manager_routes_moved_ssh_events_through_the_target_pane_identity() {
         let mut source = NativeWindowApp::new(None);

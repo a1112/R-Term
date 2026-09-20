@@ -16,7 +16,7 @@ pub fn run(options: &ScpOptions) -> Result<PtyExitStatus, Box<dyn Error>> {
 
 fn local_options_for_options(options: &ScpOptions) -> Result<LocalOptions, Box<dyn Error>> {
     let size = match &options.target {
-        SshTarget::Direct(request) => request.config.initial_size,
+        SshTarget::Direct(request) => request.config.initial_size.into(),
         SshTarget::OpenSsh(target) => target.initial_size,
     };
 
@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn scp_command_uploads_to_direct_target_with_port() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 2222, "ops", TerminalSize::new(80, 24))
+            SshSessionConfig::try_new("example.com", 2222, "ops", TerminalSize::new(80, 24).into())
                 .unwrap(),
         );
 

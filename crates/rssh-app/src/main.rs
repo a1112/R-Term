@@ -36,6 +36,7 @@ mod scp;
 mod self_test;
 #[cfg(feature = "transfer-tools")]
 mod sftp;
+#[cfg(feature = "ssh")]
 mod ssh;
 #[allow(
     dead_code,
@@ -92,6 +93,8 @@ fn run_command(
     })
 }
 
+// These hooks are consumed by SSH GUI dispatch when the extension is enabled.
+#[cfg_attr(not(feature = "ssh"), allow(clippy::only_used_in_recursion))]
 fn run_command_with_gui<F>(
     command: AppCommand,
     process_started_at: Instant,
@@ -161,11 +164,15 @@ where
         }
         #[cfg(feature = "transfer-tools")]
         AppCommand::Sftp(options) => sftp::run(&options).map(|status| pty_exit_code(&status)),
+        #[cfg(feature = "ssh")]
         AppCommand::Ssh(options) if options.gui => {
             gui_runner(&options, process_started_at)?;
             Ok(ExitCode::SUCCESS)
         }
+        #[cfg(feature = "ssh")]
         AppCommand::Ssh(options) => ssh::run(&options).map(|status| pty_exit_code(&status)),
+        #[cfg(not(feature = "ssh"))]
+        AppCommand::Ssh(_) => Err(feature_disabled("ssh")),
         AppCommand::Version(options) => {
             version::print_version(&options)?;
             Ok(ExitCode::SUCCESS)
@@ -189,11 +196,15 @@ where
     }
 }
 
-#[cfg(any(not(feature = "diagnostic-tools"), not(feature = "transfer-tools")))]
+#[cfg(any(
+    not(feature = "ssh"),
+    not(feature = "diagnostic-tools"),
+    not(feature = "transfer-tools")
+))]
 fn feature_disabled(feature: &str) -> Box<dyn std::error::Error> {
     Box::new(std::io::Error::new(
         std::io::ErrorKind::Unsupported,
-        format!("this rssh-app build does not include the '{feature}' feature"),
+        format!("this rterm build does not include the '{feature}' feature"),
     ))
 }
 
@@ -215,10 +226,9 @@ fn io_error(message: String) -> std::io::Error {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs,
-        time::{Duration, Instant},
-    };
+    use std::time::Instant;
+    #[cfg(feature = "ssh")]
+    use std::{fs, time::Duration};
 
     use rssh_pty::PtyExitStatus;
 
@@ -280,6 +290,7 @@ mod tests {
         assert!(error.to_string().contains("diagnostic-tools"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn gui_dispatch_preserves_the_process_start_instant() {
         let command = crate::cli::parse_args([
@@ -306,6 +317,7 @@ mod tests {
         assert_eq!(observed, Some(process_started_at));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn gui_profile_dispatch_preserves_the_process_start_instant() {
         let mut file = std::env::temp_dir();

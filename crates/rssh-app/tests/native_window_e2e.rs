@@ -14,7 +14,7 @@ use rssh_test_support::windows::wait_for_owned_window_frame;
 use std::process::Command;
 use sysinfo::{Pid, System};
 
-const RSSH_APP_EXECUTABLE: &str = env!("CARGO_BIN_EXE_rssh-app");
+const RSSH_APP_EXECUTABLE: &str = env!("CARGO_BIN_EXE_rterm");
 static NATIVE_WINDOW_E2E_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]

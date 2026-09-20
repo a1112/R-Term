@@ -604,7 +604,7 @@ fn native_request_for_openssh_target_with_config_output(
         .or(resolved_user)
         .ok_or("OpenSSH target did not resolve a user")?;
     let port = target.port.or(resolved_port).unwrap_or(22);
-    let config = SshSessionConfig::try_new(host, port, username, target.initial_size)?;
+    let config = SshSessionConfig::try_new(host, port, username, target.initial_size.into())?;
 
     Ok(SshConnectRequest::new(config, target.auth.clone()))
 }
@@ -1202,7 +1202,7 @@ fn append_forward_args(args: &mut Vec<String>, forwards: &[SshForward]) {
 
 fn local_options_for_options(options: &SshOptions) -> Result<LocalOptions, Box<dyn Error>> {
     let size = match &options.target {
-        SshTarget::Direct(request) => request.config.initial_size,
+        SshTarget::Direct(request) => request.config.initial_size.into(),
         SshTarget::OpenSsh(target) => target.initial_size,
     };
 
@@ -1755,7 +1755,8 @@ mod tests {
     fn dropping_native_local_forward_releases_listener_within_deadline() {
         let port = unused_loopback_port();
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let mut starter =
             super::ThreadedNativeLocalForwardStarter::new(rssh_ssh::RusshChannelOpener::default());
@@ -1783,7 +1784,8 @@ mod tests {
     fn dropping_native_dynamic_forward_releases_listener_within_deadline() {
         let port = unused_loopback_port();
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let mut starter =
             super::ThreadedNativeLocalForwardStarter::new(rssh_ssh::RusshChannelOpener::default());
@@ -1808,7 +1810,8 @@ mod tests {
     #[test]
     fn explicit_native_forward_shutdown_is_bounded_and_idempotent() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let mut starter =
             super::ThreadedNativeLocalForwardStarter::new(rssh_ssh::RusshChannelOpener::default());
@@ -1921,7 +1924,8 @@ mod tests {
         let cancellation = rssh_ssh::RusshForwardCancellation::new();
         let worker_cancellation = cancellation.clone();
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let (completion_sender, completion) = std::sync::mpsc::sync_channel(1);
         std::thread::spawn(move || {
@@ -2050,7 +2054,8 @@ mod tests {
     #[test]
     fn native_forward_partial_startup_failure_rolls_back_started_handles() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let shell_state = Arc::new(Mutex::new(MockState::default()));
         let mut connector = MockConnector {
@@ -2095,7 +2100,8 @@ mod tests {
     #[test]
     fn ssh_runner_streams_remote_output_and_closes_session() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState::default()));
         let mut connector = MockConnector {
@@ -2134,7 +2140,8 @@ mod tests {
     #[test]
     fn ssh_runner_writes_local_input_to_remote_session() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState::default()));
         let mut connector = MockConnector {
@@ -2174,7 +2181,8 @@ mod tests {
     #[test]
     fn ssh_runner_passes_remote_command_startup_to_native_connector() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState::default()));
         let mut connector = MockConnector {
@@ -2215,7 +2223,8 @@ mod tests {
     #[test]
     fn ssh_runner_passes_no_shell_startup_to_native_connector() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState::default()));
         let mut connector = MockConnector {
@@ -2253,7 +2262,8 @@ mod tests {
     #[test]
     fn native_ssh_runner_uses_connector_and_returns_success_status() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState::default()));
         let mut connector = MockConnector {
@@ -2293,7 +2303,8 @@ mod tests {
     #[test]
     fn native_session_marks_connected_immediately_after_connect() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState::default()));
         let mut connector = MockConnector {
@@ -2312,7 +2323,8 @@ mod tests {
     #[test]
     fn native_ssh_runner_returns_remote_exit_status() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState {
             remote_exit_status: Some(23),
@@ -2358,7 +2370,8 @@ mod tests {
     #[test]
     fn native_ssh_runner_preserves_remote_exit_signal_and_metrics() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState {
             remote_exit_signal: Some(SshExitSignal {
@@ -2455,7 +2468,7 @@ mod tests {
     #[test]
     fn native_ssh_runner_prints_json_metrics_when_requested() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(100, 30))
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(100, 30).into())
                 .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState::default()));
@@ -2514,7 +2527,8 @@ mod tests {
     #[test]
     fn native_ssh_runner_starts_local_forward_before_shell() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState::default()));
         let mut connector = MockConnector {
@@ -2566,7 +2580,8 @@ mod tests {
     #[test]
     fn native_ssh_runner_starts_dynamic_forward_before_shell() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState::default()));
         let mut connector = MockConnector {
@@ -2614,7 +2629,8 @@ mod tests {
     #[test]
     fn native_ssh_runner_shuts_down_all_forward_modes_after_shell() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState::default()));
         let mut connector = MockConnector { state };
@@ -2657,7 +2673,8 @@ mod tests {
     #[test]
     fn native_ssh_runner_keeps_no_shell_remote_forward_open_without_shell() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let state = Arc::new(Mutex::new(MockState::default()));
         let mut connector = MockConnector {
@@ -2757,13 +2774,17 @@ mod tests {
         assert_eq!(request.config.host, "ssh.example.com");
         assert_eq!(request.config.username, "override");
         assert_eq!(request.config.port, 2200);
-        assert_eq!(request.config.initial_size, TerminalSize::new(100, 40));
+        assert_eq!(
+            TerminalSize::from(request.config.initial_size),
+            TerminalSize::new(100, 40)
+        );
     }
 
     #[test]
     fn native_local_forward_plan_parses_bind_and_target_endpoint() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
 
         let plan = super::native_forward_plan_for_options(&SshOptions {
@@ -2814,7 +2835,8 @@ mod tests {
     #[test]
     fn native_forward_plan_accepts_remote_forwards() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
 
         let plan = super::native_forward_plan_for_options(&SshOptions {
@@ -2850,7 +2872,8 @@ mod tests {
     #[test]
     fn native_forward_plan_parses_dynamic_bind_endpoint() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
 
         let plan = super::native_forward_plan_for_options(&SshOptions {
@@ -2915,7 +2938,10 @@ mod tests {
         assert_eq!(request.config.host, "ssh.example.com");
         assert_eq!(request.config.username, "deploy");
         assert_eq!(request.config.port, 2222);
-        assert_eq!(request.config.initial_size, TerminalSize::new(100, 40));
+        assert_eq!(
+            TerminalSize::from(request.config.initial_size),
+            TerminalSize::new(100, 40)
+        );
         assert_eq!(request.auth, rssh_ssh::SshAuthMethod::Agent);
     }
 
@@ -2942,7 +2968,8 @@ mod tests {
     #[test]
     fn native_ssh_runner_resolves_password_prompt_before_connecting() {
         let request = SshConnectRequest::new(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
             rssh_ssh::SshAuthMethod::PasswordPrompt,
         );
         let state = Arc::new(Mutex::new(MockState::default()));
@@ -3061,7 +3088,8 @@ mod tests {
     fn native_ssh_runner_resolves_private_key_passphrase_before_connecting() {
         let key_path = PathBuf::from("C:/Users/ops/.ssh/id_ed25519");
         let request = SshConnectRequest::private_key(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
             key_path.clone(),
             None::<String>,
         )
@@ -3117,7 +3145,8 @@ mod tests {
     #[test]
     fn native_ssh_opener_uses_explicit_accept_unknown_host_key_policy() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
 
         let opener = super::native_channel_opener_for_options(&SshOptions {
@@ -3145,7 +3174,8 @@ mod tests {
     #[test]
     fn native_ssh_opener_uses_trust_on_first_use_host_key_policy() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
 
         let opener = super::native_channel_opener_for_options(&SshOptions {
@@ -3173,7 +3203,8 @@ mod tests {
     #[test]
     fn native_ssh_opener_uses_default_known_hosts_for_trust_on_first_use() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
 
         let opener = super::native_channel_opener_for_options(&SshOptions {
@@ -3206,8 +3237,13 @@ mod tests {
     #[test]
     fn openssh_command_uses_target_port_and_tty() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 2222, "ops", TerminalSize::new(120, 30))
-                .unwrap(),
+            SshSessionConfig::try_new(
+                "example.com",
+                2222,
+                "ops",
+                TerminalSize::new(120, 30).into(),
+            )
+            .unwrap(),
         );
 
         let command = super::openssh_command_for_options(&direct_options(request));
@@ -3219,7 +3255,8 @@ mod tests {
     #[test]
     fn openssh_command_adds_private_key_without_leaking_passphrase() {
         let request = SshConnectRequest::private_key(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
             "C:/Users/ops/.ssh/id_ed25519",
             Some("secret"),
         )
@@ -3243,7 +3280,8 @@ mod tests {
     #[test]
     fn openssh_command_uses_password_prompt_policy_without_leaking_password() {
         let request = SshConnectRequest::password(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
             "secret",
         )
         .unwrap();
@@ -3266,7 +3304,7 @@ mod tests {
     #[test]
     fn openssh_local_options_use_requested_terminal_size_and_mouse() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(132, 43))
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(132, 43).into())
                 .unwrap(),
         );
 
@@ -3281,7 +3319,8 @@ mod tests {
     #[test]
     fn openssh_local_options_preserve_osc52_policy() {
         let request = SshConnectRequest::agent(
-            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24)).unwrap(),
+            SshSessionConfig::try_new("example.com", 22, "ops", TerminalSize::new(80, 24).into())
+                .unwrap(),
         );
         let options = SshOptions {
             target: SshTarget::Direct(request),
@@ -3513,7 +3552,7 @@ mod tests {
             Ok(bytes.len())
         }
 
-        fn resize(&mut self, _size: TerminalSize) -> Result<(), SshSessionError> {
+        fn resize(&mut self, _size: rssh_ssh::SshTerminalSize) -> Result<(), SshSessionError> {
             Ok(())
         }
 
@@ -3574,7 +3613,7 @@ mod tests {
             Ok(bytes.len())
         }
 
-        fn resize(&mut self, _size: TerminalSize) -> Result<(), SshSessionError> {
+        fn resize(&mut self, _size: rssh_ssh::SshTerminalSize) -> Result<(), SshSessionError> {
             Ok(())
         }
 

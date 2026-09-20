@@ -82,6 +82,7 @@
         assert_eq!(app.active_runtime_transport, None);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn ssh_title_exposes_target_and_connection_status_without_secrets() {
         let mut app = NativeWindowApp::new_with_visual_defaults(None);
@@ -122,6 +123,7 @@
         assert_eq!(app.snapshot, snapshot_before);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn deferred_ssh_start_error_marks_failed_without_exiting_or_clearing_output() {
         let mut app = NativeWindowApp::new_with_visual_defaults(None);

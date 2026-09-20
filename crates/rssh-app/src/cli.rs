@@ -2,6 +2,7 @@ use std::{net::IpAddr, path::PathBuf};
 
 use rssh_core::TerminalSize;
 use rssh_pty::{PtyCommand, PtySize};
+#[cfg(feature = "ssh")]
 use rssh_ssh::{SshAuthMethod, SshConnectRequest, SshSessionConfig};
 
 const DEFAULT_SSH_COLUMNS: u16 = 80;
@@ -169,6 +170,7 @@ pub struct ProfileShowOptions {
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg(feature = "ssh")]
 pub struct SshOptions {
     pub target: SshTarget,
     pub remote_command: Vec<String>,
@@ -186,6 +188,7 @@ pub struct SshOptions {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[cfg(feature = "ssh")]
 pub struct SftpOptions {
     pub target: SshTarget,
     pub openssh_args: Vec<String>,
@@ -194,6 +197,7 @@ pub struct SftpOptions {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[cfg(feature = "ssh")]
 pub struct ScpOptions {
     pub target: SshTarget,
     pub transfer: ScpTransfer,
@@ -224,12 +228,14 @@ pub enum ScpTransfer {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[cfg(feature = "ssh")]
 pub enum SshTarget {
     Direct(SshConnectRequest),
     OpenSsh(OpenSshTarget),
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[cfg(feature = "ssh")]
 pub struct OpenSshTarget {
     pub target: String,
     pub username: Option<String>,
@@ -275,6 +281,7 @@ impl RendererMode {
 }
 
 #[allow(clippy::struct_excessive_bools)]
+#[cfg(feature = "ssh")]
 struct SshParseState {
     host: Option<String>,
     target: Option<String>,
@@ -298,6 +305,7 @@ struct SshParseState {
     log: Option<PathBuf>,
 }
 
+#[cfg(feature = "ssh")]
 impl Default for SshParseState {
     fn default() -> Self {
         Self {
@@ -685,31 +693,31 @@ fn parse_config_override(value: &str) -> Result<(String, String), String> {
     Ok((name.to_owned(), value.to_owned()))
 }
 
-pub fn help_text() -> &'static str {
-    r"R-SSH
+fn all_command_help() -> &'static str {
+    r"R-Term
 
 Usage:
-  rssh-app [window]
-  rssh-app doctor [--json]
-  rssh-app version [--json]
-  rssh-app self-test [--json]
-  rssh-app bench [--json] [--workload plain-scroll|ansi-scroll|ansi-scroll-query] [--bytes N] [--chunk-size N] [--render-frames N] [--idle-ms N] [--min-throughput-bytes-per-sec N] [--max-chunk-p95-us N] [--max-render-frame-p95-us N] [--max-idle-cpu-percent N] [--max-process-memory-bytes N] [--cols N --rows N]
-  rssh-app window [--frames N] [--cwd CWD] [--workspace WORKSPACE] [--class CLASS] [--position POSITION] [--domain DOMAIN] [--attach] [--no-auto-connect] [--always-new-process] [--new-tab] [--osc52 off|write|read-write] [--metrics | --metrics-json | --state | --state-json] [--log PATH] [-e <program> [args...] | -- <program> [args...] | <program> [args...]]
-  rssh-app start [--frames N] [--cwd CWD] [--workspace WORKSPACE] [--class CLASS] [--position POSITION] [--domain DOMAIN] [--attach] [--no-auto-connect] [--always-new-process] [--new-tab] [--osc52 off|write|read-write] [--metrics | --metrics-json | --state | --state-json] [--log PATH] [-e <program> [args...] | -- <program> [args...] | <program> [args...]]
-  rssh-app local [--preflight] [--metrics | --metrics-json] [--cols N] [--rows N] [--cwd CWD] [--mouse] [--osc52 off|write|read-write] [--log PATH] [-- <program> [args...]]
-  rssh-app console [--preflight] [--metrics | --metrics-json] [--cols N] [--rows N] [--cwd CWD] [--mouse] [--osc52 off|write|read-write] [--log PATH] [-- <program> [args...]]
-  rssh-app ssh ([USER@]HOST | --host HOST --user USER | --target NAME) [--preflight] [--metrics | --metrics-json] [--native | --gui] [--renderer auto|cpu|gpu] [--benchmark-startup] [--accept-unknown-host-key | --trust-on-first-use] [-l USER | --user USER] [-p N | --port N] [-J DEST] [-F PATH] [-o OPTION] [-4 | -6] [-A | -a] [-C] [-q] [-v | -vv | -vvv] [-B IFACE] [-b ADDR] [-c CIPHER] [-E LOG] [-e CHAR] [-I PKCS11] [-m MAC] [-O CTL] [-P TAG] [-Q QUERY] [-S CTL_PATH] [-W HOST:PORT] [-w TUN] [-f] [-G] [-g] [-K | -k] [-M] [-n] [-s] [-T | -t | -tt] [-X | -x | -Y | -y] [--cols N --rows N] [--agent | --password | -i PATH | --key PATH] [-L SPEC | --local-forward SPEC] [-R SPEC | --remote-forward SPEC] [-D SPEC | --dynamic-forward SPEC] [-N | --no-shell] [--osc52 off|write|read-write] [--log PATH] [COMMAND [ARGS...]]
-  rssh-app sftp ([USER@]HOST | --host HOST --user USER | --target NAME) [--preflight] [--metrics | --metrics-json] [-l LIMIT | --user USER] [-P N | --port N] [-J DEST] [-F PATH] [-o OPTION] [-4 | -6] [-A | -a] [-C] [-q] [-v | -vv | -vvv] [-b FILE] [-B N] [-R N] [-D COMMAND] [-S PROGRAM] [-s SUBSYSTEM] [-X OPTION] [-c CIPHER] [--cols N --rows N] [--agent | --password | -i PATH | --key PATH] [--log PATH]
-  rssh-app scp [--preflight] [--metrics | --metrics-json] [-l LIMIT] [-P N | --port N] [-J DEST] [-F PATH] [-o OPTION] [-4 | -6] [-A | -a] [-C] [-q] [-v | -vv | -vvv] [-3] [-O] [-T] [-B] [-p] [-R] [-s] [-D PATH] [-S PROGRAM] [-X OPTION] [-c CIPHER] [-i PATH | --key PATH] [-r | --recursive] [--log PATH] LOCAL... [USER@]HOST:REMOTE
-  rssh-app scp [--preflight] [--metrics | --metrics-json] [-l LIMIT] [-P N | --port N] [-J DEST] [-F PATH] [-o OPTION] [-4 | -6] [-A | -a] [-C] [-q] [-v | -vv | -vvv] [-3] [-O] [-T] [-B] [-p] [-R] [-s] [-D PATH] [-S PROGRAM] [-X OPTION] [-c CIPHER] [-i PATH | --key PATH] [-r | --recursive] [--log PATH] [USER@]HOST:REMOTE... LOCAL
-  rssh-app scp ([USER@]HOST | --host HOST --user USER | --target NAME) [--preflight] [--metrics | --metrics-json] [-l LIMIT | --user USER] [-P N | --port N] [-J DEST] [-F PATH] [-o OPTION] [-4 | -6] [-A | -a] [-C] [-q] [-v | -vv | -vvv] [-3] [-O] [-T] [-B] [-p] [-R] [-s] [-D PATH] [-S PROGRAM] [-X OPTION] [-c CIPHER] [--cols N --rows N] [--agent | --password | -i PATH | --key PATH] [-r | --recursive] [--log PATH] (--upload LOCAL REMOTE | --download REMOTE LOCAL)
-  rssh-app profile NAME [--file PATH]
-  rssh-app profile --check [--json] [--file PATH]
-  rssh-app profile --init [--file PATH] [--force]
-  rssh-app profile --list [--verbose | --json] [--file PATH]
-  rssh-app profile --show NAME [--json] [--file PATH]
-  rssh-app --help
-  rssh-app <command> --help
+  rterm [window]
+  rterm doctor [--json]
+  rterm version [--json]
+  rterm self-test [--json]
+  rterm bench [--json] [--workload plain-scroll|ansi-scroll|ansi-scroll-query] [--bytes N] [--chunk-size N] [--render-frames N] [--idle-ms N] [--min-throughput-bytes-per-sec N] [--max-chunk-p95-us N] [--max-render-frame-p95-us N] [--max-idle-cpu-percent N] [--max-process-memory-bytes N] [--cols N --rows N]
+  rterm window [--frames N] [--cwd CWD] [--workspace WORKSPACE] [--class CLASS] [--position POSITION] [--domain DOMAIN] [--attach] [--no-auto-connect] [--always-new-process] [--new-tab] [--osc52 off|write|read-write] [--metrics | --metrics-json | --state | --state-json] [--log PATH] [-e <program> [args...] | -- <program> [args...] | <program> [args...]]
+  rterm start [--frames N] [--cwd CWD] [--workspace WORKSPACE] [--class CLASS] [--position POSITION] [--domain DOMAIN] [--attach] [--no-auto-connect] [--always-new-process] [--new-tab] [--osc52 off|write|read-write] [--metrics | --metrics-json | --state | --state-json] [--log PATH] [-e <program> [args...] | -- <program> [args...] | <program> [args...]]
+  rterm local [--preflight] [--metrics | --metrics-json] [--cols N] [--rows N] [--cwd CWD] [--mouse] [--osc52 off|write|read-write] [--log PATH] [-- <program> [args...]]
+  rterm console [--preflight] [--metrics | --metrics-json] [--cols N] [--rows N] [--cwd CWD] [--mouse] [--osc52 off|write|read-write] [--log PATH] [-- <program> [args...]]
+  rterm ssh ([USER@]HOST | --host HOST --user USER | --target NAME) [--preflight] [--metrics | --metrics-json] [--native | --gui] [--renderer auto|cpu|gpu] [--benchmark-startup] [--accept-unknown-host-key | --trust-on-first-use] [-l USER | --user USER] [-p N | --port N] [-J DEST] [-F PATH] [-o OPTION] [-4 | -6] [-A | -a] [-C] [-q] [-v | -vv | -vvv] [-B IFACE] [-b ADDR] [-c CIPHER] [-E LOG] [-e CHAR] [-I PKCS11] [-m MAC] [-O CTL] [-P TAG] [-Q QUERY] [-S CTL_PATH] [-W HOST:PORT] [-w TUN] [-f] [-G] [-g] [-K | -k] [-M] [-n] [-s] [-T | -t | -tt] [-X | -x | -Y | -y] [--cols N --rows N] [--agent | --password | -i PATH | --key PATH] [-L SPEC | --local-forward SPEC] [-R SPEC | --remote-forward SPEC] [-D SPEC | --dynamic-forward SPEC] [-N | --no-shell] [--osc52 off|write|read-write] [--log PATH] [COMMAND [ARGS...]]
+  rterm sftp ([USER@]HOST | --host HOST --user USER | --target NAME) [--preflight] [--metrics | --metrics-json] [-l LIMIT | --user USER] [-P N | --port N] [-J DEST] [-F PATH] [-o OPTION] [-4 | -6] [-A | -a] [-C] [-q] [-v | -vv | -vvv] [-b FILE] [-B N] [-R N] [-D COMMAND] [-S PROGRAM] [-s SUBSYSTEM] [-X OPTION] [-c CIPHER] [--cols N --rows N] [--agent | --password | -i PATH | --key PATH] [--log PATH]
+  rterm scp [--preflight] [--metrics | --metrics-json] [-l LIMIT] [-P N | --port N] [-J DEST] [-F PATH] [-o OPTION] [-4 | -6] [-A | -a] [-C] [-q] [-v | -vv | -vvv] [-3] [-O] [-T] [-B] [-p] [-R] [-s] [-D PATH] [-S PROGRAM] [-X OPTION] [-c CIPHER] [-i PATH | --key PATH] [-r | --recursive] [--log PATH] LOCAL... [USER@]HOST:REMOTE
+  rterm scp [--preflight] [--metrics | --metrics-json] [-l LIMIT] [-P N | --port N] [-J DEST] [-F PATH] [-o OPTION] [-4 | -6] [-A | -a] [-C] [-q] [-v | -vv | -vvv] [-3] [-O] [-T] [-B] [-p] [-R] [-s] [-D PATH] [-S PROGRAM] [-X OPTION] [-c CIPHER] [-i PATH | --key PATH] [-r | --recursive] [--log PATH] [USER@]HOST:REMOTE... LOCAL
+  rterm scp ([USER@]HOST | --host HOST --user USER | --target NAME) [--preflight] [--metrics | --metrics-json] [-l LIMIT | --user USER] [-P N | --port N] [-J DEST] [-F PATH] [-o OPTION] [-4 | -6] [-A | -a] [-C] [-q] [-v | -vv | -vvv] [-3] [-O] [-T] [-B] [-p] [-R] [-s] [-D PATH] [-S PROGRAM] [-X OPTION] [-c CIPHER] [--cols N --rows N] [--agent | --password | -i PATH | --key PATH] [-r | --recursive] [--log PATH] (--upload LOCAL REMOTE | --download REMOTE LOCAL)
+  rterm profile NAME [--file PATH]
+  rterm profile --check [--json] [--file PATH]
+  rterm profile --init [--file PATH] [--force]
+  rterm profile --list [--verbose | --json] [--file PATH]
+  rterm profile --show NAME [--json] [--file PATH]
+  rterm --help
+  rterm <command> --help
 
 Global WezTerm configuration options (before window/start only):
   -n, --skip-config    Skip loading a configuration file
@@ -1072,6 +1080,7 @@ fn parse_profile(args: &[String]) -> Result<AppCommand, String> {
     Ok(AppCommand::Profile(ProfileOptions { name, file }))
 }
 
+#[cfg(feature = "ssh")]
 fn parse_ssh(args: &[String]) -> Result<AppCommand, String> {
     let mut state = SshParseState::default();
     let mut index = 0;
@@ -1096,6 +1105,7 @@ fn parse_ssh(args: &[String]) -> Result<AppCommand, String> {
     Ok(AppCommand::Ssh(ssh_options_from_state(state)?))
 }
 
+#[cfg(feature = "ssh")]
 fn parse_sftp(args: &[String]) -> Result<AppCommand, String> {
     let mut state = SshParseState::default();
     let mut index = 0;
@@ -1117,6 +1127,7 @@ fn parse_sftp(args: &[String]) -> Result<AppCommand, String> {
     }))
 }
 
+#[cfg(feature = "ssh")]
 fn parse_scp(args: &[String]) -> Result<AppCommand, String> {
     let mut state = SshParseState::default();
     let mut recursive = false;
@@ -1167,6 +1178,7 @@ fn parse_scp(args: &[String]) -> Result<AppCommand, String> {
     }))
 }
 
+#[cfg(feature = "ssh")]
 fn apply_scp_positionals(
     state: &mut SshParseState,
     transfer: &mut Option<ScpTransfer>,
@@ -1191,6 +1203,7 @@ fn apply_scp_positionals(
     }
 }
 
+#[cfg(feature = "ssh")]
 fn infer_scp_transfer_from_operands(
     state: &mut SshParseState,
     transfer: &mut Option<ScpTransfer>,
@@ -1277,6 +1290,7 @@ fn looks_like_windows_drive(value: &str) -> bool {
     value.len() == 1 && value.as_bytes()[0].is_ascii_alphabetic()
 }
 
+#[cfg(feature = "ssh")]
 fn ssh_target_selected(state: &SshParseState) -> bool {
     state.target.is_some()
 }
@@ -1333,6 +1347,7 @@ fn set_ssh_console_metrics(console: &mut ConsoleOptions, selected: &str) -> Resu
     set_console_metrics(&mut console.metrics, &mut console.metrics_json, selected)
 }
 
+#[cfg(feature = "ssh")]
 fn parse_sftp_option(
     args: &[String],
     index: &mut usize,
@@ -1420,6 +1435,7 @@ fn parse_sftp_option(
 }
 
 #[allow(clippy::too_many_lines)]
+#[cfg(feature = "ssh")]
 fn parse_ssh_option(
     args: &[String],
     index: &mut usize,
@@ -1530,6 +1546,7 @@ fn parse_ssh_option(
     Ok(())
 }
 
+#[cfg(feature = "ssh")]
 fn parse_ssh_passthrough_option(
     args: &[String],
     index: &mut usize,
@@ -1595,6 +1612,7 @@ fn is_verbose_flag(value: &str) -> bool {
     !rest.is_empty() && rest.chars().all(|character| character == 'v')
 }
 
+#[cfg(feature = "ssh")]
 fn parse_ssh_forward_option(
     args: &[String],
     index: &mut usize,
@@ -1636,6 +1654,7 @@ fn require_loopback_dynamic_forward(spec: &str) -> Result<(), String> {
     }
 }
 
+#[cfg(feature = "ssh")]
 fn set_explicit_ssh_target(state: &mut SshParseState, target: &str) -> Result<(), String> {
     if state.target.is_some() {
         return Err("only one SSH target can be selected".to_owned());
@@ -1645,6 +1664,7 @@ fn set_explicit_ssh_target(state: &mut SshParseState, target: &str) -> Result<()
     Ok(())
 }
 
+#[cfg(feature = "ssh")]
 fn set_positional_ssh_target(
     state: &mut SshParseState,
     target: &str,
@@ -1669,6 +1689,7 @@ fn parse_path_option(
     )?))
 }
 
+#[cfg(feature = "ssh")]
 fn ssh_options_from_state(state: SshParseState) -> Result<SshOptions, String> {
     let SshParseState {
         host,
@@ -1726,7 +1747,7 @@ fn ssh_options_from_state(state: SshParseState) -> Result<SshOptions, String> {
             let Some(username) = username else {
                 return Err("--user is required with --host".to_owned());
             };
-            let config = SshSessionConfig::try_new(host, port.unwrap_or(22), username, size)
+            let config = SshSessionConfig::try_new(host, port.unwrap_or(22), username, size.into())
                 .map_err(|error| error.to_string())?;
             SshTarget::Direct(SshConnectRequest::new(config, auth))
         }
@@ -2080,6 +2101,7 @@ fn required_forward_spec(value: Option<&String>, name: &str) -> Result<String, S
     Ok(value.to_owned())
 }
 
+#[cfg(feature = "ssh")]
 fn set_ssh_auth(auth: &mut Option<SshAuthMethod>, next: SshAuthMethod) -> Result<(), String> {
     if auth.is_some() {
         return Err("only one ssh authentication method can be selected".to_owned());
@@ -2089,6 +2111,7 @@ fn set_ssh_auth(auth: &mut Option<SshAuthMethod>, next: SshAuthMethod) -> Result
     Ok(())
 }
 
+#[cfg(feature = "ssh")]
 fn parse_native_host_key_policy(option: &str, state: &mut SshParseState) -> Result<(), String> {
     let policy = match option {
         "--accept-unknown-host-key" => NativeHostKeyPolicy::AcceptUnknown,
@@ -2099,6 +2122,7 @@ fn parse_native_host_key_policy(option: &str, state: &mut SshParseState) -> Resu
     set_native_host_key_policy(&mut state.native_host_key_policy, policy)
 }
 
+#[cfg(feature = "ssh")]
 fn set_native_host_key_policy(
     policy: &mut NativeHostKeyPolicy,
     next: NativeHostKeyPolicy,
@@ -2124,16 +2148,65 @@ const fn ssh_default_terminal_size() -> TerminalSize {
     TerminalSize::new(DEFAULT_SSH_COLUMNS, DEFAULT_SSH_ROWS)
 }
 
+#[cfg(not(feature = "ssh"))]
+#[derive(Debug, PartialEq, Eq)]
+pub struct SshOptions;
+#[cfg(not(feature = "ssh"))]
+#[derive(Debug, PartialEq, Eq)]
+pub struct ScpOptions;
+#[cfg(not(feature = "ssh"))]
+#[derive(Debug, PartialEq, Eq)]
+pub struct SftpOptions;
+#[cfg(not(feature = "ssh"))]
+fn parse_ssh(_: &[String]) -> Result<AppCommand, String> {
+    Err("SSH support is disabled; rebuild rterm with --features ssh".to_owned())
+}
+#[cfg(not(feature = "ssh"))]
+fn parse_scp(args: &[String]) -> Result<AppCommand, String> {
+    parse_ssh(args)
+}
+#[cfg(not(feature = "ssh"))]
+fn parse_sftp(args: &[String]) -> Result<AppCommand, String> {
+    parse_ssh(args)
+}
+
+pub fn help_text() -> String {
+    let mut text = all_command_help()
+        .lines()
+        .filter(|line| {
+            let command = line.trim_start();
+            (cfg!(feature = "ssh") || !command.starts_with("rterm ssh "))
+                && (cfg!(feature = "transfer-tools")
+                    || !(command.starts_with("rterm scp ") || command.starts_with("rterm sftp ")))
+                && (cfg!(feature = "diagnostic-tools")
+                    || ![
+                        "rterm doctor ",
+                        "rterm bench ",
+                        "rterm self-test ",
+                        "rterm diagnostic-gui ",
+                    ]
+                    .iter()
+                    .any(|prefix| command.starts_with(prefix)))
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    text.push('\n');
+    text
+}
+
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "ssh")]
     use rssh_ssh::SshAuthMethod;
 
-    use super::{AppCommand, NativeHostKeyPolicy, parse_args};
+    #[cfg(feature = "ssh")]
+    use super::NativeHostKeyPolicy;
+    use super::{AppCommand, parse_args};
 
     #[test]
     fn parses_default_window_command() {
         assert_eq!(
-            parse_args(["rssh-app"]).unwrap(),
+            parse_args(["rterm"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
@@ -2154,7 +2227,7 @@ mod tests {
     #[test]
     fn parses_global_wezterm_config_options_for_default_window() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "-n",
             "--config",
             "color_scheme=Builtin Solarized Dark",
@@ -2181,7 +2254,7 @@ mod tests {
     #[test]
     fn parses_repeated_global_config_overrides_in_order() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "--config",
             "color_scheme=Builtin Solarized Dark",
             "--config",
@@ -2208,7 +2281,7 @@ mod tests {
     #[test]
     fn parses_global_config_options_before_window_and_start() {
         let parsed_window = parse_args([
-            "rssh-app",
+            "rterm",
             "--config-file",
             "C:/Users/test/.wezterm.lua",
             "window",
@@ -2217,7 +2290,7 @@ mod tests {
         ])
         .unwrap();
         let parsed_start = parse_args([
-            "rssh-app",
+            "rterm",
             "--skip-config",
             "--config",
             "term=xterm-256color",
@@ -2259,8 +2332,8 @@ mod tests {
     #[test]
     fn rejects_skip_config_with_config_file() {
         for args in [
-            vec!["rssh-app", "--skip-config", "--config-file", "wezterm.lua"],
-            vec!["rssh-app", "--config-file", "wezterm.lua", "-n"],
+            vec!["rterm", "--skip-config", "--config-file", "wezterm.lua"],
+            vec!["rterm", "--config-file", "wezterm.lua", "-n"],
         ] {
             assert_eq!(
                 parse_args(args).unwrap_err(),
@@ -2273,12 +2346,13 @@ mod tests {
     fn rejects_malformed_global_config_override() {
         for value in ["=value", "name=   ", "name"] {
             assert_eq!(
-                parse_args(["rssh-app", "--config", value]).unwrap_err(),
+                parse_args(["rterm", "--config", value]).unwrap_err(),
                 "invalid value for --config: expected NAME=VALUE with non-empty NAME and VALUE"
             );
         }
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_global_config_options_for_non_gui_commands() {
         for command in [
@@ -2294,7 +2368,7 @@ mod tests {
             "self-test",
         ] {
             assert_eq!(
-                parse_args(["rssh-app", "--config", "term=xterm-256color", command]).unwrap_err(),
+                parse_args(["rterm", "--config", "term=xterm-256color", command]).unwrap_err(),
                 "global WezTerm config options cannot be used with non-GUI commands"
             );
         }
@@ -2303,15 +2377,15 @@ mod tests {
     #[test]
     fn rejects_wezterm_config_options_after_window_and_start() {
         assert_eq!(
-            parse_args(["rssh-app", "window", "--skip-config"]).unwrap_err(),
+            parse_args(["rterm", "window", "--skip-config"]).unwrap_err(),
             "unexpected window option: --skip-config"
         );
         assert_eq!(
-            parse_args(["rssh-app", "start", "--config-file", "wezterm.lua"]).unwrap_err(),
+            parse_args(["rterm", "start", "--config-file", "wezterm.lua"]).unwrap_err(),
             "unexpected window option: --config-file"
         );
         assert_eq!(
-            parse_args(["rssh-app", "window", "--config", "term=xterm"]).unwrap_err(),
+            parse_args(["rterm", "window", "--config", "term=xterm"]).unwrap_err(),
             "unexpected window option: --config"
         );
     }
@@ -2319,7 +2393,7 @@ mod tests {
     #[test]
     fn parses_explicit_window_command() {
         assert_eq!(
-            parse_args(["rssh-app", "window"]).unwrap(),
+            parse_args(["rterm", "window"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
@@ -2340,7 +2414,7 @@ mod tests {
     #[test]
     fn parses_start_alias_as_window_command() {
         assert_eq!(
-            parse_args(["rssh-app", "start"]).unwrap(),
+            parse_args(["rterm", "start"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
@@ -2361,7 +2435,7 @@ mod tests {
     #[test]
     fn parses_start_alias_exec_command() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "start",
             "-e",
             "powershell",
@@ -2385,7 +2459,7 @@ mod tests {
     #[test]
     fn parses_start_alias_bare_program_arguments() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "start",
             "--cwd",
             "E:\\project",
@@ -2414,7 +2488,7 @@ mod tests {
     #[test]
     fn parses_start_alias_help() {
         assert_eq!(
-            parse_args(["rssh-app", "start", "--help"]).unwrap(),
+            parse_args(["rterm", "start", "--help"]).unwrap(),
             AppCommand::Help
         );
     }
@@ -2422,7 +2496,7 @@ mod tests {
     #[test]
     fn parses_doctor_command() {
         assert_eq!(
-            parse_args(["rssh-app", "doctor"]).unwrap(),
+            parse_args(["rterm", "doctor"]).unwrap(),
             AppCommand::Doctor(super::DoctorOptions { json: false })
         );
     }
@@ -2430,7 +2504,7 @@ mod tests {
     #[test]
     fn parses_json_doctor_command() {
         assert_eq!(
-            parse_args(["rssh-app", "doctor", "--json"]).unwrap(),
+            parse_args(["rterm", "doctor", "--json"]).unwrap(),
             AppCommand::Doctor(super::DoctorOptions { json: true })
         );
     }
@@ -2438,7 +2512,7 @@ mod tests {
     #[test]
     fn parses_version_command() {
         assert_eq!(
-            parse_args(["rssh-app", "version"]).unwrap(),
+            parse_args(["rterm", "version"]).unwrap(),
             AppCommand::Version(super::VersionOptions { json: false })
         );
     }
@@ -2446,7 +2520,7 @@ mod tests {
     #[test]
     fn parses_json_version_command() {
         assert_eq!(
-            parse_args(["rssh-app", "version", "--json"]).unwrap(),
+            parse_args(["rterm", "version", "--json"]).unwrap(),
             AppCommand::Version(super::VersionOptions { json: true })
         );
     }
@@ -2454,7 +2528,7 @@ mod tests {
     #[test]
     fn parses_self_test_command() {
         assert_eq!(
-            parse_args(["rssh-app", "self-test"]).unwrap(),
+            parse_args(["rterm", "self-test"]).unwrap(),
             AppCommand::SelfTest(super::SelfTestOptions { json: false })
         );
     }
@@ -2462,7 +2536,7 @@ mod tests {
     #[test]
     fn parses_json_self_test_command() {
         assert_eq!(
-            parse_args(["rssh-app", "self-test", "--json"]).unwrap(),
+            parse_args(["rterm", "self-test", "--json"]).unwrap(),
             AppCommand::SelfTest(super::SelfTestOptions { json: true })
         );
     }
@@ -2470,7 +2544,7 @@ mod tests {
     #[test]
     fn parses_profile_command_with_config_file() {
         assert_eq!(
-            parse_args(["rssh-app", "profile", "prod", "--file", "profiles.toml"]).unwrap(),
+            parse_args(["rterm", "profile", "prod", "--file", "profiles.toml"]).unwrap(),
             AppCommand::Profile(super::ProfileOptions {
                 name: "prod".to_owned(),
                 file: std::path::PathBuf::from("profiles.toml"),
@@ -2481,7 +2555,7 @@ mod tests {
     #[test]
     fn parses_profile_list_command_with_config_file() {
         assert_eq!(
-            parse_args(["rssh-app", "profile", "--list", "--file", "profiles.toml"]).unwrap(),
+            parse_args(["rterm", "profile", "--list", "--file", "profiles.toml"]).unwrap(),
             AppCommand::ProfileList(super::ProfileListOptions {
                 file: std::path::PathBuf::from("profiles.toml"),
                 verbose: false,
@@ -2494,7 +2568,7 @@ mod tests {
     fn parses_verbose_profile_list_command_with_config_file() {
         assert_eq!(
             parse_args([
-                "rssh-app",
+                "rterm",
                 "profile",
                 "--list",
                 "--verbose",
@@ -2514,7 +2588,7 @@ mod tests {
     fn parses_json_profile_list_command_with_config_file() {
         assert_eq!(
             parse_args([
-                "rssh-app",
+                "rterm",
                 "profile",
                 "--list",
                 "--json",
@@ -2533,7 +2607,7 @@ mod tests {
     #[test]
     fn parses_profile_check_command_with_config_file() {
         assert_eq!(
-            parse_args(["rssh-app", "profile", "--check", "--file", "profiles.toml"]).unwrap(),
+            parse_args(["rterm", "profile", "--check", "--file", "profiles.toml"]).unwrap(),
             AppCommand::ProfileCheck(super::ProfileCheckOptions {
                 file: std::path::PathBuf::from("profiles.toml"),
                 json: false,
@@ -2545,7 +2619,7 @@ mod tests {
     fn parses_json_profile_check_command_with_config_file() {
         assert_eq!(
             parse_args([
-                "rssh-app",
+                "rterm",
                 "profile",
                 "--check",
                 "--json",
@@ -2564,7 +2638,7 @@ mod tests {
     fn parses_profile_init_command_with_force_and_config_file() {
         assert_eq!(
             parse_args([
-                "rssh-app",
+                "rterm",
                 "profile",
                 "--init",
                 "--force",
@@ -2583,7 +2657,7 @@ mod tests {
     fn parses_profile_show_command_with_config_file() {
         assert_eq!(
             parse_args([
-                "rssh-app",
+                "rterm",
                 "profile",
                 "--show",
                 "prod",
@@ -2603,7 +2677,7 @@ mod tests {
     fn parses_json_profile_show_command_with_config_file() {
         assert_eq!(
             parse_args([
-                "rssh-app",
+                "rterm",
                 "profile",
                 "--show",
                 "prod",
@@ -2623,7 +2697,7 @@ mod tests {
     #[test]
     fn parses_window_frame_limit() {
         assert_eq!(
-            parse_args(["rssh-app", "window", "--frames", "1"]).unwrap(),
+            parse_args(["rterm", "window", "--frames", "1"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
                 config: super::WindowConfigOptions::default(),
                 frame_limit: Some(1),
@@ -2644,7 +2718,7 @@ mod tests {
     #[test]
     fn parses_window_metrics_flag() {
         assert_eq!(
-            parse_args(["rssh-app", "window", "--metrics"]).unwrap(),
+            parse_args(["rterm", "window", "--metrics"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
@@ -2665,7 +2739,7 @@ mod tests {
     #[test]
     fn parses_window_metrics_json_flag() {
         assert_eq!(
-            parse_args(["rssh-app", "window", "--metrics-json"]).unwrap(),
+            parse_args(["rterm", "window", "--metrics-json"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
@@ -2685,8 +2759,7 @@ mod tests {
 
     #[test]
     fn parses_window_state_flags() {
-        let AppCommand::Window(text) = parse_args(["rssh-app", "window", "--state"]).unwrap()
-        else {
+        let AppCommand::Window(text) = parse_args(["rterm", "window", "--state"]).unwrap() else {
             panic!("expected window command");
         };
         assert!(text.state);
@@ -2694,7 +2767,7 @@ mod tests {
         assert!(!text.metrics);
         assert!(!text.metrics_json);
 
-        let AppCommand::Window(json) = parse_args(["rssh-app", "window", "--state-json"]).unwrap()
+        let AppCommand::Window(json) = parse_args(["rterm", "window", "--state-json"]).unwrap()
         else {
             panic!("expected window command");
         };
@@ -2709,7 +2782,7 @@ mod tests {
         let flags = ["--metrics", "--metrics-json", "--state", "--state-json"];
         for left in flags {
             for right in flags {
-                let error = parse_args(["rssh-app", "window", left, right]).unwrap_err();
+                let error = parse_args(["rterm", "window", left, right]).unwrap_err();
                 assert!(
                     error.contains("only one window report format can be selected"),
                     "{left} with {right}: {error}"
@@ -2728,7 +2801,7 @@ mod tests {
     #[test]
     fn parses_window_custom_command_after_separator() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "window",
             "--",
             "powershell",
@@ -2752,7 +2825,7 @@ mod tests {
     #[test]
     fn parses_window_exec_alias_for_initial_command() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "window",
             "-e",
             "powershell",
@@ -2776,7 +2849,7 @@ mod tests {
     #[test]
     fn rejects_window_exec_alias_without_program() {
         let error =
-            parse_args(["rssh-app", "window", "-e"]).expect_err("exec alias requires a program");
+            parse_args(["rterm", "window", "-e"]).expect_err("exec alias requires a program");
 
         assert_eq!(error, "missing program for -e");
     }
@@ -2784,7 +2857,7 @@ mod tests {
     #[test]
     fn parses_window_cwd_for_initial_command() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "window",
             "--cwd",
             "E:\\project",
@@ -2808,7 +2881,7 @@ mod tests {
 
     #[test]
     fn parses_window_workspace_for_initial_window() {
-        let parsed = parse_args(["rssh-app", "window", "--workspace", "ops"]).unwrap();
+        let parsed = parse_args(["rterm", "window", "--workspace", "ops"]).unwrap();
 
         let AppCommand::Window(options) = parsed else {
             panic!("expected window command");
@@ -2819,7 +2892,7 @@ mod tests {
 
     #[test]
     fn parses_window_position_for_initial_window() {
-        let parsed = parse_args(["rssh-app", "window", "--position", "10,20"]).unwrap();
+        let parsed = parse_args(["rterm", "window", "--position", "10,20"]).unwrap();
 
         let AppCommand::Window(options) = parsed else {
             panic!("expected window command");
@@ -2837,7 +2910,7 @@ mod tests {
 
     #[test]
     fn parses_window_screen_position_for_initial_window() {
-        let parsed = parse_args(["rssh-app", "window", "--position", "screen:10,20"]).unwrap();
+        let parsed = parse_args(["rterm", "window", "--position", "screen:10,20"]).unwrap();
 
         let AppCommand::Window(options) = parsed else {
             panic!("expected window command");
@@ -2855,7 +2928,7 @@ mod tests {
 
     #[test]
     fn parses_window_main_monitor_position_for_initial_window() {
-        let parsed = parse_args(["rssh-app", "window", "--position", "main:10,20"]).unwrap();
+        let parsed = parse_args(["rterm", "window", "--position", "main:10,20"]).unwrap();
 
         let AppCommand::Window(options) = parsed else {
             panic!("expected window command");
@@ -2873,7 +2946,7 @@ mod tests {
 
     #[test]
     fn parses_window_active_monitor_position_for_initial_window() {
-        let parsed = parse_args(["rssh-app", "window", "--position", "active:10,20"]).unwrap();
+        let parsed = parse_args(["rterm", "window", "--position", "active:10,20"]).unwrap();
 
         let AppCommand::Window(options) = parsed else {
             panic!("expected window command");
@@ -2887,7 +2960,7 @@ mod tests {
 
     #[test]
     fn parses_window_named_monitor_position_for_initial_window() {
-        let parsed = parse_args(["rssh-app", "window", "--position", "HDMI-1:10,20"]).unwrap();
+        let parsed = parse_args(["rterm", "window", "--position", "HDMI-1:10,20"]).unwrap();
 
         let AppCommand::Window(options) = parsed else {
             panic!("expected window command");
@@ -2903,9 +2976,10 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_window_class_for_initial_window() {
-        let parsed = parse_args(["rssh-app", "window", "--class", "org.example.RSsh"]).unwrap();
+        let parsed = parse_args(["rterm", "window", "--class", "org.example.RSsh"]).unwrap();
 
         let AppCommand::Window(options) = parsed else {
             panic!("expected window command");
@@ -2917,7 +2991,7 @@ mod tests {
     #[test]
     fn accepts_wezterm_startup_compatibility_flags_for_window() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "window",
             "--no-auto-connect",
             "--always-new-process",
@@ -2942,7 +3016,7 @@ mod tests {
     #[test]
     fn accepts_local_domain_and_attach_for_window_startup() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "window",
             "--domain",
             "local",
@@ -2961,9 +3035,10 @@ mod tests {
         assert_eq!(options.command.args(), ["-NoProfile"]);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_remote_domain_for_window_startup() {
-        let error = parse_args(["rssh-app", "window", "--domain", "ssh-prod"])
+        let error = parse_args(["rterm", "window", "--domain", "ssh-prod"])
             .expect_err("remote domains are not implemented");
 
         assert_eq!(
@@ -2974,7 +3049,7 @@ mod tests {
 
     #[test]
     fn parses_window_log_path() {
-        let parsed = parse_args(["rssh-app", "window", "--log", "window.log"]).unwrap();
+        let parsed = parse_args(["rterm", "window", "--log", "window.log"]).unwrap();
 
         let AppCommand::Window(options) = parsed else {
             panic!("expected window command");
@@ -2986,7 +3061,7 @@ mod tests {
     #[test]
     fn parses_window_osc52_policy() {
         assert_eq!(
-            parse_args(["rssh-app", "window", "--osc52", "off"]).unwrap(),
+            parse_args(["rterm", "window", "--osc52", "off"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
@@ -3003,7 +3078,7 @@ mod tests {
             })
         );
         assert_eq!(
-            parse_args(["rssh-app", "window", "--osc52", "write"]).unwrap(),
+            parse_args(["rterm", "window", "--osc52", "write"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
@@ -3019,34 +3094,35 @@ mod tests {
                 log: None
             })
         );
-        assert!(parse_args(["rssh-app", "window", "--osc52", "bad"]).is_err());
+        assert!(parse_args(["rterm", "window", "--osc52", "bad"]).is_err());
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn defaults_local_osc52_to_write_only_and_remote_ssh_to_off() {
         assert_eq!(super::Osc52Policy::default(), super::Osc52Policy::WriteOnly);
         assert!(super::Osc52Policy::default().allows_write());
         assert!(!super::Osc52Policy::default().allows_query());
 
-        let parsed = parse_args(["rssh-app"]).unwrap();
+        let parsed = parse_args(["rterm"]).unwrap();
         let AppCommand::Window(options) = parsed else {
             panic!("expected default window command");
         };
         assert_eq!(options.osc52_policy, super::Osc52Policy::WriteOnly);
 
-        let parsed = parse_args(["rssh-app", "window"]).unwrap();
+        let parsed = parse_args(["rterm", "window"]).unwrap();
         let AppCommand::Window(options) = parsed else {
             panic!("expected window command");
         };
         assert_eq!(options.osc52_policy, super::Osc52Policy::WriteOnly);
 
-        let parsed = parse_args(["rssh-app", "local"]).unwrap();
+        let parsed = parse_args(["rterm", "local"]).unwrap();
         let AppCommand::Local(options) = parsed else {
             panic!("expected local command");
         };
         assert_eq!(options.osc52_policy, super::Osc52Policy::WriteOnly);
 
-        let parsed = parse_args(["rssh-app", "ssh", "example.com"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "example.com"]).unwrap();
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
         };
@@ -3055,7 +3131,7 @@ mod tests {
 
     #[test]
     fn parses_local_default_shell() {
-        let parsed = parse_args(["rssh-app", "local"]).unwrap();
+        let parsed = parse_args(["rterm", "local"]).unwrap();
 
         let AppCommand::Local(options) = parsed else {
             panic!("expected local command");
@@ -3071,7 +3147,7 @@ mod tests {
     #[test]
     fn parses_console_alias_as_local_command() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "console",
             "--preflight",
             "--",
@@ -3092,7 +3168,7 @@ mod tests {
 
     #[test]
     fn parses_console_benchmark_command() {
-        let parsed = parse_args(["rssh-app", "bench"]).unwrap();
+        let parsed = parse_args(["rterm", "bench"]).unwrap();
 
         let AppCommand::Bench(options) = parsed else {
             panic!("expected bench command");
@@ -3111,7 +3187,7 @@ mod tests {
     #[test]
     fn parses_console_benchmark_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "bench",
             "--json",
             "--workload",
@@ -3166,16 +3242,16 @@ mod tests {
 
     #[test]
     fn rejects_invalid_console_benchmark_options() {
-        assert!(parse_args(["rssh-app", "bench", "--bytes", "0"]).is_err());
-        assert!(parse_args(["rssh-app", "bench", "--chunk-size", "0"]).is_err());
-        assert!(parse_args(["rssh-app", "bench", "--render-frames", "0"]).is_err());
-        assert!(parse_args(["rssh-app", "bench", "--idle-ms", "0"]).is_err());
-        assert!(parse_args(["rssh-app", "bench", "--max-chunk-p95-us", "0"]).is_err());
-        assert!(parse_args(["rssh-app", "bench", "--max-idle-cpu-percent", "0"]).is_err());
-        assert!(parse_args(["rssh-app", "bench", "--cols", "0"]).is_err());
-        assert!(parse_args(["rssh-app", "bench", "--rows", "0"]).is_err());
+        assert!(parse_args(["rterm", "bench", "--bytes", "0"]).is_err());
+        assert!(parse_args(["rterm", "bench", "--chunk-size", "0"]).is_err());
+        assert!(parse_args(["rterm", "bench", "--render-frames", "0"]).is_err());
+        assert!(parse_args(["rterm", "bench", "--idle-ms", "0"]).is_err());
+        assert!(parse_args(["rterm", "bench", "--max-chunk-p95-us", "0"]).is_err());
+        assert!(parse_args(["rterm", "bench", "--max-idle-cpu-percent", "0"]).is_err());
+        assert!(parse_args(["rterm", "bench", "--cols", "0"]).is_err());
+        assert!(parse_args(["rterm", "bench", "--rows", "0"]).is_err());
         assert_eq!(
-            parse_args(["rssh-app", "bench", "--workload", "unknown"]).unwrap_err(),
+            parse_args(["rterm", "bench", "--workload", "unknown"]).unwrap_err(),
             "unknown bench workload: unknown (expected plain-scroll, ansi-scroll, or ansi-scroll-query)"
         );
     }
@@ -3188,7 +3264,7 @@ mod tests {
             ("ansi-scroll-query", super::BenchWorkload::AnsiScrollQuery),
         ] {
             let parsed =
-                parse_args(["rssh-app", "bench", "--workload", name]).expect("parse workload");
+                parse_args(["rterm", "bench", "--workload", name]).expect("parse workload");
             let AppCommand::Bench(options) = parsed else {
                 panic!("expected bench command");
             };
@@ -3199,7 +3275,7 @@ mod tests {
 
     #[test]
     fn parses_local_size() {
-        let parsed = parse_args(["rssh-app", "local", "--cols", "100", "--rows", "30"]).unwrap();
+        let parsed = parse_args(["rterm", "local", "--cols", "100", "--rows", "30"]).unwrap();
 
         let AppCommand::Local(options) = parsed else {
             panic!("expected local command");
@@ -3212,7 +3288,7 @@ mod tests {
 
     #[test]
     fn parses_custom_local_command_after_separator() {
-        let parsed = parse_args(["rssh-app", "local", "--", "cmd.exe", "/K"]).unwrap();
+        let parsed = parse_args(["rterm", "local", "--", "cmd.exe", "/K"]).unwrap();
 
         let AppCommand::Local(options) = parsed else {
             panic!("expected local command");
@@ -3227,7 +3303,7 @@ mod tests {
     #[test]
     fn parses_local_cwd_for_initial_command() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "local",
             "--cwd",
             "E:\\project",
@@ -3251,7 +3327,7 @@ mod tests {
 
     #[test]
     fn parses_local_mouse_capture() {
-        let parsed = parse_args(["rssh-app", "local", "--mouse"]).unwrap();
+        let parsed = parse_args(["rterm", "local", "--mouse"]).unwrap();
 
         let AppCommand::Local(options) = parsed else {
             panic!("expected local command");
@@ -3262,7 +3338,7 @@ mod tests {
 
     #[test]
     fn parses_local_preflight() {
-        let parsed = parse_args(["rssh-app", "local", "--preflight"]).unwrap();
+        let parsed = parse_args(["rterm", "local", "--preflight"]).unwrap();
 
         let AppCommand::Local(options) = parsed else {
             panic!("expected local command");
@@ -3273,7 +3349,7 @@ mod tests {
 
     #[test]
     fn parses_local_metrics() {
-        let parsed = parse_args(["rssh-app", "local", "--metrics"]).unwrap();
+        let parsed = parse_args(["rterm", "local", "--metrics"]).unwrap();
 
         let AppCommand::Local(options) = parsed else {
             panic!("expected local command");
@@ -3284,7 +3360,7 @@ mod tests {
 
     #[test]
     fn parses_local_metrics_json() {
-        let parsed = parse_args(["rssh-app", "local", "--metrics-json"]).unwrap();
+        let parsed = parse_args(["rterm", "local", "--metrics-json"]).unwrap();
 
         let AppCommand::Local(options) = parsed else {
             panic!("expected local command");
@@ -3295,7 +3371,7 @@ mod tests {
 
     #[test]
     fn parses_local_log_path() {
-        let parsed = parse_args(["rssh-app", "local", "--log", "session.log"]).unwrap();
+        let parsed = parse_args(["rterm", "local", "--log", "session.log"]).unwrap();
 
         let AppCommand::Local(options) = parsed else {
             panic!("expected local command");
@@ -3306,20 +3382,21 @@ mod tests {
 
     #[test]
     fn parses_local_osc52_policy() {
-        let parsed = parse_args(["rssh-app", "local", "--osc52", "write"]).unwrap();
+        let parsed = parse_args(["rterm", "local", "--osc52", "write"]).unwrap();
 
         let AppCommand::Local(options) = parsed else {
             panic!("expected local command");
         };
 
         assert_eq!(options.osc52_policy, super::Osc52Policy::WriteOnly);
-        assert!(parse_args(["rssh-app", "local", "--osc52", "bad"]).is_err());
+        assert!(parse_args(["rterm", "local", "--osc52", "bad"]).is_err());
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_agent_connection_request() {
         let parsed =
-            parse_args(["rssh-app", "ssh", "--host", "example.com", "--user", "ops"]).unwrap();
+            parse_args(["rterm", "ssh", "--host", "example.com", "--user", "ops"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
@@ -3335,10 +3412,11 @@ mod tests {
         assert_eq!(request.auth, SshAuthMethod::Agent);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_native_direct_backend() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--native",
             "--host",
@@ -3359,10 +3437,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_native_accept_unknown_host_key_flag() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--native",
             "--accept-unknown-host-key",
@@ -3383,10 +3462,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_native_trust_on_first_use_host_key_flag() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--native",
             "--trust-on-first-use",
@@ -3407,9 +3487,10 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_openssh_config_target() {
-        let parsed = parse_args(["rssh-app", "ssh", "--target", "prod"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "--target", "prod"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
@@ -3429,9 +3510,10 @@ mod tests {
         assert!(!options.native);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_positional_openssh_target() {
-        let parsed = parse_args(["rssh-app", "ssh", "ops@example.com", "--preflight"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "ops@example.com", "--preflight"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
@@ -3450,10 +3532,11 @@ mod tests {
         assert!(options.console.preflight);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_openssh_short_connection_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "-p",
             "2222",
@@ -3484,10 +3567,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_openssh_passthrough_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "-F",
             "C:/Users/ops/.ssh/prod_config",
@@ -3517,9 +3601,10 @@ mod tests {
         assert!(matches!(options.target, super::SshTarget::OpenSsh(_)));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_openssh_jump_and_flag_passthrough_options() {
-        let parsed = parse_args(["rssh-app", "ssh", "-J", "bastion", "-C", "-vv", "prod"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "-J", "bastion", "-C", "-vv", "prod"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
@@ -3529,10 +3614,11 @@ mod tests {
         assert!(matches!(options.target, super::SshTarget::OpenSsh(_)));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_openssh_control_value_passthrough_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "-B",
             "Ethernet",
@@ -3601,10 +3687,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_openssh_control_flag_passthrough_options() {
         let parsed = parse_args([
-            "rssh-app", "ssh", "-f", "-G", "-g", "-K", "-k", "-M", "-n", "-s", "-T", "-t", "-tt",
+            "rterm", "ssh", "-f", "-G", "-g", "-K", "-k", "-M", "-n", "-s", "-T", "-t", "-tt",
             "-X", "-x", "-Y", "-y", "prod",
         ])
         .unwrap();
@@ -3622,10 +3709,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_positional_target_with_remote_command() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "ops@example.com",
             "--preflight",
@@ -3642,9 +3730,10 @@ mod tests {
         assert!(options.console.preflight);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_explicit_target_with_remote_command_without_separator() {
-        let parsed = parse_args(["rssh-app", "ssh", "--target", "prod", "uname", "-a"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "--target", "prod", "uname", "-a"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
@@ -3653,10 +3742,11 @@ mod tests {
         assert_eq!(options.remote_command, ["uname", "-a"]);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_openssh_config_target_with_overrides() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--target",
             "prod",
@@ -3693,10 +3783,10 @@ mod tests {
         assert!(options.remote_command.is_empty());
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_remote_command_for_openssh_config_target() {
-        let parsed =
-            parse_args(["rssh-app", "ssh", "--target", "prod", "--", "uname", "-a"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "--target", "prod", "--", "uname", "-a"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
@@ -3705,10 +3795,11 @@ mod tests {
         assert_eq!(options.remote_command, ["uname", "-a"]);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_remote_command_for_direct_target() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--host",
             "example.com",
@@ -3731,10 +3822,11 @@ mod tests {
         assert_eq!(options.remote_command, ["whoami"]);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_accept_unknown_host_key_without_native() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--accept-unknown-host-key",
             "--host",
@@ -3747,10 +3839,11 @@ mod tests {
         assert!(error.contains("--accept-unknown-host-key requires --native"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_trust_on_first_use_without_native() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--trust-on-first-use",
             "--host",
@@ -3763,10 +3856,11 @@ mod tests {
         assert!(error.contains("--trust-on-first-use requires --native"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_conflicting_native_host_key_policies() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--native",
             "--accept-unknown-host-key",
@@ -3781,10 +3875,11 @@ mod tests {
         assert!(error.contains("only one native SSH host-key policy"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_openssh_passthrough_options_with_native_ssh() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--native",
             "-o",
@@ -3796,18 +3891,18 @@ mod tests {
         assert!(error.contains("OpenSSH passthrough options require the OpenSSH console backend"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_common_openssh_passthrough_options_with_native_ssh() {
-        let error =
-            parse_args(["rssh-app", "ssh", "--native", "-J", "bastion", "prod"]).unwrap_err();
+        let error = parse_args(["rterm", "ssh", "--native", "-J", "bastion", "prod"]).unwrap_err();
 
         assert!(error.contains("OpenSSH passthrough options require the OpenSSH console backend"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_log_path() {
-        let parsed =
-            parse_args(["rssh-app", "ssh", "--target", "prod", "--log", "ssh.log"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "--target", "prod", "--log", "ssh.log"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
@@ -3816,9 +3911,10 @@ mod tests {
         assert_eq!(options.log, Some(std::path::PathBuf::from("ssh.log")));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_preflight() {
-        let parsed = parse_args(["rssh-app", "ssh", "--target", "prod", "--preflight"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "--target", "prod", "--preflight"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
@@ -3827,9 +3923,10 @@ mod tests {
         assert!(options.console.preflight);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_metrics() {
-        let parsed = parse_args(["rssh-app", "ssh", "--target", "prod", "--metrics"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "--target", "prod", "--metrics"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
@@ -3838,9 +3935,10 @@ mod tests {
         assert!(options.console.metrics);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_metrics_json() {
-        let parsed = parse_args(["rssh-app", "ssh", "--target", "prod", "--metrics-json"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "--target", "prod", "--metrics-json"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
@@ -3849,22 +3947,24 @@ mod tests {
         assert!(options.console.metrics_json);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_osc52_policy() {
-        let parsed = parse_args(["rssh-app", "ssh", "--target", "prod", "--osc52", "off"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "--target", "prod", "--osc52", "off"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
         };
 
         assert_eq!(options.osc52_policy, super::Osc52Policy::Off);
-        assert!(parse_args(["rssh-app", "ssh", "--target", "prod", "--osc52", "bad"]).is_err());
+        assert!(parse_args(["rterm", "ssh", "--target", "prod", "--osc52", "bad"]).is_err());
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_forwarding_and_no_shell_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--target",
             "prod",
@@ -3893,11 +3993,12 @@ mod tests {
         assert!(options.no_shell);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_unauthenticated_socks5_on_non_loopback_bind_addresses() {
         for spec in ["0.0.0.0:1080", "192.0.2.10:1080", "[::]:1080", "proxy:1080"] {
             let error = parse_args([
-                "rssh-app",
+                "rterm",
                 "ssh",
                 "--target",
                 "prod",
@@ -3913,11 +4014,12 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn accepts_loopback_only_socks5_bind_addresses() {
         for spec in ["1080", "127.0.0.1:1080", "localhost:1080", "[::1]:1080"] {
             let parsed = parse_args([
-                "rssh-app",
+                "rterm",
                 "ssh",
                 "--target",
                 "prod",
@@ -3935,10 +4037,11 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_openssh_short_forwarding_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "-L",
             "127.0.0.1:15432:db.internal:5432",
@@ -3967,25 +4070,20 @@ mod tests {
         assert!(matches!(options.target, super::SshTarget::OpenSsh(_)));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_empty_ssh_forwarding_spec() {
-        let error = parse_args([
-            "rssh-app",
-            "ssh",
-            "--target",
-            "prod",
-            "--local-forward",
-            " ",
-        ])
-        .unwrap_err();
+        let error =
+            parse_args(["rterm", "ssh", "--target", "prod", "--local-forward", " "]).unwrap_err();
 
         assert!(error.contains("--local-forward cannot be empty"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_no_shell_with_remote_command() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--target",
             "prod",
@@ -3998,10 +4096,11 @@ mod tests {
         assert!(error.contains("--no-shell cannot be combined with a remote command"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_password_connection_request() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--host",
             "example.com",
@@ -4031,10 +4130,11 @@ mod tests {
         assert_eq!(request.auth, SshAuthMethod::PasswordPrompt);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_private_key_connection_request() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--host",
             "example.com",
@@ -4062,10 +4162,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_sftp_openssh_config_target_with_key_and_log() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "sftp",
             "--target",
             "prod",
@@ -4096,9 +4197,10 @@ mod tests {
         assert_eq!(options.log, Some(std::path::PathBuf::from("sftp.log")));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_sftp_positional_openssh_target() {
-        let parsed = parse_args(["rssh-app", "sftp", "ops@example.com", "--port", "2222"]).unwrap();
+        let parsed = parse_args(["rterm", "sftp", "ops@example.com", "--port", "2222"]).unwrap();
 
         let AppCommand::Sftp(options) = parsed else {
             panic!("expected sftp command");
@@ -4116,10 +4218,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_sftp_openssh_short_connection_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "sftp",
             "-P",
             "2222",
@@ -4148,9 +4251,10 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_sftp_openssh_bandwidth_limit_option() {
-        let parsed = parse_args(["rssh-app", "sftp", "-l", "4096", "prod"]).unwrap();
+        let parsed = parse_args(["rterm", "sftp", "-l", "4096", "prod"]).unwrap();
 
         let AppCommand::Sftp(options) = parsed else {
             panic!("expected sftp command");
@@ -4169,10 +4273,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_sftp_openssh_passthrough_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "sftp",
             "-F",
             "C:/Users/ops/.ssh/prod_config",
@@ -4197,10 +4302,10 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_sftp_openssh_jump_and_flag_passthrough_options() {
-        let parsed =
-            parse_args(["rssh-app", "sftp", "-J", "bastion", "-C", "-vv", "prod"]).unwrap();
+        let parsed = parse_args(["rterm", "sftp", "-J", "bastion", "-C", "-vv", "prod"]).unwrap();
 
         let AppCommand::Sftp(options) = parsed else {
             panic!("expected sftp command");
@@ -4209,10 +4314,11 @@ mod tests {
         assert_eq!(options.openssh_args, ["-J", "bastion", "-C", "-vv"]);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_sftp_openssh_batch_and_transfer_passthrough_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "sftp",
             "-b",
             "batch.txt",
@@ -4261,9 +4367,10 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_sftp_preflight() {
-        let parsed = parse_args(["rssh-app", "sftp", "--target", "prod", "--preflight"]).unwrap();
+        let parsed = parse_args(["rterm", "sftp", "--target", "prod", "--preflight"]).unwrap();
 
         let AppCommand::Sftp(options) = parsed else {
             panic!("expected sftp command");
@@ -4272,9 +4379,10 @@ mod tests {
         assert!(options.console.preflight);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_sftp_metrics() {
-        let parsed = parse_args(["rssh-app", "sftp", "--target", "prod", "--metrics"]).unwrap();
+        let parsed = parse_args(["rterm", "sftp", "--target", "prod", "--metrics"]).unwrap();
 
         let AppCommand::Sftp(options) = parsed else {
             panic!("expected sftp command");
@@ -4283,10 +4391,10 @@ mod tests {
         assert!(options.console.metrics);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_sftp_metrics_json() {
-        let parsed =
-            parse_args(["rssh-app", "sftp", "--target", "prod", "--metrics-json"]).unwrap();
+        let parsed = parse_args(["rterm", "sftp", "--target", "prod", "--metrics-json"]).unwrap();
 
         let AppCommand::Sftp(options) = parsed else {
             panic!("expected sftp command");
@@ -4295,10 +4403,11 @@ mod tests {
         assert!(options.console.metrics_json);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_upload_for_openssh_config_target() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "--target",
             "prod",
@@ -4341,10 +4450,11 @@ mod tests {
         assert_eq!(options.log, Some(std::path::PathBuf::from("scp.log")));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_positional_openssh_target() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "ops@example.com",
             "--upload",
@@ -4369,10 +4479,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_style_upload() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "local.txt",
             "ops@example.com:/tmp/remote.txt",
@@ -4402,10 +4513,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_style_upload_with_multiple_sources() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "app.log",
             "audit.log",
@@ -4436,10 +4548,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_short_connection_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "-P",
             "2222",
@@ -4478,10 +4591,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_bandwidth_limit_option() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "-l",
             "4096",
@@ -4507,10 +4621,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_preserve_times_option() {
         let parsed =
-            parse_args(["rssh-app", "scp", "-p", "local.txt", "prod:/tmp/remote.txt"]).unwrap();
+            parse_args(["rterm", "scp", "-p", "local.txt", "prod:/tmp/remote.txt"]).unwrap();
 
         let AppCommand::Scp(options) = parsed else {
             panic!("expected scp command");
@@ -4526,10 +4641,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_remote_remote_and_subsystem_flags() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "-R",
             "-s",
@@ -4552,10 +4668,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_remote_remote_flag_without_consuming_source() {
         let parsed =
-            parse_args(["rssh-app", "scp", "-R", "local.txt", "prod:/tmp/remote.txt"]).unwrap();
+            parse_args(["rterm", "scp", "-R", "local.txt", "prod:/tmp/remote.txt"]).unwrap();
 
         let AppCommand::Scp(options) = parsed else {
             panic!("expected scp command");
@@ -4571,10 +4688,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_subsystem_flag_without_consuming_source() {
         let parsed =
-            parse_args(["rssh-app", "scp", "-s", "local.txt", "prod:/tmp/remote.txt"]).unwrap();
+            parse_args(["rterm", "scp", "-s", "local.txt", "prod:/tmp/remote.txt"]).unwrap();
 
         let AppCommand::Scp(options) = parsed else {
             panic!("expected scp command");
@@ -4590,10 +4708,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_passthrough_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "-F",
             "C:/Users/ops/.ssh/prod_config",
@@ -4619,10 +4738,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_jump_and_flag_passthrough_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "-J",
             "bastion",
@@ -4640,10 +4760,11 @@ mod tests {
         assert_eq!(options.openssh_args, ["-J", "bastion", "-C", "-vv"]);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_protocol_and_transfer_passthrough_options() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "-3",
             "-O",
@@ -4685,10 +4806,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_style_download() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "ops@example.com:/tmp/remote.txt",
             "local.txt",
@@ -4718,10 +4840,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_openssh_style_download_with_multiple_sources() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "ops@example.com:/var/log/app.log",
             "ops@example.com:/var/log/audit.log",
@@ -4755,10 +4878,11 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_preflight() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "--target",
             "prod",
@@ -4776,10 +4900,11 @@ mod tests {
         assert!(options.console.preflight);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_metrics() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "--target",
             "prod",
@@ -4797,10 +4922,11 @@ mod tests {
         assert!(options.console.metrics);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_scp_metrics_json() {
         let parsed = parse_args([
-            "rssh-app",
+            "rterm",
             "scp",
             "--target",
             "prod",
@@ -4818,10 +4944,11 @@ mod tests {
         assert!(options.console.metrics_json);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_ssh_password_command_line_secret() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--host",
             "example.com",
@@ -4835,10 +4962,11 @@ mod tests {
         assert!(error.contains("unexpected ssh option: secret"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_ssh_passphrase_command_line_secret() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--host",
             "example.com",
@@ -4858,18 +4986,21 @@ mod tests {
     fn help_text_does_not_request_secret_values() {
         let help = super::help_text();
 
-        assert!(help.contains("--password"));
-        assert!(help.contains("--native"));
-        assert!(help.contains("--accept-unknown-host-key"));
-        assert!(help.contains("--target"));
-        assert!(help.contains("rssh-app console"));
+        assert_eq!(help.contains("--password"), cfg!(feature = "ssh"));
+        assert_eq!(help.contains("--native"), cfg!(feature = "ssh"));
+        assert_eq!(
+            help.contains("--accept-unknown-host-key"),
+            cfg!(feature = "ssh")
+        );
+        assert_eq!(help.contains("--target"), cfg!(feature = "ssh"));
+        assert!(help.contains("rterm console"));
         assert!(help.contains("--cwd CWD"));
         assert!(help.contains("--workspace WORKSPACE"));
         assert!(help.contains("--class CLASS"));
         assert!(help.contains("--no-auto-connect"));
         assert!(help.contains("--always-new-process"));
         assert!(help.contains("--new-tab"));
-        assert!(help.contains("rssh-app <command> --help"));
+        assert!(help.contains("rterm <command> --help"));
         assert!(!help.contains("PASSWORD"));
         assert!(!help.contains("PASSPHRASE"));
     }
@@ -4887,36 +5018,39 @@ mod tests {
         assert!(help.contains("may be used with --skip-config"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_subcommand_help_before_command_separator() {
         assert_eq!(
-            parse_args(["rssh-app", "local", "--help"]).unwrap(),
+            parse_args(["rterm", "local", "--help"]).unwrap(),
             AppCommand::Help
         );
         assert_eq!(
-            parse_args(["rssh-app", "window", "-h"]).unwrap(),
+            parse_args(["rterm", "window", "-h"]).unwrap(),
             AppCommand::Help
         );
         assert_eq!(
-            parse_args(["rssh-app", "ssh", "--help"]).unwrap(),
+            parse_args(["rterm", "ssh", "--help"]).unwrap(),
             AppCommand::Help
         );
         assert_eq!(
-            parse_args(["rssh-app", "profile", "--help"]).unwrap(),
+            parse_args(["rterm", "profile", "--help"]).unwrap(),
             AppCommand::Help
         );
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_ssh_missing_host_or_user() {
-        assert!(parse_args(["rssh-app", "ssh", "--user", "ops"]).is_err());
-        assert!(parse_args(["rssh-app", "ssh", "--host", "example.com"]).is_err());
+        assert!(parse_args(["rterm", "ssh", "--user", "ops"]).is_err());
+        assert!(parse_args(["rterm", "ssh", "--host", "example.com"]).is_err());
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_ssh_host_and_target_together() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--host",
             "example.com",
@@ -4930,17 +5064,19 @@ mod tests {
         assert!(error.contains("only one of --host or --target can be selected"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_positional_ssh_target_with_explicit_target() {
         let error =
-            parse_args(["rssh-app", "ssh", "ops@example.com", "--target", "prod"]).unwrap_err();
+            parse_args(["rterm", "ssh", "ops@example.com", "--target", "prod"]).unwrap_err();
 
         assert!(error.contains("only one SSH target can be selected"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_ssh_native_openssh_config_target() {
-        let parsed = parse_args(["rssh-app", "ssh", "--native", "--target", "prod"]).unwrap();
+        let parsed = parse_args(["rterm", "ssh", "--native", "--target", "prod"]).unwrap();
 
         let AppCommand::Ssh(options) = parsed else {
             panic!("expected ssh command");
@@ -4949,11 +5085,12 @@ mod tests {
         assert!(matches!(options.target, super::SshTarget::OpenSsh(_)));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_ssh_conflicting_auth_methods() {
         assert!(
             parse_args([
-                "rssh-app",
+                "rterm",
                 "ssh",
                 "--host",
                 "example.com",
@@ -4969,19 +5106,20 @@ mod tests {
 
     #[test]
     fn rejects_unknown_command() {
-        assert!(parse_args(["rssh-app", "wat"]).is_err());
+        assert!(parse_args(["rterm", "wat"]).is_err());
     }
 
     #[test]
     fn rejects_partial_local_size() {
-        assert!(parse_args(["rssh-app", "local", "--cols", "100"]).is_err());
-        assert!(parse_args(["rssh-app", "local", "--rows", "30"]).is_err());
+        assert!(parse_args(["rterm", "local", "--cols", "100"]).is_err());
+        assert!(parse_args(["rterm", "local", "--rows", "30"]).is_err());
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_gui_ssh_with_hybrid_renderer_by_default() {
         let AppCommand::Ssh(options) =
-            parse_args(["rssh-app", "ssh", "--gui", "--target", "prod"]).unwrap()
+            parse_args(["rterm", "ssh", "--gui", "--target", "prod"]).unwrap()
         else {
             panic!("expected SSH command");
         };
@@ -4992,10 +5130,11 @@ mod tests {
         assert!(!options.benchmark_startup);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_gui_ssh_renderer_override_and_startup_benchmark() {
         let AppCommand::Ssh(options) = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--target",
             "prod",
@@ -5013,11 +5152,12 @@ mod tests {
         assert!(options.benchmark_startup);
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_gui_ssh_forwarding_no_shell_and_openssh_passthrough() {
         for args in [
             vec![
-                "rssh-app",
+                "rterm",
                 "ssh",
                 "--gui",
                 "--target",
@@ -5025,10 +5165,8 @@ mod tests {
                 "-L",
                 "127.0.0.1:1:db:1",
             ],
-            vec!["rssh-app", "ssh", "--gui", "--target", "prod", "--no-shell"],
-            vec![
-                "rssh-app", "ssh", "--gui", "--target", "prod", "-J", "bastion",
-            ],
+            vec!["rterm", "ssh", "--gui", "--target", "prod", "--no-shell"],
+            vec!["rterm", "ssh", "--gui", "--target", "prod", "-J", "bastion"],
         ] {
             let error = parse_args(args).unwrap_err();
             assert!(
@@ -5038,10 +5176,11 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn renderer_parser_rejects_unknown_values() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "ssh",
             "--gui",
             "--target",
@@ -5054,18 +5193,20 @@ mod tests {
         assert!(error.contains("renderer"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_renderer_without_gui_even_when_auto_is_selected() {
         let error =
-            parse_args(["rssh-app", "ssh", "--target", "prod", "--renderer", "auto"]).unwrap_err();
+            parse_args(["rterm", "ssh", "--target", "prod", "--renderer", "auto"]).unwrap_err();
 
         assert!(error.contains("--renderer requires --gui"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn parses_hermetic_ssh1_diagnostic_fixture_options() {
         let AppCommand::DiagnosticGui(options) = parse_args([
-            "rssh-app",
+            "rterm",
             "diagnostic-gui",
             "--run-id",
             "fixture-run",
@@ -5108,7 +5249,7 @@ mod tests {
             ("gl", DiagnosticGpuBackend::Gl),
         ] {
             let AppCommand::DiagnosticGui(options) = parse_args([
-                "rssh-app",
+                "rterm",
                 "diagnostic-gui",
                 "--run-id",
                 "backend-probe",
@@ -5132,7 +5273,7 @@ mod tests {
     #[test]
     fn diagnostic_gpu_backend_rejects_unsupported_value() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "diagnostic-gui",
             "--run-id",
             "backend-probe",
@@ -5151,7 +5292,7 @@ mod tests {
     #[test]
     fn diagnostic_gpu_backend_rejects_cpu_renderer_combination() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "diagnostic-gui",
             "--run-id",
             "backend-probe",
@@ -5199,7 +5340,7 @@ mod tests {
             ("full-frame", DiagnosticAttributionStage::FullFrame),
         ] {
             let AppCommand::DiagnosticGui(options) = parse_args([
-                "rssh-app",
+                "rterm",
                 "diagnostic-gui",
                 "--run-id",
                 "attribution-stage",
@@ -5217,7 +5358,7 @@ mod tests {
         }
 
         let invalid = parse_args([
-            "rssh-app",
+            "rterm",
             "diagnostic-gui",
             "--run-id",
             "attribution-stage",
@@ -5232,7 +5373,7 @@ mod tests {
         assert!(invalid.contains("unsupported diagnostic attribution stage"));
 
         let ssh1 = parse_args([
-            "rssh-app",
+            "rterm",
             "diagnostic-gui",
             "--run-id",
             "attribution-stage",
@@ -5252,7 +5393,7 @@ mod tests {
         use rssh_diagnostics::{DiagnosticFontMode, DiagnosticFontSpecimen};
 
         let AppCommand::DiagnosticGui(options) = parse_args([
-            "rssh-app",
+            "rterm",
             "diagnostic-gui",
             "--run-id",
             "font-proof",
@@ -5278,7 +5419,7 @@ mod tests {
             vec!["--font-specimen", "cjk"],
         ] {
             let mut args = vec![
-                "rssh-app",
+                "rterm",
                 "diagnostic-gui",
                 "--run-id",
                 "font-proof",
@@ -5296,7 +5437,7 @@ mod tests {
     #[test]
     fn diagnostic_font_mode_rejects_cpu_renderer() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "diagnostic-gui",
             "--run-id",
             "font-proof",
@@ -5315,10 +5456,11 @@ mod tests {
         assert!(error.contains("require --renderer auto or gpu"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn diagnostic_font_mode_rejects_ssh1_scenario() {
         let error = parse_args([
-            "rssh-app",
+            "rterm",
             "diagnostic-gui",
             "--run-id",
             "font-proof",
@@ -5343,10 +5485,11 @@ mod tests {
         assert!(error.contains("font proof requires the empty-window scenario"));
     }
 
+    #[cfg(feature = "ssh")]
     #[test]
     fn rejects_non_loopback_or_incomplete_ssh1_diagnostic_fixture() {
         let non_loopback = parse_args([
-            "rssh-app",
+            "rterm",
             "diagnostic-gui",
             "--run-id",
             "fixture-run",
@@ -5365,7 +5508,7 @@ mod tests {
         assert!(non_loopback.contains("loopback"));
 
         let incomplete = parse_args([
-            "rssh-app",
+            "rterm",
             "diagnostic-gui",
             "--run-id",
             "fixture-run",

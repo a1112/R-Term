@@ -313,7 +313,7 @@ fn app_recursive_scp_roundtrip(server: &HermeticSshServer, client: &TempHome) {
 }
 
 fn app_command(server: &HermeticSshServer) -> Command {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_rssh-app"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_rterm"));
     server.temp_home().apply_to(&mut command);
     command
         .env_remove("SSH_AUTH_SOCK")

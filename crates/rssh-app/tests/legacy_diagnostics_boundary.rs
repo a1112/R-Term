@@ -50,7 +50,7 @@ fn legacy_diagnostic_commands_fail_without_metrics_or_startup_markers() {
         ],
     ];
     for args in cases {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_rssh-app"));
+        let mut command = Command::new(env!("CARGO_BIN_EXE_rterm"));
         command.args(*args);
         let output = ChildGuard::spawn(command, Duration::from_secs(15))
             .expect("bounded legacy diagnostic process")

@@ -6,8 +6,11 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[features]
+ssh = ["dep:rssh-types"]
+
 [dependencies]
-rssh-types = { git = "file:///H:/project/R-SSH-split-trial/R-SSH", rev = "c2c515df0e532271abe32aac63c62b91fc75864d" }
+rssh-types = { optional = true, git = "file:///H:/project/R-SSH-split-trial/R-SSH", rev = "c2c515df0e532271abe32aac63c62b91fc75864d" }
 
 [lints]
 workspace = true

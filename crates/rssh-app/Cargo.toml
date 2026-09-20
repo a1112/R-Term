@@ -1,31 +1,38 @@
 [package]
 name = "rssh-app"
+default-run = "rterm"
+autobins = false
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[[bin]]
+name = "rterm"
+path = "src/main.rs"
+
 [features]
-default = ["developer-full"]
+default = ["production-gui"]
 developer-full = [
     "production-gui",
+    "ssh",
     "image-gif",
     "image-legacy",
     "transfer-tools",
     "diagnostic-tools",
 ]
-production-gui = ["native-gui", "ssh", "local-pty", "image-basic", "production-fonts"]
+production-gui = ["native-gui", "local-pty", "image-basic", "production-fonts"]
 production-fonts = ["rssh-fonts/shared-source-ownership"]
 # Reserved for verified frozen-source preparation; never enabled by normal profiles.
 rterm-legacy-0-1 = []
 native-gui = []
-ssh = []
+ssh = ["dep:rssh-ssh", "dep:rpassword"]
 local-pty = []
 image-basic = ["rterm-render-cpu/image-basic", "rterm-render-wgpu/image-basic"]
 image-gif = ["rterm-render-cpu/image-gif", "rterm-render-wgpu/image-gif"]
 image-legacy = ["rterm-render-cpu/image-legacy", "rterm-render-wgpu/image-legacy"]
-transfer-tools = []
+transfer-tools = ["ssh"]
 diagnostic-tools = ["rssh-fonts/diagnostic-tools"]
 functional-test-observer = ["dep:rssh-functional-tests"]
 
@@ -36,7 +43,7 @@ crossterm = "0.29"
 notify = "8"
 pollster = "0.4"
 regex = "1"
-rpassword = "7"
+rpassword = { version = "7", optional = true }
 rssh-config = { path = "../rssh-config", version = "0.1.0" }
 rssh-core = { path = "../rssh-core", version = "0.1.0" }
 rssh-diagnostics = { path = "../rssh-diagnostics", version = "0.1.0", default-features = false }
@@ -48,7 +55,7 @@ rterm-render-core = { path = "../rterm-render-core", version = "0.1.0" }
 rterm-render-cpu = { path = "../rterm-render-cpu", version = "0.1.0", default-features = false }
 rterm-render-wgpu = { path = "../rterm-render-wgpu", version = "0.1.0", default-features = false }
 rterm-runtime = { path = "../rssh-runtime", version = "0.1.0" }
-rssh-ssh = { package = "rterm-ssh-adapter", path = "../rssh-ssh", version = "0.1.0", features = ["runtime-adapter"] }
+rssh-ssh = { optional = true, package = "rterm-ssh-adapter", path = "../rssh-ssh", version = "0.1.0", features = ["runtime-adapter"] }
 rssh-terminal = { package = "rterm-terminal", path = "../rssh-terminal", version = "0.1.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -71,3 +78,19 @@ sha2 = "0.11"
 
 [lints]
 workspace = true
+
+[[test]]
+name = "openssh_loopback"
+required-features = ["ssh"]
+
+[[test]]
+name = "transfer_loopback"
+required-features = ["transfer-tools"]
+
+[[test]]
+name = "diagnostics_ssh1"
+required-features = ["diagnostic-tools", "ssh"]
+
+[[test]]
+name = "diagnostics_gui"
+required-features = ["diagnostic-tools"]
