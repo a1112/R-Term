@@ -10,7 +10,7 @@ version.workspace = true
 ssh = ["dep:rssh-types"]
 
 [dependencies]
-rssh-types = { optional = true, git = "file:///H:/project/R-SSH-split-trial/R-SSH", rev = "c2c515df0e532271abe32aac63c62b91fc75864d" }
+rssh-types = { optional = true, git = "https://github.com/a1112/R-SSH.git", rev = "3fdda8299ff6e066b4272a7a064d135e3be38647" }
 
 [lints]
 workspace = true

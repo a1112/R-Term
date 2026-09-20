@@ -3,7 +3,7 @@
 This repository owns the native graphical application, window handling, terminal
 emulation and runtime, CPU/GPU renderers, fonts, clipboard/input, local PTY,
 Web UI, Tauri application, graphical configuration and graphical diagnostics.
-The executable is `rterm`. Internal `rssh-*` crate names are retained during the trial.
+The executable is `rterm`. Internal `rssh-*` crate names are retained for source compatibility.
 
 ## Local terminal (default, SSH disabled)
 
@@ -53,12 +53,10 @@ the entire workspace, run `npm --prefix web ci` and `npm --prefix web run build`
 Tauri embeds the resulting Web assets.
 
 When enabled, SSH transport comes from the separate R-SSH repository, pinned to an immutable
-local Git commit in Cargo.toml/Cargo.lock. There are no sibling path dependencies.
+GitHub commit in Cargo.toml/Cargo.lock. There are no sibling path dependencies.
 The GUI-owned `rterm-ssh-adapter` bridges SSH sessions to the terminal runtime.
-Relocation to another machine requires making that Git source available or
-replacing its local URL with an approved repository URL while retaining the SHA.
-Cargo may still need to resolve/fetch an optional Git source when creating its
-lockfile/cache; disabling a feature controls compilation, not Cargo's resolver.
+Cargo may resolve/fetch the pinned optional Git source for its lockfile/cache,
+even when the extension is disabled. No local trial directory is required.
 
 ## Validation
 
@@ -71,7 +69,7 @@ cargo test --locked -p rssh-app --features developer-full --bin rterm --test fea
 The graph check covers default, no-default-features and SSH-enabled builds.
 See [Windows validation](docs/trial/2026-09-20-optional-ssh.md) for the trial results.
 
-Historical documentation and scripts still describe the monolith. Historical CI
-workflows are archived under `docs/trial/legacy-workflows`; they are not evidence
-that this trial is certified. Stage 7 remains NO-GO. No remote is configured.
-The original source checkout remains the release source and rollback point.
+Historical monolith workflows remain archived under `docs/trial/legacy-workflows`.
+Active Windows CI validates the split repository. Cross-platform protected CI
+certification remains outstanding. See [formal split record](docs/formal-split.md)
+for provenance, ownership and rollback.
