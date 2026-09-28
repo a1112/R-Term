@@ -699,6 +699,28 @@ const NERD_FONTS_CHAR_SELECT_CANDIDATES: &[(char, &str)] = &[
 const UNICODE_NAMES_CHAR_SELECT_CANDIDATES: &[char] =
     &['A', 'B', 'C', '0', '1', 'α', 'β', 'Ω', '中', '字'];
 
+fn build_window_event_loop(
+    backend: crate::cli::DisplayBackend,
+) -> Result<EventLoop<WindowUserEvent>, Box<dyn Error>> {
+    use crate::cli::DisplayBackend;
+    let mut builder = EventLoop::<WindowUserEvent>::with_user_event();
+    #[cfg(target_os = "linux")]
+    match backend {
+        DisplayBackend::Auto => {},
+        DisplayBackend::Wayland => {
+            winit::platform::wayland::EventLoopBuilderExtWayland::with_wayland(&mut builder);
+        },
+        DisplayBackend::X11 => {
+            winit::platform::x11::EventLoopBuilderExtX11::with_x11(&mut builder);
+        },
+    }
+    #[cfg(not(target_os = "linux"))]
+    if backend != DisplayBackend::Auto {
+        return Err("explicit display backends are only supported on Linux".into());
+    }
+    Ok(builder.build()?)
+}
+
 pub fn run(
     options: &WindowOptions,
     composition: RuntimeComposition,
@@ -716,7 +738,7 @@ pub fn run(
         eprintln!("failed to load WezTerm config: {diagnostic}");
     }
 
-    let event_loop = EventLoop::<WindowUserEvent>::with_user_event().build()?;
+    let event_loop = build_window_event_loop(options.display_backend)?;
     let event_proxy = event_loop.create_proxy();
     let config_event_proxy = event_proxy.clone();
     crate::stage7_attribution::audit_product_service_start(
@@ -996,7 +1018,22 @@ fn window_attributes_with_class(
     }
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "linux")]
+fn window_attributes_with_class(
+    attributes: WindowAttributes,
+    window_class: Option<&str>,
+) -> WindowAttributes {
+    // Both Linux extensions populate winit's shared ApplicationName: Wayland
+    // uses the general name as app_id, while X11 exposes general/instance as WM_CLASS.
+    match window_class {
+        Some(name) => winit::platform::wayland::WindowAttributesExtWayland::with_name(
+            attributes, name, name,
+        ),
+        None => attributes,
+    }
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
 fn window_attributes_with_class(
     attributes: WindowAttributes,
     window_class: Option<&str>,
@@ -3518,6 +3555,7 @@ fn configured_startup_app_with_constructor(
     let mut app = constructor(startup);
     app.metrics.mark_config_started();
     app.set_base_config(lifecycle.effective(), ReloadDisposition::SilentStartup);
+    app.set_renderer_mode(options.renderer);
     app.metrics.mark_config_finished();
     Ok(ConfiguredStartupApp {
         app,

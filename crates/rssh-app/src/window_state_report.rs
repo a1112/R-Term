@@ -340,6 +340,8 @@ mod tests {
 
     fn startup_options(config: WindowConfigOptions) -> WindowOptions {
         WindowOptions {
+            renderer: crate::cli::RendererMode::Auto,
+            display_backend: crate::cli::DisplayBackend::Auto,
             config,
             frame_limit: None,
             workspace: None,

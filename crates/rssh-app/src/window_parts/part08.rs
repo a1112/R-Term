@@ -563,9 +563,9 @@ impl NativeWindowApp {
                 window: None,
                 bootstrap_surface: None,
                 bootstrap_frame: Vec::new(),
-                // Existing window launches retain their synchronous GPU path;
-                // the SSH GUI entry point overrides this with the requested
-                // hybrid/cpu mode before the event loop starts.
+                // Low-level constructors keep the legacy GPU default. Public
+                // local/SSH entry points apply the requested renderer before
+                // the event loop starts; new windows inherit that selection.
                 renderer_mode: RendererMode::Gpu,
                 presentation_owner: PresentationOwner::Bootstrap,
                 deferred_gpu_generation: 0,

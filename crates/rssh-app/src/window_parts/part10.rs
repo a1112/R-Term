@@ -7193,6 +7193,11 @@ fn lua_window_effective_config_field_text_part3(
             return Ok(false);
         }
 
+        if !focused {
+            self.ime_preedit = None;
+            self.dead_key_active = false;
+            self.dead_key_text = None;
+        }
         self.window_focused = focused;
         self.mouse_click_may_focus_window = focused;
         if !focused && let Some(UiKeyReleasePending::FullBarrier(key)) = self.ui_key_release_pending

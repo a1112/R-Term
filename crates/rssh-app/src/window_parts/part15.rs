@@ -2520,14 +2520,28 @@ fn window_hyperlink_activation_modifiers(modifiers: ModifiersState) -> bool {
     modifiers.control_key() && !modifiers.shift_key() && !modifiers.alt_key()
 }
 
+// Wayland/X11 selection ownership must survive the copy callback. The UI
+// thread owns this handle until shutdown; initialization and access are lazy.
+thread_local! {
+    static WINDOW_CLIPBOARD: RefCell<Option<arboard::Clipboard>> = const { RefCell::new(None) };
+}
+
+fn with_window_clipboard<T>(operation: impl FnOnce(&mut arboard::Clipboard) -> Option<T>) -> Option<T> {
+    WINDOW_CLIPBOARD.with(|owner| {
+        let mut owner = owner.borrow_mut();
+        if owner.is_none() {
+            *owner = Some(arboard::Clipboard::new().ok()?);
+        }
+        operation(owner.as_mut()?)
+    })
+}
+
 fn read_window_clipboard_text() -> Option<String> {
-    arboard::Clipboard::new().ok()?.get_text().ok()
+    with_window_clipboard(|clipboard| clipboard.get_text().ok())
 }
 
 fn write_window_clipboard_text(text: &str) -> bool {
-    arboard::Clipboard::new()
-        .and_then(|mut clipboard| clipboard.set_text(text.to_owned()))
-        .is_ok()
+    with_window_clipboard(|clipboard| clipboard.set_text(text.to_owned()).ok()).is_some()
 }
 
 fn read_window_primary_selection_text() -> Option<String> {
@@ -3168,6 +3182,9 @@ impl ApplicationHandler<WindowUserEvent> for NativeWindowManager {
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         self.finish_deferred_config_if_ready();
         self.start_deferred_config_if_ready();
+        // Eagerly configured local CPU/auto windows also need their PTY once
+        // the first frame has presented; no deferred-config completion fires.
+        self.start_configured_transports_after_present();
         self.reap_retired_apps();
         if let Err(error) = self.materialize_pending_apps(event_loop) {
             eprintln!("window error: {error}");

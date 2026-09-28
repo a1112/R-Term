@@ -1026,6 +1026,8 @@ command = ["cmd.exe", "/K", "echo", "window-profile-smoke"]
         assert_eq!(
             command,
             AppCommand::Window(WindowOptions {
+                renderer: crate::cli::RendererMode::Auto,
+                display_backend: crate::cli::DisplayBackend::Auto,
                 config: WindowConfigOptions::default(),
                 frame_limit: Some(120),
                 workspace: None,
@@ -1096,6 +1098,8 @@ metrics = "json"
         assert_eq!(
             command,
             AppCommand::Window(WindowOptions {
+                renderer: crate::cli::RendererMode::Auto,
+                display_backend: crate::cli::DisplayBackend::Auto,
                 config: WindowConfigOptions::default(),
                 frame_limit: Some(3),
                 workspace: None,

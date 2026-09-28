@@ -1963,6 +1963,8 @@
 
     fn startup_test_options(config: WindowConfigOptions) -> WindowOptions {
         WindowOptions {
+            renderer: crate::cli::RendererMode::Auto,
+            display_backend: crate::cli::DisplayBackend::Auto,
             config,
             frame_limit: None,
             workspace: None,
@@ -1988,6 +1990,14 @@
             xdg_config_dirs: Vec::new(),
             environment_config_file: None,
         }
+    }
+
+    #[test]
+    fn configured_window_applies_cli_renderer_before_opening() {
+        let mut options = startup_test_options(WindowConfigOptions::default());
+        options.renderer = crate::cli::RendererMode::Cpu;
+        let configured = super::configured_startup_app_for_test(&options, startup_test_discovery()).unwrap();
+        assert_eq!(configured.app.renderer_mode, crate::cli::RendererMode::Cpu);
     }
 
     fn install_reload_transaction_observers(

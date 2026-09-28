@@ -170,3 +170,51 @@ fn renderer_timing_and_cursor_values_share_the_applied_config_snapshot() {
     assert!(app.applied_config.force_reverse_video_cursor);
     assert_eq!(app.max_fps, 144);
 }
+
+#[test]
+fn focus_loss_clears_ime_composition() {
+    let mut app = NativeWindowApp::new(Some(0));
+    app.window_focused = true;
+    app.handle_ime_preedit("zhong中文");
+    assert!(app.ime_preedit.is_some());
+    app.handle_focus_changed(false).unwrap();
+    assert!(app.ime_preedit.is_none(), "stale composition must not cross focus changes");
+}
+
+#[test]
+fn renderer_selection_survives_new_window_and_reload() {
+    let mut app = NativeWindowApp::new(Some(0));
+    app.set_renderer_mode(crate::cli::RendererMode::Cpu);
+    let mut child = NativeWindowApp::new(Some(0));
+    child.inherit_effective_config_from(&app);
+    child.set_config_overrides(NativeConfigSnapshot::default());
+    assert_eq!(child.renderer_mode, crate::cli::RendererMode::Cpu);
+}
+
+#[test]
+fn chinese_preedit_uses_two_cells_per_character() {
+    let mut app = NativeWindowApp::new(Some(0));
+    app.handle_ime_preedit("中文");
+    let layout = app.pane_render_layout();
+    let cells = app.ime_preedit_cells(&layout);
+    assert_eq!(cells.len(), 4);
+    assert_eq!(cells[0].text.as_ref(), "中");
+    assert_eq!(cells[0].columns, 2);
+    assert!(cells[1].continuation);
+    assert_eq!(cells[2].text.as_ref(), "文");
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+#[ignore = "requires a Wayland compositor with data-control, with DISPLAY unset"]
+fn native_wayland_clipboard_survives_copy_callback() {
+    assert!(std::env::var_os("WAYLAND_DISPLAY").is_some());
+    assert!(std::env::var_os("DISPLAY").is_none());
+    assert!(super::write_window_clipboard_text("R-Term 中文 clipboard"));
+    let received = std::process::Command::new("wl-paste")
+        .args(["--no-newline", "--type", "text/plain;charset=utf-8"])
+        .output()
+        .expect("wl-paste installed in the Wayland test environment");
+    assert!(received.status.success(), "{}", String::from_utf8_lossy(&received.stderr));
+    assert_eq!(String::from_utf8(received.stdout).unwrap(), "R-Term 中文 clipboard");
+}

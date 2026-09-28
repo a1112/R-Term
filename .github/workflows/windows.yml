@@ -17,6 +17,6 @@ jobs:
       - run: python scripts/ci/check-rterm-feature-boundary.py
       - run: cargo fmt --all --check
       - run: cargo test --locked -p rssh-app --no-default-features --bin rterm -j 2
-      - run: cargo test --locked -p rssh-app --test feature_boundary --test local_pty --test native_window_e2e -j 2
+      - run: cargo test --locked -p rssh-app --test feature_boundary --test local_pty --test native_window_e2e --test native_wayland -j 2
       - run: cargo check --locked -p rssh-app --features ssh -j 2
       - run: cargo build --locked -j 2

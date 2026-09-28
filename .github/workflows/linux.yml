@@ -1,0 +1,42 @@
+name: Linux native terminal
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      RUST_TEST_THREADS: "4"
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native build and compositor dependencies
+        run: sudo apt-get update && sudo apt-get install -y libwayland-dev libxkbcommon-dev libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev libegl1-mesa-dev mesa-vulkan-drivers fonts-noto-cjk sway wl-clipboard
+      - run: python3 scripts/ci/check-rterm-feature-boundary.py
+      - run: cargo test --locked -p rssh-app --no-default-features --bin rterm -j 2
+      - run: cargo test --locked -p rssh-app --test feature_boundary --test local_pty --test native_wayland -j 2
+      - run: cargo check --locked -p rssh-app --features ssh -j 2
+      - name: Native Wayland CPU presentation and clipboard
+        shell: bash
+        run: |
+          export XDG_RUNTIME_DIR="$(mktemp -d)"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          export WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1
+          printf 'output * resolution 1280x720\nseat seat0 fallback true\n' > "$RUNNER_TEMP/sway.conf"
+          dbus-run-session -- sway --unsupported-gpu -c "$RUNNER_TEMP/sway.conf" > "$RUNNER_TEMP/sway.log" 2>&1 &
+          compositor=$!
+          trap 'kill "$compositor" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 100); do
+            socket=$(find "$XDG_RUNTIME_DIR" -maxdepth 1 -type s -name 'wayland-*' | head -n 1)
+            [ -z "$socket" ] || break
+            sleep 0.1
+          done
+          test -n "$socket" || { cat "$RUNNER_TEMP/sway.log"; exit 1; }
+          export WAYLAND_DISPLAY="${socket##*/}"
+          unset DISPLAY
+          timeout 60 cargo test --locked -p rssh-app --test native_wayland -- --ignored --nocapture
+          timeout 60 cargo test --locked -p rssh-app --no-default-features --bin rterm native_wayland_clipboard_survives_copy_callback -- --ignored --nocapture

@@ -346,6 +346,8 @@ pub struct WindowConfigOptions {
 )]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WindowOptions {
+    pub renderer: RendererMode,
+    pub display_backend: DisplayBackend,
     pub config: WindowConfigOptions,
     pub frame_limit: Option<u64>,
     pub workspace: Option<String>,
@@ -358,6 +360,36 @@ pub struct WindowOptions {
     pub state_json: bool,
     pub command: PtyCommand,
     pub log: Option<PathBuf>,
+}
+
+/// Explicit Linux backend selections are strict; winit must not fall back.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum DisplayBackend {
+    #[default]
+    Auto,
+    Wayland,
+    X11,
+}
+
+impl DisplayBackend {
+    fn parse(value: &str) -> Result<Self, String> {
+        let backend = match value {
+            "auto" => Self::Auto,
+            "wayland" => Self::Wayland,
+            "x11" => Self::X11,
+            _ => {
+                return Err(format!(
+                    "invalid display backend: {value}; expected auto, wayland, or x11"
+                ));
+            }
+        };
+        if !cfg!(target_os = "linux") && backend != Self::Auto {
+            return Err(format!(
+                "display backend {value} is only supported on Linux"
+            ));
+        }
+        Ok(backend)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -408,6 +440,8 @@ where
     let (config, command_index) = parse_global_window_config_prefix(&args)?;
     let Some(command) = args.get(command_index) else {
         return Ok(AppCommand::Window(WindowOptions {
+            renderer: crate::cli::RendererMode::Auto,
+            display_backend: crate::cli::DisplayBackend::Auto,
             config,
             frame_limit: None,
             workspace: None,
@@ -702,8 +736,8 @@ Usage:
   rterm version [--json]
   rterm self-test [--json]
   rterm bench [--json] [--workload plain-scroll|ansi-scroll|ansi-scroll-query] [--bytes N] [--chunk-size N] [--render-frames N] [--idle-ms N] [--min-throughput-bytes-per-sec N] [--max-chunk-p95-us N] [--max-render-frame-p95-us N] [--max-idle-cpu-percent N] [--max-process-memory-bytes N] [--cols N --rows N]
-  rterm window [--frames N] [--cwd CWD] [--workspace WORKSPACE] [--class CLASS] [--position POSITION] [--domain DOMAIN] [--attach] [--no-auto-connect] [--always-new-process] [--new-tab] [--osc52 off|write|read-write] [--metrics | --metrics-json | --state | --state-json] [--log PATH] [-e <program> [args...] | -- <program> [args...] | <program> [args...]]
-  rterm start [--frames N] [--cwd CWD] [--workspace WORKSPACE] [--class CLASS] [--position POSITION] [--domain DOMAIN] [--attach] [--no-auto-connect] [--always-new-process] [--new-tab] [--osc52 off|write|read-write] [--metrics | --metrics-json | --state | --state-json] [--log PATH] [-e <program> [args...] | -- <program> [args...] | <program> [args...]]
+  rterm window [--renderer auto|cpu|gpu] [--display-backend auto|wayland|x11] [--frames N] [--cwd CWD] [--workspace WORKSPACE] [--class CLASS] [--position POSITION] [--domain DOMAIN] [--attach] [--no-auto-connect] [--always-new-process] [--new-tab] [--osc52 off|write|read-write] [--metrics | --metrics-json | --state | --state-json] [--log PATH] [-e <program> [args...] | -- <program> [args...] | <program> [args...]]
+  rterm start [--renderer auto|cpu|gpu] [--display-backend auto|wayland|x11] [--frames N] [--cwd CWD] [--workspace WORKSPACE] [--class CLASS] [--position POSITION] [--domain DOMAIN] [--attach] [--no-auto-connect] [--always-new-process] [--new-tab] [--osc52 off|write|read-write] [--metrics | --metrics-json | --state | --state-json] [--log PATH] [-e <program> [args...] | -- <program> [args...] | <program> [args...]]
   rterm local [--preflight] [--metrics | --metrics-json] [--cols N] [--rows N] [--cwd CWD] [--mouse] [--osc52 off|write|read-write] [--log PATH] [-- <program> [args...]]
   rterm console [--preflight] [--metrics | --metrics-json] [--cols N] [--rows N] [--cwd CWD] [--mouse] [--osc52 off|write|read-write] [--log PATH] [-- <program> [args...]]
   rterm ssh ([USER@]HOST | --host HOST --user USER | --target NAME) [--preflight] [--metrics | --metrics-json] [--native | --gui] [--renderer auto|cpu|gpu] [--benchmark-startup] [--accept-unknown-host-key | --trust-on-first-use] [-l USER | --user USER] [-p N | --port N] [-J DEST] [-F PATH] [-o OPTION] [-4 | -6] [-A | -a] [-C] [-q] [-v | -vv | -vvv] [-B IFACE] [-b ADDR] [-c CIPHER] [-E LOG] [-e CHAR] [-I PKCS11] [-m MAC] [-O CTL] [-P TAG] [-Q QUERY] [-S CTL_PATH] [-W HOST:PORT] [-w TUN] [-f] [-G] [-g] [-K | -k] [-M] [-n] [-s] [-T | -t | -tt] [-X | -x | -Y | -y] [--cols N --rows N] [--agent | --password | -i PATH | --key PATH] [-L SPEC | --local-forward SPEC] [-R SPEC | --remote-forward SPEC] [-D SPEC | --dynamic-forward SPEC] [-N | --no-shell] [--osc52 off|write|read-write] [--log PATH] [COMMAND [ARGS...]]
@@ -1797,6 +1831,8 @@ fn ssh_options_from_state(state: SshParseState) -> Result<SshOptions, String> {
     reason = "compatibility reducer remains linear to preserve evaluation and precedence order"
 )]
 fn parse_window(args: &[String], config: WindowConfigOptions) -> Result<AppCommand, String> {
+    let mut renderer = RendererMode::Auto;
+    let mut display_backend = DisplayBackend::Auto;
     let mut frame_limit = None;
     let mut workspace = None;
     let mut window_class = None;
@@ -1813,6 +1849,18 @@ fn parse_window(args: &[String], config: WindowConfigOptions) -> Result<AppComma
 
     while index < args.len() {
         match args[index].as_str() {
+            "--renderer" => {
+                index += 1;
+                renderer =
+                    RendererMode::parse(required_option_value(args.get(index), "--renderer")?)?;
+            }
+            "--display-backend" => {
+                index += 1;
+                display_backend = DisplayBackend::parse(required_option_value(
+                    args.get(index),
+                    "--display-backend",
+                )?)?;
+            }
             "--frames" => {
                 index += 1;
                 frame_limit = Some(parse_frame_limit(args.get(index))?);
@@ -1914,6 +1962,8 @@ fn parse_window(args: &[String], config: WindowConfigOptions) -> Result<AppComma
     let command = window_command_from_args(command_args, cwd);
 
     Ok(AppCommand::Window(WindowOptions {
+        renderer,
+        display_backend,
         config,
         frame_limit,
         workspace,
@@ -2204,10 +2254,68 @@ mod tests {
     use super::{AppCommand, parse_args};
 
     #[test]
+    fn window_accepts_renderer_and_display_backend_options() {
+        for command in ["window", "start"] {
+            for renderer in ["auto", "cpu", "gpu"] {
+                let parsed = parse_args([
+                    "rterm",
+                    command,
+                    "--renderer",
+                    renderer,
+                    "--display-backend",
+                    "auto",
+                ]);
+                let AppCommand::Window(options) = parsed.expect("window options accepted") else {
+                    panic!("expected window");
+                };
+                assert_eq!(
+                    options.renderer,
+                    super::RendererMode::parse(renderer).unwrap()
+                );
+                assert_eq!(options.display_backend, super::DisplayBackend::Auto);
+            }
+        }
+    }
+
+    #[test]
+    fn window_backend_support_is_platform_specific() {
+        for (name, backend) in [
+            ("wayland", super::DisplayBackend::Wayland),
+            ("x11", super::DisplayBackend::X11),
+        ] {
+            let parsed = parse_args(["rterm", "window", "--display-backend", name]);
+            if cfg!(target_os = "linux") {
+                let AppCommand::Window(options) = parsed.unwrap() else {
+                    panic!("expected window");
+                };
+                assert_eq!(options.display_backend, backend);
+            } else {
+                assert!(parsed.unwrap_err().contains("only supported on Linux"));
+            }
+        }
+        for option in ["--renderer", "--display-backend"] {
+            assert!(parse_args(["rterm", "window", option]).is_err());
+        }
+    }
+
+    #[test]
+    fn window_rejects_unknown_renderer_and_backend_values() {
+        for (option, value, message) in [
+            ("--renderer", "software", "invalid renderer"),
+            ("--display-backend", "mir", "invalid display backend"),
+        ] {
+            let error = parse_args(["rterm", "window", option, value]).unwrap_err();
+            assert!(error.contains(message), "{error}");
+        }
+    }
+
+    #[test]
     fn parses_default_window_command() {
         assert_eq!(
             parse_args(["rterm"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
+                renderer: crate::cli::RendererMode::Auto,
+                display_backend: crate::cli::DisplayBackend::Auto,
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
                 workspace: None,
@@ -2395,6 +2503,8 @@ mod tests {
         assert_eq!(
             parse_args(["rterm", "window"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
+                renderer: crate::cli::RendererMode::Auto,
+                display_backend: crate::cli::DisplayBackend::Auto,
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
                 workspace: None,
@@ -2416,6 +2526,8 @@ mod tests {
         assert_eq!(
             parse_args(["rterm", "start"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
+                renderer: crate::cli::RendererMode::Auto,
+                display_backend: crate::cli::DisplayBackend::Auto,
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
                 workspace: None,
@@ -2699,6 +2811,8 @@ mod tests {
         assert_eq!(
             parse_args(["rterm", "window", "--frames", "1"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
+                renderer: crate::cli::RendererMode::Auto,
+                display_backend: crate::cli::DisplayBackend::Auto,
                 config: super::WindowConfigOptions::default(),
                 frame_limit: Some(1),
                 workspace: None,
@@ -2720,6 +2834,8 @@ mod tests {
         assert_eq!(
             parse_args(["rterm", "window", "--metrics"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
+                renderer: crate::cli::RendererMode::Auto,
+                display_backend: crate::cli::DisplayBackend::Auto,
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
                 workspace: None,
@@ -2741,6 +2857,8 @@ mod tests {
         assert_eq!(
             parse_args(["rterm", "window", "--metrics-json"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
+                renderer: crate::cli::RendererMode::Auto,
+                display_backend: crate::cli::DisplayBackend::Auto,
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
                 workspace: None,
@@ -3063,6 +3181,8 @@ mod tests {
         assert_eq!(
             parse_args(["rterm", "window", "--osc52", "off"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
+                renderer: crate::cli::RendererMode::Auto,
+                display_backend: crate::cli::DisplayBackend::Auto,
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
                 workspace: None,
@@ -3080,6 +3200,8 @@ mod tests {
         assert_eq!(
             parse_args(["rterm", "window", "--osc52", "write"]).unwrap(),
             AppCommand::Window(super::WindowOptions {
+                renderer: crate::cli::RendererMode::Auto,
+                display_backend: crate::cli::DisplayBackend::Auto,
                 config: super::WindowConfigOptions::default(),
                 frame_limit: None,
                 workspace: None,

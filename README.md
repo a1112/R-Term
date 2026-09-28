@@ -73,3 +73,5 @@ Historical monolith workflows remain archived under `docs/trial/legacy-workflows
 Active Windows CI validates the split repository. Cross-platform protected CI
 certification remains outstanding. See [formal split record](docs/formal-split.md)
 for provenance, ownership and rollback.
+
+Linux desktop launch and native Wayland validation: [Native Wayland guide](docs/native-wayland.md).

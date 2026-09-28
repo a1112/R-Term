@@ -58,7 +58,15 @@ fn run_ten_frame_native_window_with_command(
     let framed_marker = format!("{PTY_LINK_BEGIN}{DETERMINISTIC_PAYLOAD}{PTY_LINK_END}");
     let marker_command = marker_command(&framed_marker);
     let mut command = Command::new(executable);
-    command.args(["-n", "window", "--frames", "10", "--metrics-json"]);
+    command.args([
+        "-n",
+        "window",
+        "--renderer",
+        "gpu",
+        "--frames",
+        "10",
+        "--metrics-json",
+    ]);
     if let Some(log) = log {
         command.arg("--log").arg(log);
     }

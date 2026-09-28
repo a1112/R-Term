@@ -2338,7 +2338,10 @@ impl NativeWindowManager {
         true
     }
 
-    fn finish_deferred_startup_after_config(&mut self) {
+    fn start_configured_transports_after_present(&mut self) {
+        if self.deferred_config_pending || self.deferred_config_receiver.is_some() {
+            return;
+        }
 
         // The bootstrap frame is intentionally independent from the full
         // configuration.  Local PTYs must not observe the default projection
@@ -2363,6 +2366,11 @@ impl NativeWindowManager {
                 eprintln!("deferred transport start error: {error}");
             }
         }
+
+    }
+
+    fn finish_deferred_startup_after_config(&mut self) {
+        self.start_configured_transports_after_present();
 
         // Diagnostics own a hermetic, one-shot configuration lifecycle.  A
         // filesystem watcher would make the measured process depend on ambient
