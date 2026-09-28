@@ -18,6 +18,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libwayland-dev libxkbcommon-dev libx11-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev libegl1-mesa-dev mesa-vulkan-drivers fonts-noto-cjk sway wl-clipboard
       - run: python3 scripts/ci/check-rterm-feature-boundary.py
       - run: cargo test --locked -p rssh-app --no-default-features --bin rterm -j 2
+      - run: cargo test --locked -p rterm-render-cpu --no-default-features --features image-basic --lib image_basic_decodes_bmp_without_clipboard_dependency_features -j 2
       - run: cargo test --locked -p rssh-app --bin rterm window_app_renders_wezterm_background_bmp_file_layer -j 2
       - run: cargo test --locked -p rssh-app --test feature_boundary --test local_pty --test native_wayland -j 2
       - run: cargo check --locked -p rssh-app --features ssh -j 2

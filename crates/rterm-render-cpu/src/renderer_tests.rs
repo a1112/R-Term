@@ -3613,3 +3613,17 @@ fn first_pixel_y(target: &[u8], width: usize, color: [u8; 4]) -> usize {
         .map(|index| index / width)
         .expect("expected color pixel")
 }
+
+#[test]
+#[cfg(feature = "image-basic")]
+fn image_basic_decodes_bmp_without_clipboard_dependency_features() {
+    // A complete 1x1 red 24-bit BMP; no encoder features or GUI dependencies.
+    let bmp = [
+        0x42, 0x4d, 0x3a, 0, 0, 0, 0, 0, 0, 0, 0x36, 0, 0, 0, 0x28, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0,
+        0, 1, 0, 0x18, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0x13, 0x0b, 0, 0, 0x13, 0x0b, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0xff, 0,
+    ];
+    let decoded = super::decode_image_rgba(&bmp, 0, None).expect("image-basic includes BMP");
+    assert_eq!((decoded.width, decoded.height), (1, 1));
+    assert_eq!(&*decoded.pixels, &[255, 0, 0, 255]);
+}

@@ -221,6 +221,7 @@ fn native_wayland_clipboard_survives_copy_callback() {
 
 #[test]
 fn cpu_window_rasterizes_chinese_text_at_desktop_scales() {
+    const CHINESE: &str = "中文终端输入测试你好世界";
     let mut app = NativeWindowApp::new_with_visual_defaults(None);
     app.set_renderer_mode(crate::cli::RendererMode::Cpu);
     for (scale, millipoints) in [(1.0, 14_000), (1.5, 18_000), (2.0, 22_000)] {
@@ -236,7 +237,7 @@ fn cpu_window_rasterizes_chinese_text_at_desktop_scales() {
         let (width, height) = app.frame_size_for_test();
         let mut blank = vec![0; (width * height * 4) as usize];
         app.render_framebuffer(&mut blank);
-        app.handle_pty_output("中文".as_bytes()).unwrap();
+        app.handle_pty_output(CHINESE.as_bytes()).unwrap();
         let mut chinese = blank.clone();
         app.render_framebuffer(&mut chinese);
         let top = app.frame_content_pixel_top()
@@ -249,7 +250,8 @@ fn cpu_window_rasterizes_chinese_text_at_desktop_scales() {
                 frame[start..end].iter().copied()
             }).collect::<Vec<_>>()
         };
-        for column in [0, 2] {
+        let columns = (0..CHINESE.chars().count() as u32 * 2).step_by(2);
+        for column in columns.clone() {
             let before = glyph_pixels(&blank, column);
             let after = glyph_pixels(&chinese, column);
             let changed = before.chunks_exact(4).zip(after.chunks_exact(4))
@@ -257,9 +259,12 @@ fn cpu_window_rasterizes_chinese_text_at_desktop_scales() {
             assert!(changed > 20, "Chinese glyph pixels missing at scale {scale}, column {column}: {changed}");
         }
         // Distinct Chinese characters must not become the same missing-glyph box.
-        assert_ne!(glyph_pixels(&chinese, 0), glyph_pixels(&chinese, 2));
+        let glyphs = columns.map(|column| glyph_pixels(&chinese, column)).collect::<Vec<_>>();
+        for (index, glyph) in glyphs.iter().enumerate() {
+            assert!(glyphs[index + 1..].iter().all(|other| glyph != other));
+        }
         // Repainting the same Chinese text through the damage path is stable.
-        app.handle_pty_output("\r中文".as_bytes()).unwrap();
+        app.handle_pty_output(format!("\r{CHINESE}").as_bytes()).unwrap();
         let mut damaged = chinese.clone();
         app.render_framebuffer(&mut damaged);
         assert_eq!(chinese, damaged);

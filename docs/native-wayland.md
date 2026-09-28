@@ -1,7 +1,9 @@
 # Native Linux terminal
 
 The production build keeps SSH disabled. Build the locked default profile with
-`cargo build --locked --release -p rssh-app --bin rterm`.
+`cargo build --locked --release -p rssh-app --bin rterm`. The production
+`image-basic` feature explicitly enables PNG, JPEG and BMP decoding on every
+platform; it does not depend on clipboard packages enabling image codecs.
 
 `rterm window` and `rterm start` accept `--renderer auto|cpu|gpu` and
 `--display-backend auto|wayland|x11`. Both default to `auto`. Renderer selection
@@ -16,7 +18,10 @@ rterm window --renderer cpu --display-backend wayland --class org.forge.RTerm
 ```
 
 The persistent CPU path uses the production font catalog, Unicode shaping and
-software glyph rasterization, including Chinese fallback fonts. Font reloads
+software glyph rasterization, including Chinese fallback fonts. Install a full
+CJK font package (for example Arch `noto-fonts-cjk` or Debian `fonts-noto-cjk`);
+the bundled emergency subset cannot cover ordinary Chinese terminal text. Both
+Arch and Debian system font directory layouts are recognized. Font reloads
 and DPI changes refresh the text caches. Metrics report `shaped-cpu`; the
 `bitmap-emergency` path is reserved for the transient automatic GPU bootstrap.
 

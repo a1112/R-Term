@@ -8,7 +8,7 @@ version.workspace = true
 
 [features]
 default = ["image-basic", "image-gif", "image-legacy"]
-image-basic = ["image/png", "image/jpeg"]
+image-basic = ["image/png", "image/jpeg", "image/bmp"]
 image-gif = ["image/gif"]
 image-legacy = ["image/dds", "image/ff", "image/ico", "image/pnm", "image/tga", "image/tiff"]
 

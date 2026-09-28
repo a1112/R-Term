@@ -993,6 +993,44 @@ fn platform_candidates(os: &str) -> Vec<IndexedFont> {
                 "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
                 FontCoverage::Emoji,
             ),
+            // Arch (including ForgeOS) installs these packages outside the
+            // Debian truetype/opentype directories. Keep both layouts in the
+            // lazy inventory; unavailable paths are never materialized.
+            (
+                "NotoSansMono.arch.system.ttf",
+                "/usr/share/fonts/noto/NotoSansMono-Regular.ttf",
+                FontCoverage::Primary,
+            ),
+            (
+                "DejaVuSansMono.arch.system.ttf",
+                "/usr/share/fonts/TTF/DejaVuSansMono.ttf",
+                FontCoverage::Primary,
+            ),
+            (
+                "NotoSans.arch.system.ttf",
+                "/usr/share/fonts/noto/NotoSans-Regular.ttf",
+                FontCoverage::Primary,
+            ),
+            (
+                "NotoSansCJK.arch.system.ttc",
+                "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+                FontCoverage::Cjk,
+            ),
+            (
+                "NotoSansArabic.arch.system.ttf",
+                "/usr/share/fonts/noto/NotoSansArabic-Regular.ttf",
+                FontCoverage::Arabic,
+            ),
+            (
+                "NotoSansDevanagari.arch.system.ttf",
+                "/usr/share/fonts/noto/NotoSansDevanagari-Regular.ttf",
+                FontCoverage::Devanagari,
+            ),
+            (
+                "NotoColorEmoji.arch.system.ttf",
+                "/usr/share/fonts/noto/NotoColorEmoji.ttf",
+                FontCoverage::Emoji,
+            ),
         ],
         "macos" => &[
             (
@@ -2125,6 +2163,70 @@ mod tests {
         assert!(!rendered.to_ascii_lowercase().contains("path"));
         assert!(rendered.contains("index_fingerprint"));
         assert!(rendered.contains("catalog_fingerprint"));
+    }
+
+    #[test]
+    fn linux_font_inventory_supports_arch_and_debian_install_locations() {
+        let candidates = platform_candidates("linux");
+        for (path, coverage) in [
+            (
+                "/usr/share/fonts/noto/NotoSansMono-Regular.ttf",
+                FontCoverage::Primary,
+            ),
+            (
+                "/usr/share/fonts/TTF/DejaVuSansMono.ttf",
+                FontCoverage::Primary,
+            ),
+            (
+                "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+                FontCoverage::Cjk,
+            ),
+            (
+                "/usr/share/fonts/noto/NotoSansArabic-Regular.ttf",
+                FontCoverage::Arabic,
+            ),
+            (
+                "/usr/share/fonts/noto/NotoSansDevanagari-Regular.ttf",
+                FontCoverage::Devanagari,
+            ),
+            (
+                "/usr/share/fonts/noto/NotoColorEmoji.ttf",
+                FontCoverage::Emoji,
+            ),
+            (
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+                FontCoverage::Cjk,
+            ),
+        ] {
+            assert!(candidates.iter().any(|candidate| {
+                candidate.coverage == coverage && !candidate.emergency
+                    && matches!(&candidate.locator, IndexedFontLocator::File(found) if found == &PathBuf::from(path))
+            }), "missing native font candidate: {path}");
+        }
+    }
+
+    #[test]
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    fn production_fonts_cover_desktop_chinese_beyond_emergency_subset() {
+        let mut repository = PlatformFontRepository::production_index();
+        let mut catalog = repository.build_catalog(FontCatalogMode::Lazy).unwrap();
+        let text = "终端输入测试你好世界";
+        repository.preflight_text(text, &mut catalog).unwrap();
+        let mut shaper = TerminalShaper::new(crate::window_cpu::font_config(None, 17.0));
+        let row = shaper.shape_row(&mut catalog, text).unwrap();
+        assert!(
+            row.clusters.iter().all(|cluster| !cluster.is_tofu),
+            "the desktop requires an installed full CJK font; the emergency subset is insufficient"
+        );
+        assert_eq!(row.cell_count, text.chars().count() * 2);
+        assert!(
+            repository.indexed.iter().any(|source| {
+                source.coverage == FontCoverage::Cjk
+                    && !source.emergency
+                    && repository.active.contains_key(&source.key)
+            }),
+            "CJK coverage must come from an installed font"
+        );
     }
 
     #[test]
