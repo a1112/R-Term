@@ -168,3 +168,35 @@ fn cpu_renderer_starts_local_pty_and_preserves_exit_status() {
     assert_eq!(metrics["gpu_rendered_frames"], 0);
     assert!(metrics["pty_bytes"].as_u64().unwrap() > 0);
 }
+
+#[test]
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+#[cfg_attr(target_os = "linux", ignore = "requires a native Wayland compositor")]
+fn cpu_renderer_closes_failed_program_window() {
+    let missing =
+        std::env::temp_dir().join(format!("rterm-missing-program-{}", std::process::id()));
+    assert!(!missing.exists());
+    let mut command = Command::new(env!("CARGO_BIN_EXE_rterm"));
+    command
+        .args(["-n", "window", "--renderer", "cpu", "--"])
+        .arg(missing);
+    let output = run(command);
+    let diagnostic = String::from_utf8_lossy(&output.stderr);
+    assert!(diagnostic.contains("transport start error"), "{diagnostic}");
+}
+
+#[test]
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+#[cfg_attr(target_os = "linux", ignore = "requires a native Wayland compositor")]
+fn cpu_renderer_closes_failed_working_directory_window() {
+    let missing =
+        std::env::temp_dir().join(format!("rterm-missing-directory-{}", std::process::id()));
+    assert!(!missing.exists());
+    let mut command = Command::new(env!("CARGO_BIN_EXE_rterm"));
+    command
+        .args(["-n", "window", "--renderer", "cpu", "--cwd"])
+        .arg(missing);
+    let output = run(command);
+    let diagnostic = String::from_utf8_lossy(&output.stderr);
+    assert!(diagnostic.contains("transport start error"), "{diagnostic}");
+}

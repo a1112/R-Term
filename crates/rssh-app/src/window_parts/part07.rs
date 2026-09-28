@@ -2350,10 +2350,11 @@ impl NativeWindowManager {
         // panes are the exception: their native transport is allowed to run
         // in parallel with configuration and is already marked as started by
         // the first CPU frame.
-        for app in self
+        let mut failed_windows = Vec::new();
+        for (window_id, app) in self
             .windows
-            .values_mut()
-            .filter(|app| {
+            .iter_mut()
+            .filter(|(_, app)| {
                 app.rendered_frames > 0
                     && !app.is_benchmark_startup()
                     && !app.suppresses_transport_start()
@@ -2362,11 +2363,15 @@ impl NativeWindowManager {
             if app.transport_start_requested {
                 continue;
             }
-            if let Err(error) = app.spawn_pty() {
-                eprintln!("deferred transport start error: {error}");
+            if let Err(error) = app.spawn_pty()
+                && app.handle_transport_start_error(error.as_ref())
+            {
+                failed_windows.push(*window_id);
             }
         }
-
+        for window_id in failed_windows {
+            self.finalize_app_close_at_location(ManagedWindowAppLocation::Window(window_id));
+        }
     }
 
     fn finish_deferred_startup_after_config(&mut self) {

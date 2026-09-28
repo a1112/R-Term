@@ -3370,6 +3370,16 @@ impl NativeWindowApp {
             &term_session_id,
         );
 
+        // Some platform PTY launchers silently fall back from an invalid cwd.
+        // An explicit launch directory must instead fail visibly.
+        if let Some(cwd) = command.cwd()
+            && !cwd.is_dir()
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                format!("working directory is unavailable: {}", cwd.display()),
+            ).into());
+        }
         let (pty_size, runtime) = self.prepare_pane_spawn_runtime(pane_id)?;
         self.metrics.start_spawn_timer();
         let session = PtySession::spawn(&command, pty_size)?;
