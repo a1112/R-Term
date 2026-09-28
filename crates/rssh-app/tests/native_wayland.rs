@@ -110,6 +110,26 @@ fn native_wayland_cpu_window() {
             .any(|line| line.contains("set_app_id") && line.contains("org.forge.RTerm")),
         "native app ID missing: {protocol_log}"
     );
+    // The CPU surface must participate in Wayland frame pacing. Otherwise,
+    // redraws while DPMS is off exhaust softbuffer's available SHM buffers and
+    // block the window thread (including PTY exit and compositor ping events).
+    let mut pending_frame_surfaces = std::collections::HashSet::new();
+    let mut presents = 0;
+    for line in protocol_log.lines() {
+        let Some((_, request)) = line.split_once(" -> ") else {
+            continue;
+        };
+        if let Some((surface, _)) = request.split_once(".frame(") {
+            pending_frame_surfaces.insert(surface);
+        } else if let Some((surface, _)) = request.split_once(".attach(wl_buffer") {
+            assert!(
+                pending_frame_surfaces.remove(surface),
+                "CPU surface submitted a buffer without requesting frame pacing: {line}"
+            );
+            presents += 1;
+        }
+    }
+    assert!(presents > 0, "native CPU buffer presentation missing");
     assert_eq!(metrics["gpu_rendered_frames"], 0);
     assert_eq!(metrics["text_backend"], "shaped-cpu");
     assert_eq!(metrics["render_frames"], 10);

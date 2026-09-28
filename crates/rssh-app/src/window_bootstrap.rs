@@ -80,8 +80,14 @@ impl WindowBootstrapSurface {
             )
             .into());
         }
+        let window = Arc::clone(self.surface.window());
         let mut buffer = self.surface.buffer_mut()?;
         write_rgba_to_softbuffer(&rgba[..expected], &mut buffer)?;
+        // On Wayland this requests a frame callback so winit pauses redraws
+        // while the surface is hidden or DPMS is off. Without it, repeated
+        // draws can block buffer_mut waiting for a compositor-held SHM buffer
+        // and prevent the window thread from handling PTY exits or pings.
+        window.pre_present_notify();
         buffer.present()?;
         Ok(())
     }
