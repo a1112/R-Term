@@ -15,6 +15,11 @@ Example for a software-rendered desktop terminal:
 rterm window --renderer cpu --display-backend wayland --class org.forge.RTerm
 ```
 
+The persistent CPU path uses the production font catalog, Unicode shaping and
+software glyph rasterization, including Chinese fallback fonts. Font reloads
+and DPI changes refresh the text caches. Metrics report `shaped-cpu`; the
+`bitmap-emergency` path is reserved for the transient automatic GPU bootstrap.
+
 `--class` sets the Wayland application ID and X11 WM_CLASS. Use the same value
 as the desktop file basename for taskbar grouping. `--cwd` and command arguments
 remain distinct arguments; launchers should never concatenate them into shell

@@ -3595,6 +3595,8 @@ impl NativeWindowApp {
             });
         let text_backend = if self.gpu_owners.active.is_some() {
             "shaped-gpu-atlas"
+        } else if self.cpu_text.is_some() {
+            "shaped-cpu"
         } else {
             "bitmap-emergency"
         };

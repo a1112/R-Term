@@ -57,6 +57,7 @@ mod visible_output;
 #[rustfmt::skip]
 mod window;
 mod window_bootstrap;
+mod window_cpu;
 mod window_gpu;
 
 use std::{env, process::ExitCode, time::Instant};

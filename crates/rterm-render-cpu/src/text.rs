@@ -105,6 +105,12 @@ impl CpuTextRenderer {
         TextBackend::Shaped
     }
 
+    /// Extends the catalog through the application's lazy font repository.
+    /// Shape and raster caches are scoped by the catalog generation.
+    pub fn text_catalog_mut(&mut self) -> &mut FontCatalog {
+        &mut self.catalog
+    }
+
     /// Changes the raster DPI/zoom scope and invalidates stale cached images.
     pub fn set_scale(&mut self, dpi_scale: f32, zoom: f32) {
         self.raster.set_scale(dpi_scale, zoom);

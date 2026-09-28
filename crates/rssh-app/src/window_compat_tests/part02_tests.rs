@@ -892,6 +892,7 @@
     }
 
     #[test]
+    #[cfg(feature = "image-basic")]
     fn window_app_renders_wezterm_background_bmp_file_layer() {
         let image_path = write_test_bmp_file("wezterm-background-file-layer.bmp");
         let lua_path = lua_string_path(&image_path);

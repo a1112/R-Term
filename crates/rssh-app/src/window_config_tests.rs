@@ -218,3 +218,51 @@ fn native_wayland_clipboard_survives_copy_callback() {
     assert!(received.status.success(), "{}", String::from_utf8_lossy(&received.stderr));
     assert_eq!(String::from_utf8(received.stdout).unwrap(), "R-Term 中文 clipboard");
 }
+
+#[test]
+fn cpu_window_rasterizes_chinese_text_at_desktop_scales() {
+    let mut app = NativeWindowApp::new_with_visual_defaults(None);
+    app.set_renderer_mode(crate::cli::RendererMode::Cpu);
+    for (scale, millipoints) in [(1.0, 14_000), (1.5, 18_000), (2.0, 22_000)] {
+        // A reload must rebuild shaping with the new font size while retaining
+        // the CPU renderer and loaded font sources.
+        app.set_config_overrides(native_config_snapshot! {
+            font_size: Some(super::NativeFontSize::from_millipoints(millipoints)),
+            ..NativeConfigSnapshot::default()
+        });
+        app.apply_window_scale_factor(scale);
+        app.handle_window_resize(app.initial_frame_size()).unwrap();
+        app.handle_pty_output(b"\x1b[?25l\x1b[2J\x1b[H").unwrap();
+        let (width, height) = app.frame_size_for_test();
+        let mut blank = vec![0; (width * height * 4) as usize];
+        app.render_framebuffer(&mut blank);
+        app.handle_pty_output("中文".as_bytes()).unwrap();
+        let mut chinese = blank.clone();
+        app.render_framebuffer(&mut chinese);
+        let top = app.frame_content_pixel_top()
+            + u32::from(app.terminal_frame_row_offset()) * app.cell_height();
+        let glyph_pixels = |frame: &[u8], column: u32| {
+            let left = app.frame_content_pixel_left() + column * app.cell_width();
+            (top..top + app.cell_height()).flat_map(|y| {
+                let start = ((y * width + left) * 4) as usize;
+                let end = start + (app.cell_width() * 2 * 4) as usize;
+                frame[start..end].iter().copied()
+            }).collect::<Vec<_>>()
+        };
+        for column in [0, 2] {
+            let before = glyph_pixels(&blank, column);
+            let after = glyph_pixels(&chinese, column);
+            let changed = before.chunks_exact(4).zip(after.chunks_exact(4))
+                .filter(|(a, b)| a != b).count();
+            assert!(changed > 20, "Chinese glyph pixels missing at scale {scale}, column {column}: {changed}");
+        }
+        // Distinct Chinese characters must not become the same missing-glyph box.
+        assert_ne!(glyph_pixels(&chinese, 0), glyph_pixels(&chinese, 2));
+        // Repainting the same Chinese text through the damage path is stable.
+        app.handle_pty_output("\r中文".as_bytes()).unwrap();
+        let mut damaged = chinese.clone();
+        app.render_framebuffer(&mut damaged);
+        assert_eq!(chinese, damaged);
+        assert_eq!(app.metrics_snapshot().text_backend, "shaped-cpu");
+    }
+}

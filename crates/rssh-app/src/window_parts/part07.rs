@@ -1474,6 +1474,7 @@ struct NativeWindowApp {
     ssh_secret_prompts: HashMap<rssh_core::PaneId, SshSecretPromptState>,
     ssh_connection_states: HashMap<rssh_core::PaneId, ConnectionState>,
     gpu_owners: crate::window_gpu::WindowGpuOwners,
+    cpu_text: Option<Box<crate::window_cpu::WindowCpuText>>,
     renderer: GpuFramePlanner,
     configured_dpi: Option<u32>,
     dpi_by_screen: BTreeMap<String, u32>,

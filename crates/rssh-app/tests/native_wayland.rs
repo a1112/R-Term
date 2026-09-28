@@ -111,6 +111,7 @@ fn native_wayland_cpu_window() {
         "native app ID missing: {protocol_log}"
     );
     assert_eq!(metrics["gpu_rendered_frames"], 0);
+    assert_eq!(metrics["text_backend"], "shaped-cpu");
     assert_eq!(metrics["render_frames"], 10);
     assert!(metrics["pty_bytes"].as_u64().unwrap() > 0);
 }
@@ -166,6 +167,7 @@ fn cpu_renderer_starts_local_pty_and_preserves_exit_status() {
     assert_eq!(metrics["last_exit_code"], 7);
     assert_eq!(metrics["runtime_live_threads"], 0);
     assert_eq!(metrics["gpu_rendered_frames"], 0);
+    assert_eq!(metrics["text_backend"], "shaped-cpu");
     assert!(metrics["pty_bytes"].as_u64().unwrap() > 0);
 }
 

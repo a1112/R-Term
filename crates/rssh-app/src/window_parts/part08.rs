@@ -49,7 +49,7 @@ impl NativeFrameContentPlacement {
 
 #[allow(clippy::too_many_arguments)]
 fn render_framebuffer_with_state(
-    renderer: &PixelRenderer,
+    renderer: &mut crate::window_cpu::CpuFramePainter<'_>,
     snapshot: &TerminalRenderSnapshot,
     scrollbar: Option<ScrollbackScrollbar>,
     pending_frame_damage: &mut Vec<DamageRegion>,
@@ -108,7 +108,7 @@ fn render_framebuffer_with_state(
 
 #[allow(clippy::too_many_arguments)]
 fn render_aligned_framebuffer(
-    renderer: &PixelRenderer,
+    renderer: &mut crate::window_cpu::CpuFramePainter<'_>,
     snapshot: &TerminalRenderSnapshot,
     scrollbar: Option<ScrollbackScrollbar>,
     frame: &mut [u8],
@@ -299,7 +299,7 @@ fn blit_framebuffer(
 }
 
 fn redraw_frame_ui_rows(
-    renderer: &PixelRenderer,
+    renderer: &mut crate::window_cpu::CpuFramePainter<'_>,
     snapshot: &TerminalRenderSnapshot,
     frame: &mut [u8],
     geometry: RenderGeometry,
@@ -580,6 +580,7 @@ impl NativeWindowApp {
                 ssh_secret_prompts: HashMap::new(),
                 ssh_connection_states: HashMap::new(),
                 gpu_owners: crate::window_gpu::WindowGpuOwners::default(),
+                cpu_text: None,
                 renderer: {
                     let mut renderer = GpuFramePlanner::new(PixelRenderer::new());
                     renderer.set_reverse_video_cursor_min_contrast(Some(
@@ -7770,6 +7771,18 @@ impl NativeWindowApp {
         }
     }
 
+    fn cpu_font_config(&self) -> rssh_fonts::FontConfig {
+        crate::window_cpu::font_config(
+            self.config_overrides.font.as_deref(),
+            (17.0 * self.font_size_scale_against_default() * self.font_size_scale) as f32,
+        )
+    }
+
+    fn needs_shaped_cpu_text(&self) -> bool {
+        self.renderer_mode == RendererMode::Cpu
+            || self.presentation_owner == PresentationOwner::CpuFallback
+    }
+
     fn draw_cpu_frame(
         &mut self,
         event_loop: &ActiveEventLoop,
@@ -7804,8 +7817,23 @@ impl NativeWindowApp {
             self.frame_needs_full_repaint || self.has_visible_split_layout();
         let background_color = self.background_color;
         let started = Instant::now();
+        let mut cpu_text = self.cpu_text.take();
+        if self.needs_shaped_cpu_text() {
+            match crate::window_cpu::prepare(
+                &mut cpu_text, snapshot, self.cpu_font_config(), self.gpu_dpi_scale(),
+            ) {
+                Ok(changed) => frame_needs_full_repaint |= changed,
+                Err(error) => {
+                    self.cpu_text = cpu_text;
+                    eprintln!("CPU text preparation failed: {error}");
+                    event_loop.exit();
+                    return;
+                }
+            }
+        }
+        let mut painter = crate::window_cpu::CpuFramePainter::new(&self.renderer, cpu_text.as_deref_mut());
         let mode = render_framebuffer_with_state(
-            &self.renderer,
+            &mut painter,
             snapshot,
             scrollbar,
             &mut pending_frame_damage,
@@ -7819,6 +7847,7 @@ impl NativeWindowApp {
         self.pending_frame_damage = pending_frame_damage;
         self.frame_needs_full_repaint = frame_needs_full_repaint;
         self.bootstrap_frame = bootstrap_frame;
+        self.cpu_text = cpu_text;
         self.metrics.record_terminal_linkage_snapshot(snapshot);
         let Some(surface) = self.bootstrap_surface.as_mut() else {
             eprintln!("CPU renderer lost bootstrap surface");
@@ -7965,10 +7994,20 @@ impl NativeWindowApp {
             self.frame_needs_full_repaint || self.has_visible_split_layout();
         let damage_row_offset = self.terminal_frame_row_offset();
         let background_color = self.background_color;
+        let mut cpu_text = self.cpu_text.take();
+        let shaped_cpu = self.needs_shaped_cpu_text();
+        let font_config = self.cpu_font_config();
+        let dpi_scale = self.gpu_dpi_scale();
         let snapshot = self.render_snapshot();
+        if shaped_cpu {
+            frame_needs_full_repaint |= crate::window_cpu::prepare(
+                &mut cpu_text, &snapshot, font_config, dpi_scale,
+            ).expect("CPU text preparation");
+        }
         let missing_glyphs = snapshot.missing_glyphs().clone();
+        let mut painter = crate::window_cpu::CpuFramePainter::new(&self.renderer, cpu_text.as_deref_mut());
         let mode = render_framebuffer_with_state(
-            &self.renderer,
+            &mut painter,
             &snapshot,
             scrollbar,
             &mut pending_frame_damage,
@@ -7980,6 +8019,7 @@ impl NativeWindowApp {
             color_to_rgba(background_color, DEFAULT_RENDER_BACKGROUND_RGBA),
         );
         drop(snapshot);
+        self.cpu_text = cpu_text;
         self.pending_frame_damage = pending_frame_damage;
         self.frame_needs_full_repaint = frame_needs_full_repaint;
         self.record_missing_glyph_codepoints(missing_glyphs);
