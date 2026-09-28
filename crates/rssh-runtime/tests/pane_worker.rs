@@ -636,3 +636,62 @@ fn effect_backpressure_wakes_before_the_worker_waits_for_mailbox_space() {
     );
     hub.shutdown();
 }
+
+#[test]
+fn reader_eof_waits_for_late_exit_status_before_closed_notice() {
+    let mut hub = RuntimeHub::new(VirtualClock::new(Instant::now()));
+    let exit = SessionExit {
+        status: Some(7),
+        signal: None,
+    };
+    let (transport, driver) = ScriptedTransport::new(
+        [ReadAction::Eof],
+        [],
+        [ExitAction::Pending, ExitAction::Exited(exit.clone())],
+    );
+    let handle = hub
+        .open(PaneId::new(87), transport, PaneWorkerConfig::default())
+        .unwrap();
+    let token = handle.token();
+    recv_ready(&mut hub, token);
+    assert_eq!(
+        hub.recv_notice().unwrap(),
+        PaneNotice::Closed {
+            pane: token,
+            exit: Some(exit)
+        }
+    );
+    assert_eq!(
+        driver.interrupt_calls(),
+        0,
+        "natural exit must not receive a termination signal"
+    );
+    hub.shutdown();
+    assert_eq!(hub.live_thread_count(), 0);
+}
+
+#[test]
+fn reader_eof_without_exit_status_still_closes_within_a_bound() {
+    let mut hub = RuntimeHub::new(VirtualClock::new(Instant::now()));
+    let (transport, driver) = scripted_session([ReadAction::Eof], []);
+    let handle = hub
+        .open(PaneId::new(88), transport, PaneWorkerConfig::default())
+        .unwrap();
+    let token = handle.token();
+    let deadline = Instant::now() + Duration::from_secs(2);
+    loop {
+        assert!(
+            Instant::now() < deadline,
+            "EOF must not wait indefinitely for a child that stays alive"
+        );
+        if let Ok(PaneNotice::Closed { pane, exit }) = hub.try_recv_notice() {
+            assert_eq!(pane, token);
+            assert!(exit.is_none());
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    assert_eq!(driver.interrupt_calls(), 1);
+    hub.shutdown();
+    assert_eq!(hub.live_thread_count(), 0);
+}

@@ -412,6 +412,25 @@ fn next_worker_message<S: crate::SessionControl>(
     }
 }
 
+// Closing the slave side is observable before waitpid/remote exit metadata on
+// some transports. Preserve a natural exit before any out-of-band termination,
+// while bounding the case where a program closes its output but keeps running.
+fn poll_exit_after_reader_eof<S: crate::SessionControl>(control: &mut S) -> Option<SessionExit> {
+    let deadline = Instant::now() + Duration::from_millis(100);
+    loop {
+        match control.poll_exit() {
+            Ok(Some(exit)) => return Some(exit),
+            Err(_) => return None,
+            Ok(None) => {}
+        }
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return None;
+        }
+        thread::sleep(remaining.min(Duration::from_millis(5)));
+    }
+}
+
 fn configure_runtime(runtime: &mut TerminalRuntime, capture_host_stream: bool) -> RuntimeBuffers {
     runtime.set_capture_host_stream(capture_host_stream);
     RuntimeBuffers::default()
@@ -511,7 +530,13 @@ fn run_worker<W: Write, S: crate::SessionControl, C: Clock>(
                     Ok(())
                 })
             }
-            PaneMessage::ReaderEof | PaneMessage::ReaderError | PaneMessage::Close => break,
+            PaneMessage::ReaderEof => {
+                if observed_exit.is_none() {
+                    observed_exit = poll_exit_after_reader_eof(&mut control);
+                }
+                break;
+            }
+            PaneMessage::ReaderError | PaneMessage::Close => break,
         };
         if result.is_err() {
             break;
@@ -520,7 +545,9 @@ fn run_worker<W: Write, S: crate::SessionControl, C: Clock>(
 
     accepting.store(false, Ordering::Release);
     let _ = receiver.close();
-    let _ = interrupt.interrupt();
+    if observed_exit.is_none() {
+        let _ = interrupt.interrupt();
+    }
     let _ = control.begin_close();
     let delta = runtime.finish_into(&mut buffers);
     let (snapshot, state, metrics) =

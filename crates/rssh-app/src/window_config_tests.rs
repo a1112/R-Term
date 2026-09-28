@@ -271,3 +271,18 @@ fn cpu_window_rasterizes_chinese_text_at_desktop_scales() {
         assert_eq!(app.metrics_snapshot().text_backend, "shaped-cpu");
     }
 }
+
+#[test]
+fn focus_roundtrip_invalidates_unchanged_ime_cursor_rectangle() {
+    let mut app = NativeWindowApp::new(Some(0));
+    app.window_focused = true;
+    let unchanged_rectangle = Some((74, 73, 10, 21));
+    app.last_ime_cursor_area.set(unchanged_rectangle);
+    app.handle_focus_changed(false).unwrap();
+    assert_eq!(app.last_ime_cursor_area.get(), None);
+    // An unfocused redraw may have cached the same geometry again. A new
+    // text-input focus needs an explicit synchronization even without movement.
+    app.last_ime_cursor_area.set(unchanged_rectangle);
+    app.handle_focus_changed(true).unwrap();
+    assert_eq!(app.last_ime_cursor_area.get(), None);
+}

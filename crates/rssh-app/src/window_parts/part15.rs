@@ -3482,6 +3482,15 @@ impl ApplicationHandler<WindowUserEvent> for NativeWindowApp {
                 }
                 self.update_ime_cursor_area();
             }
+            WindowEvent::Ime(winit::event::Ime::Enabled) => {
+                // Wayland text-input enter can follow keyboard focus. Its
+                // newly enabled state needs the current rectangle again.
+                self.last_ime_cursor_area.set(None);
+                self.update_ime_cursor_area();
+            }
+            WindowEvent::Ime(winit::event::Ime::Disabled) => {
+                self.last_ime_cursor_area.set(None);
+            }
             WindowEvent::Ime(winit::event::Ime::Commit(text)) => {
                 if let Err(error) = self.handle_ime_commit(&text) {
                     eprintln!("PTY IME input error: {error}");

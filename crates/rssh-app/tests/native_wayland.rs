@@ -142,20 +142,27 @@ fn forced_x11_does_not_fall_back_to_live_wayland() {
 }
 
 #[test]
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+#[cfg_attr(target_os = "linux", ignore = "requires a native Wayland compositor")]
 fn cpu_renderer_starts_local_pty_and_preserves_exit_status() {
     let mut command = Command::new(env!("CARGO_BIN_EXE_rterm"));
+    command.args(["-n", "window", "--renderer", "cpu", "--metrics-json"]);
+    #[cfg(target_os = "windows")]
     command.args([
-        "-n",
-        "window",
-        "--renderer",
-        "cpu",
-        "--metrics-json",
         "--",
         "cmd.exe",
         "/d",
         "/c",
         "echo RTERM-CPU-PTY & exit /b 7",
+    ]);
+    #[cfg(target_os = "linux")]
+    command.env_remove("DISPLAY").args([
+        "--display-backend",
+        "wayland",
+        "--",
+        "/bin/sh",
+        "-c",
+        "printf 'RSSH-LINK-BEGIN|RTERM-CYCLE|中文|RSSH-LINK-END\n'; exit 7",
     ]);
     let output = run(command);
     assert!(

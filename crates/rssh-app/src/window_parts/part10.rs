@@ -7211,6 +7211,13 @@ fn lua_window_effective_config_field_text_part3(
             self.dead_key_text = None;
         }
         self.window_focused = focused;
+        // Compositors reset text-input state across focus changes, even when
+        // the terminal cursor has not moved. Never reuse the previous focus's
+        // candidate rectangle; synchronize it immediately on focus return.
+        self.last_ime_cursor_area.set(None);
+        if focused {
+            self.update_ime_cursor_area();
+        }
         self.mouse_click_may_focus_window = focused;
         if !focused && let Some(UiKeyReleasePending::FullBarrier(key)) = self.ui_key_release_pending
         {
