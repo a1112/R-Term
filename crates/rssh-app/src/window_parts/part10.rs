@@ -6839,7 +6839,10 @@ fn lua_window_effective_config_field_text_part3(
     }
 
     fn update_cursor_blink_phase_if_due(&mut self, now: Instant) -> bool {
-        if self.cursor_blink_rate.is_zero() {
+        // An event-loop wake is not evidence that anything is animating.
+        // Advancing an invisible/steady cursor dirties another frame and can
+        // keep Wayland buffer-release events driving an otherwise idle window.
+        if !self.has_active_cursor_blink_animation() {
             if self.cursor_blink_opacity_alpha != u8::MAX {
                 self.apply_cursor_blink_opacity(u8::MAX);
                 self.last_cursor_blink_at = None;
@@ -6880,10 +6883,16 @@ fn lua_window_effective_config_field_text_part3(
     }
 
     fn update_text_blink_phase_if_due(&mut self, now: Instant) -> bool {
-        let text_blink_rate = self.text_blink_rate;
+        let regular_visible = self.pane_snapshots()
+            .any(|snapshot| snapshot_has_active_text_blink(snapshot, true, false));
+        let rapid_visible = self.pane_snapshots()
+            .any(|snapshot| snapshot_has_active_text_blink(snapshot, false, true));
+        // Reset absent blink kinds instead of continuously dirtying frames
+        // for opacity changes that cannot affect any displayed text.
+        let text_blink_rate = if regular_visible { self.text_blink_rate } else { Duration::ZERO };
         let text_blink_ease_in = self.text_blink_ease_in;
         let text_blink_ease_out = self.text_blink_ease_out;
-        let text_blink_rate_rapid = self.text_blink_rate_rapid;
+        let text_blink_rate_rapid = if rapid_visible { self.text_blink_rate_rapid } else { Duration::ZERO };
         let text_blink_rapid_ease_in = self.text_blink_rapid_ease_in;
         let text_blink_rapid_ease_out = self.text_blink_rapid_ease_out;
         let text_blink_opacity_alpha = self.text_blink_opacity_alpha;

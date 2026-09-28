@@ -286,3 +286,37 @@ fn focus_roundtrip_invalidates_unchanged_ime_cursor_rectangle() {
     app.handle_focus_changed(true).unwrap();
     assert_eq!(app.last_ime_cursor_area.get(), None);
 }
+
+#[test]
+fn idle_plain_terminal_does_not_dirty_frames_on_later_event_loop_wakes() {
+    use std::time::{Duration, Instant};
+    for cursor_mode in ["\x1b[?12l", "\x1b[?25l"] {
+        let mut app = NativeWindowApp::new(None);
+        app.handle_pty_output(format!("{cursor_mode}plain 中文 prompt").as_bytes()).unwrap();
+        let started = Instant::now();
+        app.update_cursor_blink_phase_if_due(started);
+        app.update_text_blink_phase_if_due(started);
+        app.frame_needs_full_repaint = false;
+        app.pending_frame_damage.clear();
+        for millis in [250, 510, 825, 2_035] {
+            let now = started + Duration::from_millis(millis);
+            assert!(!app.update_cursor_blink_phase_if_due(now), "inactive cursor at {millis}");
+            assert!(!app.update_text_blink_phase_if_due(now), "plain text at {millis}");
+            assert!(!app.frame_needs_full_repaint, "idle wake dirtied frame at {millis}");
+        }
+    }
+}
+
+#[test]
+fn absent_text_blink_kind_does_not_advance_its_animation() {
+    use std::time::{Duration, Instant};
+    for (sgr, regular, rapid) in [(5, true, false), (6, false, true)] {
+        let mut app = NativeWindowApp::new(None);
+        app.handle_pty_output(format!("\x1b[{sgr}mblink").as_bytes()).unwrap();
+        let started = Instant::now();
+        app.update_text_blink_phase_if_due(started);
+        assert!(app.update_text_blink_phase_if_due(started + Duration::from_millis(125)));
+        assert_eq!(app.text_blink_opacity_alpha < u8::MAX, regular);
+        assert_eq!(app.rapid_text_blink_opacity_alpha < u8::MAX, rapid);
+    }
+}
