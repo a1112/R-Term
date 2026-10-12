@@ -1,0 +1,460 @@
+{
+  "schema_version": 1,
+  "notes": "Source package numbers are preserved. A numeric source version does not claim a released/stable product. See VERSIONING.md for release history, native release owners and limitations.",
+  "units": {
+    "rust-workspace": {
+      "canonical": {
+        "path": "Cargo.toml",
+        "adapter": "toml",
+        "table": [
+          "workspace",
+          "package"
+        ],
+        "key": "version",
+        "format": "semver"
+      },
+      "mirrors": [
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-app",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-config",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-core",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-diagnostics",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-domain",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-functional-tests",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-native",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-pty",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-renderer",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-tauri",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-test-support",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rssh-web",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-fonts",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-render-core",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-render-cpu",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-render-wgpu",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-runtime",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-ssh-adapter",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-terminal",
+          "format": "semver"
+        },
+        {
+          "path": "Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-types",
+          "format": "semver"
+        },
+        {
+          "path": "contracts/rterm-consumer/Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-fonts",
+          "format": "semver"
+        },
+        {
+          "path": "contracts/rterm-consumer/Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-render-core",
+          "format": "semver"
+        },
+        {
+          "path": "contracts/rterm-consumer/Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-render-cpu",
+          "format": "semver"
+        },
+        {
+          "path": "contracts/rterm-consumer/Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-render-wgpu",
+          "format": "semver"
+        },
+        {
+          "path": "contracts/rterm-consumer/Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-runtime",
+          "format": "semver"
+        },
+        {
+          "path": "contracts/rterm-consumer/Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-terminal",
+          "format": "semver"
+        },
+        {
+          "path": "contracts/rterm-consumer/Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-types",
+          "format": "semver"
+        },
+        {
+          "path": "tauri/src-tauri/tauri.conf.json",
+          "adapter": "json",
+          "pointer": "/version",
+          "format": "semver"
+        },
+        {
+          "path": "tauri/package.json",
+          "adapter": "json",
+          "pointer": "/version",
+          "format": "semver"
+        },
+        {
+          "path": "tauri/package-lock.json",
+          "adapter": "json",
+          "pointer": "/version",
+          "format": "semver"
+        },
+        {
+          "path": "tauri/package-lock.json",
+          "adapter": "json",
+          "pointer": "/packages//version",
+          "format": "semver"
+        }
+      ],
+      "assertions": [
+        {
+          "path": "crates/rssh-app/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-config/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-core/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-diagnostics/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-domain/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-functional-tests/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-native/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-pty/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-renderer/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-runtime/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-ssh/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-terminal/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-test-support/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rssh-web/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rterm-fonts/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rterm-render-core/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rterm-render-cpu/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rterm-render-wgpu/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "crates/rterm-types/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "scripts/split/ssh-cli/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        },
+        {
+          "path": "tauri/src-tauri/Cargo.toml",
+          "adapter": "toml",
+          "table": [
+            "package",
+            "version"
+          ],
+          "key": "workspace",
+          "equals": true
+        }
+      ],
+      "notes": "Rust workspace package version; inherited crate declarations remain source bindings Incoming local Cargo version constraints require native dependency resolution Tauri application packaging version is synchronized with its own Cargo package.",
+      "read_only": true
+    },
+    "crate-rterm-consumer-contract": {
+      "canonical": {
+        "path": "contracts/rterm-consumer/Cargo.toml",
+        "adapter": "toml",
+        "table": [
+          "package"
+        ],
+        "key": "version",
+        "format": "semver"
+      },
+      "mirrors": [
+        {
+          "path": "contracts/rterm-consumer/Cargo.lock",
+          "adapter": "cargo-lock",
+          "package": "rterm-consumer-contract",
+          "format": "semver"
+        }
+      ],
+      "assertions": [],
+      "notes": "Independent Rust package; no repository-wide release version is inferred."
+    }
+  },
+  "unmanaged": [
+    {
+      "name": "web/package.json",
+      "reason": "Unversioned private workspace/frontend tooling; no fabricated product version.",
+      "paths": [
+        "web/package.json"
+      ]
+    },
+    {
+      "name": "non-product versions",
+      "reason": "Dependency/toolchain/Swift tools/SDK, protocol, schema, database and generated/upstream versions are not application release versions.",
+      "paths": []
+    },
+    {
+      "name": "historical sources",
+      "reason": "Vendored code, generated Apple projects, docs/evidence and junk snapshots retain their original versions and are excluded from bump operations.",
+      "paths": []
+    }
+  ]
+}
