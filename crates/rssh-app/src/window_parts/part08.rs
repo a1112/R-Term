@@ -1152,6 +1152,7 @@ impl NativeWindowApp {
     }
 
     fn handle_window_close_requested(&mut self) {
+        self.save_native_window_geometry();
         if self.window_close_confirmation == NativeWindowCloseConfirmation::NeverPrompt {
             self.request_window_close();
             return;
@@ -7284,6 +7285,17 @@ impl NativeWindowApp {
         app
     }
 
+    fn native_window_geometry_path(&self) -> Option<PathBuf> {
+        if self.diagnostic_scale_override_enabled() || self.frame_limit.is_some() { return None; }
+        Some(default_rssh_state_dir()?.join("native-window-geometry.txt"))
+    }
+
+    fn save_native_window_geometry(&self) {
+        if let (Some(window), Some(path)) = (&self.window, self.native_window_geometry_path()) {
+            native_window_geometry::save(window, &path);
+        }
+    }
+
     #[expect(
         clippy::too_many_lines,
         reason = "native window creation keeps platform setup and presentation ownership atomic"
@@ -7294,6 +7306,7 @@ impl NativeWindowApp {
         let chrome_policy = native_window_chrome_policy(self.window_decorations);
         let mut window_attributes = Window::default_attributes()
             .with_title(self.window_title.clone())
+            .with_visible(false)
             .with_inner_size(initial_size)
             .with_resizable(self.window_decorations.resize)
             .with_decorations(self.window_decorations.winit_decorations_enabled());
@@ -7364,9 +7377,19 @@ impl NativeWindowApp {
             self.diagnostic_scale_override_enabled(),
             window.scale_factor(),
         ));
-        let size = window
-            .request_inner_size(self.initial_frame_size())
-            .unwrap_or_else(|| window.inner_size());
+        let size = if self.diagnostic_scale_override_enabled() || self.frame_limit.is_some() {
+            window.request_inner_size(self.initial_frame_size())
+                .unwrap_or_else(|| window.inner_size())
+        } else {
+            let path = self.native_window_geometry_path();
+            native_window_geometry::startup(
+                &window,
+                self.initial_frame_size(),
+                path.as_deref(),
+                self.initial_cols == DEFAULT_INITIAL_COLS && self.initial_rows == DEFAULT_INITIAL_ROWS,
+                self.initial_window_position.is_none(),
+            )
+        };
         self.frame_width = size.width;
         self.frame_height = size.height;
         self.window = Some(window);
@@ -7396,6 +7419,7 @@ impl NativeWindowApp {
         self.refresh_window_frame_from_window();
         self.update_ime_cursor_area();
         self.mark_diagnostic_window_created();
+        if let Some(window) = &self.window { window.set_visible(true); }
 
         Ok(())
     }

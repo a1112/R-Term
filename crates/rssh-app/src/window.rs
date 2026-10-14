@@ -180,6 +180,9 @@ macro_rules! native_window_config_patch_values {
 #[path = "window_config_tests.rs"]
 mod window_config_tests;
 bind_native_config_projection!(NativeConfigSnapshot, native_config_overrides_from_wezterm_lua_config, automatically_reload_config);
+#[path = "native_window_geometry.rs"]
+mod native_window_geometry;
+
 const TERMINAL_COLUMNS: u16 = 80;
 const TERMINAL_ROWS: u16 = 24;
 const DEFAULT_INITIAL_COLS: u16 = TERMINAL_COLUMNS;

@@ -1781,6 +1781,7 @@ impl NativeWindowManager {
             .chain(self.pending_apps.iter_mut())
             .chain(self.retired_apps.iter_mut())
         {
+            app.save_native_window_geometry();
             app.stop_active_runtime();
             if let Some(mut worker) = app.runtime.take_worker() {
                 worker.shutdown();
@@ -2584,6 +2585,7 @@ impl NativeWindowManager {
     fn finalize_app_close_at_location(&mut self, location: ManagedWindowAppLocation) -> Option<()> {
         let (app_window_id, quit_when_all_windows_are_closed, snapshot) = {
             let app = self.app_at_location_mut(location)?;
+            app.save_native_window_geometry();
             app.shutdown_gpu_for_window_close();
             app.stop_active_runtime();
             if let Some(mut worker) = app.runtime.take_worker() {
