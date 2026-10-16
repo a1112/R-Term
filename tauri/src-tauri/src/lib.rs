@@ -113,8 +113,7 @@ fn functional_observer_publish(
 }
 
 pub fn run() {
-    let builder = tauri::Builder::default()
-        .plugin(window_geometry::init());
+    let builder = tauri::Builder::default().plugin(window_geometry::init());
     #[cfg(feature = "functional-test-observer")]
     let builder = builder.invoke_handler(tauri::generate_handler![functional_observer_publish]);
     builder
