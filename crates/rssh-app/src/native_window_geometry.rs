@@ -413,13 +413,16 @@ pub(super) fn startup(
         stored.is_none() && restore_size && restore_position,
         frame,
     );
-    set_minimum(window, geometry);
+    // Native backends interpret physical constraints at the current monitor's
+    // DPI. Release old constraints and move before applying the target minimum.
+    window.set_min_inner_size(None::<PhysicalSize<u32>>);
     if window.outer_position().is_ok() {
         window.set_outer_position(PhysicalPosition::new(
             geometry.x.round() as i32,
             geometry.y.round() as i32,
         ));
     }
+    set_minimum(window, geometry);
     window
         .request_inner_size(physical_size(geometry))
         .unwrap_or_else(|| window.inner_size())
