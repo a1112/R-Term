@@ -739,6 +739,49 @@ mod tests {
         assert_eq!(fit(g, a, false, (0.0, 24.0)), g);
     }
     #[test]
+    fn macbook_air_and_large_native_work_area_matrix() {
+        for (width, height) in [
+            (1024.0, 640.0),
+            (1280.0, 720.0),
+            (1280.0, 800.0),
+            (1440.0, 800.0),
+            (1470.0, 833.0),
+            (1920.0, 1040.0),
+            (2560.0, 1400.0),
+        ] {
+            for scale in [1.0, 2.0] {
+                let area = Area {
+                    x: -width * scale,
+                    y: 32.0 * scale,
+                    width,
+                    height,
+                    scale,
+                };
+                let oversized = Geometry {
+                    x: 9000.0,
+                    y: -9000.0,
+                    width: 3000.0,
+                    height: 2000.0,
+                    scale,
+                };
+                for first in [true, false] {
+                    let fitted = fit(oversized, area, first, (0.0, 24.0));
+                    assert!(contains(fitted, area, (0.0, 24.0)));
+                    assert!(physical_size(fitted).width as f64 <= (width * scale).round());
+                    assert!(physical_size(fitted).height as f64 <= (height * scale).round());
+                }
+                let saved = Geometry {
+                    x: area.x + 20.0 * scale,
+                    y: area.y + 20.0 * scale,
+                    width: 640.0,
+                    height: 400.0,
+                    scale,
+                };
+                assert_eq!(fit(saved, area, false, (0.0, 24.0)), saved);
+            }
+        }
+    }
+    #[test]
     fn corrupt_storage_is_ignored() {
         for text in [
             "",
