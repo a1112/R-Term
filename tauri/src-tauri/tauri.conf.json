@@ -12,10 +12,11 @@
   "app": {
     "windows": [
       {
+        "visible": false,
         "label": "main",
         "title": "R-SSH",
-        "width": 1200,
-        "height": 760,
+        "width": 1000,
+        "height": 660,
         "minWidth": 640,
         "minHeight": 360,
         "resizable": true,

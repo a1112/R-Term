@@ -3533,6 +3533,7 @@ impl ApplicationHandler<WindowUserEvent> for NativeWindowApp {
             }
             WindowEvent::Moved(position) => {
                 self.handle_window_moved(position);
+                self.save_native_window_geometry();
             }
             WindowEvent::Resized(size) => {
                 if let Err(error) = self.handle_window_resize(size) {
@@ -3540,9 +3541,20 @@ impl ApplicationHandler<WindowUserEvent> for NativeWindowApp {
                     event_loop.exit();
                 } else {
                     self.update_ime_cursor_area();
+                    self.save_native_window_geometry();
                 }
             }
-            WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+            WindowEvent::ScaleFactorChanged { scale_factor, mut inner_size_writer } => {
+                if !self.diagnostic_scale_override_enabled() && self.frame_limit.is_none() {
+                    if let Some(window) = &self.window {
+                        native_window_geometry::scale_changed(
+                            window,
+                            f64::from(self.detected_window_dpi.max(1)) / f64::from(DEFAULT_WINDOW_DPI),
+                            scale_factor,
+                            &mut inner_size_writer,
+                        );
+                    }
+                }
                 self.apply_window_scale_factor(startup_window_scale_factor(
                     self.diagnostic_scale_override_enabled(),
                     scale_factor,
