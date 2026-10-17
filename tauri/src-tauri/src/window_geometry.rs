@@ -155,13 +155,17 @@ fn physical_minimum(
     )
 }
 
-fn apply<R: Runtime>(window: &Window<R>, restore: bool) {
+fn apply<R: Runtime>(window: &Window<R>, restore: bool, cached: Option<&str>) {
     if !restore
         && (window.is_maximized().unwrap_or(false) || window.is_fullscreen().unwrap_or(false))
     {
         return;
     }
-    let saved = if restore { load(window) } else { None };
+    let saved = if restore {
+        cached.and_then(parse).or_else(|| load(window))
+    } else {
+        None
+    };
     let monitors = window.available_monitors().unwrap_or_default();
     let chosen = saved.and_then(|(r, scale)| {
         monitors
@@ -266,24 +270,25 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
                 {
                     return;
                 }
-                apply(&window, true);
+                let cached = geometry_writer::cached_record(&ready_writers, window.label());
+                apply(&window, true, cached.as_deref());
                 let observed = window.clone();
-                let writer = path(&window).and_then(|path| match GeometryWriter::new(path) {
-                    Ok(writer) => Some(Arc::new(writer)),
-                    Err(error) => {
-                        eprintln!("cannot start geometry writer: {error}");
-                        None
-                    }
-                });
-                if let Some(writer) = &writer {
-                    let mut entries = ready_writers.lock().unwrap();
-                    entries.retain(|(_, writer)| !writer.is_finished());
-                    entries.push((window.label().to_owned(), writer.clone()));
-                    drop(entries);
-                    if let Some(contents) = capture(&window) {
-                        writer.schedule(contents);
-                    }
-                }
+                let writer =
+                    path(&window).and_then(|path| {
+                        match geometry_writer::writer_for_window(
+                            &ready_writers,
+                            window.label(),
+                            path,
+                        ) {
+                            Ok(writer) => Some(writer),
+                            Err(error) => {
+                                eprintln!("cannot start geometry writer: {error}");
+                                None
+                            }
+                        }
+                    });
+                // Restoration setters may be asynchronous. Persist only normal
+                // geometry observed from subsequent events or explicit exit.
                 window.on_window_event(move |event| {
                     if matches!(event, WindowEvent::Destroyed) {
                         if let Some(writer) = &writer {
@@ -292,7 +297,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
                         return;
                     }
                     if matches!(event, WindowEvent::ScaleFactorChanged { .. }) {
-                        apply(&observed, false);
+                        apply(&observed, false, None);
                     }
                     if matches!(
                         event,
