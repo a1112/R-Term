@@ -1,4 +1,8 @@
-//! Desktop geometry only; user-selected immersive modes are never restored implicitly.
+#[path = "geometry_writer.rs"]
+mod geometry_writer;
+use geometry_writer::GeometryWriter;
+use std::sync::{Arc, Mutex};
+// Desktop geometry only; user-selected immersive modes are never restored implicitly.
 use tauri::{Manager, Runtime, Window, WindowEvent};
 
 #[derive(Clone, Copy, Debug)]
@@ -110,29 +114,22 @@ fn parse(text: &str) -> Option<(Geometry, f64)> {
     ))
 }
 
-fn save<R: Runtime>(window: &Window<R>) {
+fn capture<R: Runtime>(window: &Window<R>) -> Option<String> {
     if window.is_maximized().unwrap_or(true)
         || window.is_fullscreen().unwrap_or(true)
         || window.is_minimized().unwrap_or(true)
     {
-        return;
+        return None;
     }
-    let (Ok(position), Ok(size), Ok(scale), Some(path)) = (
+    let (Ok(position), Ok(size), Ok(scale)) = (
         window.outer_position(),
         window.inner_size(),
         window.scale_factor(),
-        path(window),
     ) else {
-        return;
+        return None;
     };
     if size.width == 0 || size.height == 0 {
-        return;
-    }
-    let Some(parent) = path.parent() else {
-        return;
-    };
-    if std::fs::create_dir_all(parent).is_err() {
-        return;
+        return None;
     }
     // Logical content dimensions survive DPI changes; desktop positions stay physical.
     let contents = format!(
@@ -143,10 +140,7 @@ fn save<R: Runtime>(window: &Window<R>) {
         size.height as f64 / scale,
         scale
     );
-    let temporary = path.with_extension("tmp");
-    if std::fs::write(&temporary, contents).is_ok() {
-        let _ = std::fs::rename(temporary, path);
-    }
+    Some(contents)
 }
 
 fn physical_minimum(
@@ -259,11 +253,12 @@ fn apply<R: Runtime>(window: &Window<R>, restore: bool) {
 }
 
 pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    let writers = Arc::new(Mutex::new(Vec::<(String, Arc<GeometryWriter>)>::new()));
+    let ready_writers = writers.clone();
     tauri::plugin::Builder::new("compact-window-geometry")
-        .on_window_ready(|window| {
+        .on_window_ready(move |window| {
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
             {
-                // Explicit wallpaper/browser/auxiliary surfaces keep their own behavior.
                 if window.label() != "main"
                     && !window.label().starts_with("annotation-")
                     && !window.label().starts_with("tab-window-")
@@ -273,15 +268,70 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
                 }
                 apply(&window, true);
                 let observed = window.clone();
-                window.on_window_event(move |event| match event {
-                    WindowEvent::ScaleFactorChanged { .. } => apply(&observed, false),
-                    WindowEvent::Moved(_)
-                    | WindowEvent::Resized(_)
-                    | WindowEvent::CloseRequested { .. } => save(&observed),
-                    _ => {}
+                let writer = path(&window).and_then(|path| match GeometryWriter::new(path) {
+                    Ok(writer) => Some(Arc::new(writer)),
+                    Err(error) => {
+                        eprintln!("cannot start geometry writer: {error}");
+                        None
+                    }
+                });
+                if let Some(writer) = &writer {
+                    let mut entries = ready_writers.lock().unwrap();
+                    entries.retain(|(_, writer)| !writer.is_finished());
+                    entries.push((window.label().to_owned(), writer.clone()));
+                    drop(entries);
+                    if let Some(contents) = capture(&window) {
+                        writer.schedule(contents);
+                    }
+                }
+                window.on_window_event(move |event| {
+                    if matches!(event, WindowEvent::Destroyed) {
+                        if let Some(writer) = &writer {
+                            writer.finish_soon();
+                        }
+                        return;
+                    }
+                    if matches!(event, WindowEvent::ScaleFactorChanged { .. }) {
+                        apply(&observed, false);
+                    }
+                    if matches!(
+                        event,
+                        WindowEvent::Moved(_)
+                            | WindowEvent::Resized(_)
+                            | WindowEvent::CloseRequested { .. }
+                    ) {
+                        if let Some(writer) = &writer {
+                            if let Some(contents) = capture(&observed) {
+                                writer.schedule(contents);
+                            }
+                            if matches!(event, WindowEvent::CloseRequested { .. }) {
+                                writer.flush_soon();
+                            }
+                        }
+                    }
                 });
             }
             let _ = window.show();
+        })
+        .on_event(move |app, event| {
+            if matches!(
+                event,
+                tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
+            ) {
+                let entries = writers.lock().unwrap().clone();
+                for (label, writer) in entries {
+                    if matches!(event, tauri::RunEvent::ExitRequested { .. }) {
+                        if let Some(window) = app.get_webview_window(&label) {
+                            if let Some(contents) = capture(&window.as_ref().window()) {
+                                writer.schedule(contents);
+                            }
+                        }
+                        writer.flush_soon();
+                    } else if let Err(error) = writer.flush() {
+                        eprintln!("cannot save window {label}: {error}");
+                    }
+                }
+            }
         })
         .build()
 }
