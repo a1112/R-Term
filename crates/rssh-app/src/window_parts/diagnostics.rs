@@ -192,6 +192,7 @@ pub fn run_diagnostic_gui(
     let mut manager = NativeWindowManager::new(app)
         .with_config_lifecycle(lifecycle)
         .with_deferred_config();
+    let _geometry_flush = native_window_geometry::FlushOnExit;
     event_loop.run_app(&mut manager)?;
     manager.shutdown_runtime_owners();
     manager.reap_retired_apps();

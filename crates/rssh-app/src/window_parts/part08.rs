@@ -1153,6 +1153,7 @@ impl NativeWindowApp {
 
     fn handle_window_close_requested(&mut self) {
         self.save_native_window_geometry();
+        self.flush_native_window_geometry();
         if self.window_close_confirmation == NativeWindowCloseConfirmation::NeverPrompt {
             self.request_window_close();
             return;
@@ -1183,10 +1184,14 @@ impl NativeWindowApp {
     }
 
     fn request_application_quit(&mut self) {
+        self.save_native_window_geometry();
+        self.flush_native_window_geometry();
         self.application_quit_requested = true;
     }
 
     fn hide_window(&mut self) {
+        self.save_native_window_geometry();
+        self.flush_native_window_geometry();
         self.window_hide_requested = true;
         if let Some(window) = &self.window {
             window.set_minimized(true);
@@ -1203,6 +1208,8 @@ impl NativeWindowApp {
     }
 
     fn hide_application(&mut self) {
+        self.save_native_window_geometry();
+        self.flush_native_window_geometry();
         self.application_hide_requested = true;
     }
 
@@ -7293,6 +7300,12 @@ impl NativeWindowApp {
     fn save_native_window_geometry(&self) {
         if let (Some(window), Some(path)) = (&self.window, self.native_window_geometry_path()) {
             native_window_geometry::save(window, &path);
+        }
+    }
+
+    fn flush_native_window_geometry(&self) {
+        if let Some(path) = self.native_window_geometry_path() {
+            native_window_geometry::flush_soon(&path);
         }
     }
 

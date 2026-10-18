@@ -1781,7 +1781,9 @@ impl NativeWindowManager {
             .chain(self.pending_apps.iter_mut())
             .chain(self.retired_apps.iter_mut())
         {
-            app.save_native_window_geometry();
+            // Do not resample unordered/retired windows over the last normal
+            // event's shared-path record. The run_app exit guard drains it.
+            app.flush_native_window_geometry();
             app.stop_active_runtime();
             if let Some(mut worker) = app.runtime.take_worker() {
                 worker.shutdown();
@@ -2586,6 +2588,7 @@ impl NativeWindowManager {
         let (app_window_id, quit_when_all_windows_are_closed, snapshot) = {
             let app = self.app_at_location_mut(location)?;
             app.save_native_window_geometry();
+            app.flush_native_window_geometry();
             app.shutdown_gpu_for_window_close();
             app.stop_active_runtime();
             if let Some(mut worker) = app.runtime.take_worker() {

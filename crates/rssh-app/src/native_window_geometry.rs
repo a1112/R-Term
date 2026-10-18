@@ -4,7 +4,32 @@
 //! Logical frame-relative insets are applied to winit's physical monitor origin,
 //! so Retina scales and negative/mixed-screen origins are never conflated.
 //! Platforms lacking a safe work-area adapter use a documented reserve fallback.
-use std::{fs, path::Path};
+use std::{fs, path::Path, sync::OnceLock};
+#[path = "native_geometry_writer.rs"]
+mod native_geometry_writer;
+use native_geometry_writer::GeometryStore;
+
+fn store() -> &'static GeometryStore {
+    static STORE: OnceLock<GeometryStore> = OnceLock::new();
+    STORE.get_or_init(GeometryStore::default)
+}
+
+/// Keep the exit wait outside winit callbacks, including run_app error returns.
+/// Window close/hide only requests a background flush and keeps the shared
+/// writer alive for other windows and later reopen operations.
+pub(super) struct FlushOnExit;
+impl Drop for FlushOnExit {
+    fn drop(&mut self) {
+        if let Err(error) = store().shutdown() {
+            eprintln!("native window geometry shutdown failed: {error}");
+        }
+    }
+}
+
+pub(super) fn flush_soon(path: &Path) {
+    store().flush_soon(path);
+}
+
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
     event::InnerSizeWriter,
@@ -254,19 +279,16 @@ fn load(path: &Path) -> Option<Geometry> {
     parse(&fs::read_to_string(path).ok()?)
 }
 
+fn record(geometry: Geometry) -> String {
+    format!(
+        "{} {} {} {} {}\n",
+        geometry.x, geometry.y, geometry.width, geometry.height, geometry.scale
+    )
+}
+
+#[cfg(test)]
 fn write(path: &Path, geometry: Geometry) -> std::io::Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    let temporary = path.with_extension(format!("{}.tmp", std::process::id()));
-    fs::write(
-        &temporary,
-        format!(
-            "{} {} {} {} {}\n",
-            geometry.x, geometry.y, geometry.width, geometry.height, geometry.scale
-        ),
-    )?;
-    fs::rename(temporary, path)
+    native_geometry_writer::atomic_write(path, &record(geometry))
 }
 
 fn snapshot(window: &Window, scale: f64) -> Option<Geometry> {
@@ -381,7 +403,17 @@ pub(super) fn startup(
     };
     geometry.width = f64::from(desired.width) / scale;
     geometry.height = f64::from(desired.height) / scale;
-    let stored = path.and_then(load);
+    // Reopening before a background write completes must restore the latest
+    // normal cache, not an older on-disk record. Prepare the worker at startup.
+    let stored = path.and_then(|path| {
+        if let Err(error) = store().prepare(path) {
+            eprintln!("native window geometry writer unavailable: {error}");
+        }
+        store()
+            .cached(path)
+            .and_then(|text| parse(&text))
+            .or_else(|| load(path))
+    });
     if let Some(saved) = stored {
         if restore_size {
             geometry.width = saved.width;
@@ -479,11 +511,17 @@ pub(super) fn scale_changed(
 }
 
 pub(super) fn save(window: &Window, path: &Path) {
-    if !normal(window) {
-        return;
-    }
-    if let Some(geometry) = snapshot(window, window.scale_factor()) {
-        let _ = write(path, geometry);
+    let is_normal = normal(window);
+    let geometry = is_normal
+        .then(|| snapshot(window, window.scale_factor()))
+        .flatten();
+    save_snapshot(store(), path, is_normal, geometry);
+}
+
+fn save_snapshot(store: &GeometryStore, path: &Path, is_normal: bool, geometry: Option<Geometry>) {
+    if is_normal && let Some(geometry) = geometry {
+        // Only the worker creates directories, writes, syncs and renames.
+        let _ = store.publish(path, record(geometry));
     }
 }
 
@@ -806,6 +844,55 @@ mod tests {
         };
         write(&path, updated).unwrap();
         assert_eq!(load(&path), Some(updated));
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn close_hide_and_immersive_snapshots_keep_final_normal_cache() {
+        let dir = std::env::temp_dir().join(format!("rterm-normal-cache-{}", std::process::id()));
+        let path = dir.join("geometry.txt");
+        let store = GeometryStore::default();
+        save_snapshot(&store, &path, true, Some(geometry()));
+        let last_normal = Geometry {
+            width: 1100.0,
+            ..geometry()
+        };
+        save_snapshot(&store, &path, true, Some(last_normal));
+        // Minimize/fullscreen/maximize and unavailable zero-size snapshots
+        // must not replace the latest known normal frame before close/exit.
+        save_snapshot(
+            &store,
+            &path,
+            false,
+            Some(Geometry {
+                width: 2400.0,
+                ..geometry()
+            }),
+        );
+        save_snapshot(&store, &path, true, None);
+        store.flush_soon(&path);
+        assert_eq!(
+            store.cached(&path).and_then(|text| parse(&text)),
+            Some(last_normal)
+        );
+        store.shutdown().unwrap();
+        assert_eq!(load(&path), Some(last_normal));
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn exit_guard_drains_latest_record_on_event_loop_error_return() {
+        fn simulate_error(path: &Path) -> Result<(), &'static str> {
+            let _guard = FlushOnExit;
+            save_snapshot(store(), path, true, Some(geometry()));
+            Err("synthetic event-loop failure; no GUI created")
+        }
+        let dir = std::env::temp_dir().join(format!("rterm-error-exit-{}", std::process::id()));
+        let path = dir.join("geometry.txt");
+        let result = simulate_error(&path);
+        assert!(result.is_err());
+        assert_eq!(load(&path), Some(geometry()));
+        assert!(store().cached(&path).is_none());
         fs::remove_dir_all(dir).unwrap();
     }
 }

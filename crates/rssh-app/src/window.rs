@@ -748,6 +748,7 @@ pub fn run(
     app.set_char_select_recently_used_path(default_char_select_recently_used_path());
     let mut app = NativeWindowManager::new(app).with_config_lifecycle(lifecycle);
 
+    let _geometry_flush = native_window_geometry::FlushOnExit;
     event_loop.run_app(&mut app)?;
     app.shutdown_runtime_owners();
     app.reap_retired_apps();
@@ -810,6 +811,7 @@ pub fn run_ssh_gui(
     let mut manager = NativeWindowManager::new(app)
         .with_config_lifecycle(lifecycle)
         .with_deferred_config();
+    let _geometry_flush = native_window_geometry::FlushOnExit;
     event_loop.run_app(&mut manager)?;
     if let Some(markers) = product_markers {
         manager.shutdown_runtime_owners();
