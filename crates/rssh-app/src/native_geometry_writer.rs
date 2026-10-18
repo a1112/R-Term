@@ -61,10 +61,15 @@ impl GeometryWriter {
                         continue;
                     }
                     let now = Instant::now();
-                    let due =
-                        (state.last.unwrap() + DEBOUNCE).min(state.first.unwrap() + MAX_DELAY);
+                    // Lifecycle flushes may skip debounce, but must respect I/O
+                    // failure backoff. Stopping still permits one final attempt.
+                    let due = if state.force {
+                        now
+                    } else {
+                        (state.last.unwrap() + DEBOUNCE).min(state.first.unwrap() + MAX_DELAY)
+                    };
                     let due = state.retry.map_or(due, |retry| due.max(retry));
-                    if !state.force && !state.stopping && now < due {
+                    if !state.stopping && now < due {
                         state = worker_shared.wake.wait_timeout(state, due - now).unwrap().0;
                         continue;
                     }
@@ -83,7 +88,8 @@ impl GeometryWriter {
                         }
                         Err(error) => {
                             // Retain the failed record only when no newer one supersedes it.
-                            if state.latest.is_none() {
+                            let newer_pending = state.latest.is_some();
+                            if !newer_pending {
                                 state.latest = Some((revision, contents));
                                 let now = Instant::now();
                                 state.first = Some(now);
@@ -91,7 +97,10 @@ impl GeometryWriter {
                             }
                             state.error = Some(error.to_string());
                             state.retry = Some(Instant::now() + RETRY);
-                            if state.stopping {
+                            // An older in-flight failure must not skip a newer
+                            // pending value during retirement. If that latest
+                            // value also fails with no successor, stop boundedly.
+                            if state.stopping && !newer_pending {
                                 break;
                             }
                         }
@@ -457,5 +466,202 @@ mod tests {
         assert!(store.writers.lock().unwrap().is_empty());
         fs::remove_dir_all(a.parent().unwrap()).unwrap();
         fs::remove_dir_all(b.parent().unwrap()).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod failure_boundary_tests {
+    use super::*;
+    use std::sync::mpsc;
+    #[test]
+    fn repeated_flush_must_respect_actual_retry_deadline() {
+        let mut calls = 0;
+        let (tx, rx) = mpsc::channel();
+        let writer = GeometryWriter::with_sink(move |_| {
+            calls += 1;
+            if calls == 1 {
+                Err(io::Error::other("synthetic first write failure"))
+            } else {
+                tx.send(Instant::now()).unwrap();
+                Ok(())
+            }
+        })
+        .unwrap();
+        writer.schedule("latest".into());
+        writer.flush_soon();
+        let state = writer.shared.state.lock().unwrap();
+        let (state, timeout) = writer
+            .shared
+            .wake
+            .wait_timeout_while(state, Duration::from_secs(3), |s| s.retry.is_none())
+            .unwrap();
+        assert!(!timeout.timed_out());
+        let deadline = state.retry.unwrap();
+        drop(state);
+        for _ in 0..100 {
+            writer.flush_soon();
+        }
+        let actual = rx.recv_timeout(Duration::from_secs(3)).unwrap();
+        drop(writer);
+        println!(
+            "synthetic_failure retry_deadline_violated={} early_by_us={}",
+            actual < deadline,
+            deadline.saturating_duration_since(actual).as_micros()
+        );
+        assert!(
+            actual >= deadline,
+            "lifecycle flush bypassed the actual retry deadline"
+        );
+    }
+    #[test]
+    fn stopping_must_attempt_newer_pending_after_old_inflight_failure() {
+        let (started_tx, started_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let values = Arc::new(Mutex::new(Vec::new()));
+        let output = values.clone();
+        let writer = GeometryWriter::with_sink(move |value| {
+            if value == "old" {
+                started_tx.send(()).unwrap();
+                release_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+                Err(io::Error::other(
+                    "synthetic old inflight failure during retirement",
+                ))
+            } else {
+                output.lock().unwrap().push(value.to_owned());
+                Ok(())
+            }
+        })
+        .unwrap();
+        writer.schedule("old".into());
+        writer.flush_soon();
+        started_rx.recv_timeout(Duration::from_secs(3)).unwrap();
+        writer.schedule("new".into());
+        let shared = writer.shared.clone();
+        // Native direct Drop sets stopping.
+        let join = thread::spawn(move || drop(writer));
+        let state = shared.state.lock().unwrap();
+        let (state, timeout) = shared
+            .wake
+            .wait_timeout_while(state, Duration::from_secs(3), |s| !s.stopping)
+            .unwrap();
+        let stopping = state.stopping;
+        drop(state);
+        release_tx.send(()).unwrap();
+        join.join().unwrap();
+        assert!(!timeout.timed_out() && stopping);
+        let state = shared.state.lock().unwrap();
+        let pending = state.latest.as_ref().map(|(_, s)| s.clone());
+        println!(
+            "synthetic_failure stopped={} completed={} revision={} still_pending={pending:?} saved={:?}",
+            state.stopped,
+            state.completed,
+            state.revision,
+            values.lock().unwrap()
+        );
+        drop(state);
+        assert_eq!(
+            *values.lock().unwrap(),
+            vec!["new".to_owned()],
+            "newer pending value was never attempted before stop"
+        );
+    }
+
+    #[test]
+    fn actual_native_store_shutdown_flushes_before_drop() {
+        let (started_tx, started_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let values = Arc::new(Mutex::new(Vec::new()));
+        let output = values.clone();
+        let writer = Arc::new(
+            GeometryWriter::with_sink(move |value| {
+                if value == "old" {
+                    started_tx.send(()).unwrap();
+                    release_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+                    Err(io::Error::other(
+                        "synthetic old inflight failure during normal shutdown",
+                    ))
+                } else {
+                    output.lock().unwrap().push(value.to_owned());
+                    Ok(())
+                }
+            })
+            .unwrap(),
+        );
+        let store = GeometryStore::default();
+        store
+            .writers
+            .lock()
+            .unwrap()
+            .insert(PathBuf::from("synthetic-no-file-sink"), writer.clone());
+        writer.schedule("old".into());
+        writer.flush_soon();
+        started_rx.recv_timeout(Duration::from_secs(3)).unwrap();
+        writer.schedule("new".into());
+        let shared = writer.shared.clone();
+        drop(writer);
+        let join = thread::spawn(move || store.shutdown());
+        let state = shared.state.lock().unwrap();
+        let (state, timeout) = shared
+            .wake
+            .wait_timeout_while(state, Duration::from_secs(3), |s| !s.force)
+            .unwrap();
+        let flush_started = state.force;
+        drop(state);
+        release_tx.send(()).unwrap();
+        let result = join.join().unwrap();
+        assert!(!timeout.timed_out() && flush_started);
+        println!(
+            "native_normal_shutdown result={result:?} saved={:?}",
+            values.lock().unwrap()
+        );
+        assert_eq!(*values.lock().unwrap(), vec!["new".to_owned()]);
+    }
+
+    #[test]
+    fn stopping_latest_failure_is_bounded_after_attempting_newer_pending() {
+        let (started_tx, started_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let attempts = calls.clone();
+        let writer = GeometryWriter::with_sink(move |value| {
+            attempts.lock().unwrap().push(value.to_owned());
+            if value == "old" {
+                started_tx.send(()).unwrap();
+                release_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+            }
+            Err(io::Error::other("synthetic permanent failure"))
+        })
+        .unwrap();
+        writer.schedule("old".into());
+        writer.flush_soon();
+        started_rx.recv_timeout(Duration::from_secs(3)).unwrap();
+        writer.schedule("new".into());
+        let shared = writer.shared.clone();
+        // Native direct Drop.
+        let (done_tx, done_rx) = mpsc::channel();
+        let join = thread::spawn(move || {
+            drop(writer);
+            done_tx.send(()).unwrap();
+        });
+        let state = shared.state.lock().unwrap();
+        let (state, timeout) = shared
+            .wake
+            .wait_timeout_while(state, Duration::from_secs(3), |s| !s.stopping)
+            .unwrap();
+        let stopping = state.stopping;
+        drop(state);
+        release_tx.send(()).unwrap();
+        assert!(!timeout.timed_out() && stopping);
+        let finished = done_rx.recv_timeout(Duration::from_secs(3)).is_ok();
+        assert!(
+            finished,
+            "stopping retried a final failed value without a bound"
+        );
+        join.join().unwrap();
+        assert_eq!(
+            *calls.lock().unwrap(),
+            vec!["old".to_owned(), "new".to_owned()]
+        );
+        assert!(shared.state.lock().unwrap().stopped);
     }
 }
