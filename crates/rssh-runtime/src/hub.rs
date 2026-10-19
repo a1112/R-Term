@@ -429,15 +429,21 @@ impl<C: Clock> RuntimeHub<C> {
     }
 
     fn take_drained_close(&mut self) -> Option<PaneNotice> {
-        let token = self.pending_closed.keys().copied().find(|token| {
-            self.panes
-                .get(&token.pane())
-                .filter(|slot| slot.token == *token)
-                .is_none_or(|slot| !slot.publication.has_work())
-        })?;
-        let notice = self.pending_closed.remove(&token)?;
-        self.finish_closed_slot(&notice);
-        Some(notice)
+        loop {
+            let token = self.pending_closed.keys().copied().find(|token| {
+                self.panes
+                    .get(&token.pane())
+                    .filter(|slot| slot.token == *token)
+                    .is_none_or(|slot| !slot.publication.has_work())
+            })?;
+            let notice = self.pending_closed.remove(&token)?;
+            // Cached notices can outlive a restart or close deadline as well.
+            if !self.is_current(token) {
+                continue;
+            }
+            self.finish_closed_slot(&notice);
+            return Some(notice);
+        }
     }
 
     fn remove_pane_order(&mut self, pane: PaneId) {

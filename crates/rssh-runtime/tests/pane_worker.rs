@@ -7,8 +7,8 @@ use rterm_runtime::testing::{
     ExitAction, ReadAction, ScriptedTransport, VirtualClock, WriteAction,
 };
 use rterm_runtime::{
-    BatchPolicy, MailboxLimits, PaneNotice, PaneWorkerConfig, RuntimeEffectKind, RuntimeHub,
-    SessionExit, SubmitResult, TerminalRuntime,
+    BatchPolicy, MailboxLimits, PaneNotice, PaneToken, PaneWorkerConfig, RuntimeEffectKind,
+    RuntimeHub, SessionExit, SubmitResult, TerminalRuntime, TryRecvError,
 };
 use rterm_types::PaneId;
 use rterm_types::TerminalSize;
@@ -338,6 +338,142 @@ fn restart_issues_a_new_generation_rejects_old_handle_and_filters_stale_notices(
         hub.recv_notice().expect("replacement ready"),
         PaneNotice::Ready(second.token())
     );
+    hub.shutdown();
+    assert_eq!(hub.live_thread_count(), 0);
+}
+
+fn hub_with_deferred_close(pane: PaneId) -> (RuntimeHub<VirtualClock>, PaneToken) {
+    let mut hub = RuntimeHub::new(VirtualClock::new(Instant::now()));
+    let (transport, _) = ScriptedTransport::new(
+        [ReadAction::bytes(b"synthetic-output\x07"), ReadAction::Eof],
+        [WriteAction::accept(usize::MAX)],
+        [ExitAction::Exited(SessionExit {
+            status: Some(0),
+            signal: None,
+        })],
+    );
+    let config = PaneWorkerConfig {
+        capture_host_stream: true,
+        ..PaneWorkerConfig::default()
+    };
+    let handle = hub
+        .open(pane, transport, config)
+        .expect("open scripted pane");
+    let token = handle.token();
+    recv_ready(&mut hub, token);
+
+    // Ready proves the worker started; zero now proves Closed is already queued.
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while hub.live_thread_count() != 0 {
+        assert!(Instant::now() < deadline, "scripted pane did not finish");
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    let mut saw_wake = false;
+    while let Ok(notice) = hub.try_recv_notice() {
+        assert_eq!(notice.pane(), token);
+        assert!(!matches!(notice, PaneNotice::Closed { .. }));
+        saw_wake |= matches!(notice, PaneNotice::Wake(_));
+    }
+    assert!(saw_wake, "undrained final output must defer the close");
+    (hub, token)
+}
+
+fn assert_deferred_close_does_not_retire_replacement(blocking: bool) {
+    let pane = PaneId::new(71);
+    let (mut hub, first) = hub_with_deferred_close(pane);
+    let (transport, driver) =
+        scripted_session([ReadAction::Block], [WriteAction::accept(usize::MAX)]);
+    let second = hub
+        .restart(pane, transport, PaneWorkerConfig::default())
+        .expect("restart scripted pane");
+
+    let notice = if blocking {
+        Some(hub.recv_notice().expect("replacement ready"))
+    } else {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            match hub.try_recv_notice() {
+                Ok(notice) => break Some(notice),
+                Err(TryRecvError::Empty) if Instant::now() < deadline => {
+                    std::thread::sleep(Duration::from_millis(1));
+                }
+                Err(_) => break None,
+            }
+        }
+    };
+    let replacement_owned = hub.drain_pane(second.token(), 0).is_some();
+    let replacement_can_close = hub.begin_close(second.token(), Duration::ZERO);
+
+    // The buggy implementation detaches the replacement from the live map.
+    // End the memory reader explicitly so even a failing baseline joins safely.
+    driver.push_read(ReadAction::Eof);
+    hub.shutdown();
+    assert_eq!(hub.live_thread_count(), 0);
+    assert_ne!(first, second.token());
+    assert!(
+        replacement_owned,
+        "cached old close removed the replacement"
+    );
+    assert!(replacement_can_close, "replacement lost its close owner");
+    assert_eq!(notice, Some(PaneNotice::Ready(second.token())));
+}
+
+#[test]
+fn blocking_receive_filters_deferred_close_after_restart() {
+    assert_deferred_close_does_not_retire_replacement(true);
+}
+
+#[test]
+fn nonblocking_receive_filters_deferred_close_after_restart() {
+    assert_deferred_close_does_not_retire_replacement(false);
+}
+
+#[test]
+fn expired_generation_discards_its_deferred_close_without_a_replacement() {
+    let (mut hub, token) = hub_with_deferred_close(PaneId::new(72));
+    assert!(hub.begin_close(token, Duration::ZERO));
+    assert_eq!(hub.reap_expired(), 1);
+    let notice = hub.try_recv_notice();
+    hub.shutdown();
+
+    assert_eq!(notice, Err(TryRecvError::Empty));
+    assert_eq!(hub.live_thread_count(), 0);
+}
+
+#[test]
+fn current_deferred_close_waits_for_effects_and_is_delivered_once() {
+    let (mut hub, token) = hub_with_deferred_close(PaneId::new(73));
+    let first = hub.drain_pane(token, 0).expect("pending publication");
+    assert!(first.frame.is_none());
+    assert!(first.effects.is_empty());
+    assert!(first.continuation);
+    assert_eq!(hub.try_recv_notice(), Err(TryRecvError::Empty));
+
+    let final_drain = hub.drain_pane(token, usize::MAX).expect("final effects");
+    assert!(final_drain.frame.is_some());
+    let bytes = final_drain
+        .effects
+        .iter()
+        .filter_map(|effect| match effect.effect.kind() {
+            RuntimeEffectKind::HostStream(bytes) => Some(bytes.as_slice()),
+            _ => None,
+        })
+        .flatten()
+        .copied()
+        .collect::<Vec<_>>();
+    assert_eq!(bytes, b"synthetic-output\x07");
+    assert_eq!(
+        hub.recv_notice().expect("current close"),
+        PaneNotice::Closed {
+            pane: token,
+            exit: Some(SessionExit {
+                status: Some(0),
+                signal: None,
+            }),
+        }
+    );
+    assert!(hub.drain_pane(token, 0).is_none());
+    assert_eq!(hub.try_recv_notice(), Err(TryRecvError::Empty));
     hub.shutdown();
     assert_eq!(hub.live_thread_count(), 0);
 }
