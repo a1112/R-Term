@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail closed if a production R-SSH artifact contains a functional observer."""
+"""Fail closed if a production R-Term artifact contains a functional observer."""
 
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ import tempfile
 import time
 
 PROTOCOL_MARKERS = (
-    b"rssh-functional-observer-v1",
-    b"__RSSH_FUNCTIONAL_SNAPSHOT__",
-    b"RSSH_FUNCTIONAL_OBSERVER_ENDPOINT",
+    b"rterm-functional-observer-v1",
+    b"__RTERM_FUNCTIONAL_SNAPSHOT__",
+    b"RTERM_FUNCTIONAL_OBSERVER_ENDPOINT",
 )
 
 
@@ -33,7 +33,7 @@ def observer_endpoint_exists(requested_path: Path) -> bool:
     import ctypes
     from ctypes import wintypes
 
-    pipe = rf"\\.\pipe\rssh-functional-{endpoint_path_hash(requested_path):016x}"
+    pipe = rf"\\.\pipe\rterm-functional-{endpoint_path_hash(requested_path):016x}"
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     create_file = kernel32.CreateFileW
     create_file.argtypes = (
@@ -70,7 +70,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--web-dist", type=Path)
-    parser.add_argument("--package", default="rssh-app")
+    parser.add_argument("--package", default="rterm-app")
     parser.add_argument(
         "--startup-probe",
         choices=("desktop-cli", "web-server", "gui"),
@@ -88,8 +88,8 @@ def main() -> int:
     )
     if tree.returncode != 0:
         raise SystemExit(f"cargo tree failed: {tree.stderr.decode(errors='replace')}")
-    if b"rssh-functional-tests" in tree.stdout:
-        raise SystemExit("production cargo tree contains rssh-functional-tests")
+    if b"rterm-functional-tests" in tree.stdout:
+        raise SystemExit("production cargo tree contains rterm-functional-tests")
 
     binary_bytes = binary.read_bytes()
     for marker in PROTOCOL_MARKERS:
@@ -103,11 +103,11 @@ def main() -> int:
                     if marker in contents:
                         raise SystemExit(f"production web asset {path} contains observer marker {marker!r}")
 
-    with tempfile.TemporaryDirectory(prefix="rssh-production-observer-probe-") as directory:
+    with tempfile.TemporaryDirectory(prefix="rterm-production-observer-probe-") as directory:
         endpoint = Path(directory) / "must-not-exist.sock"
         env = os.environ.copy()
-        env["RSSH_FUNCTIONAL_OBSERVER_ENDPOINT"] = str(endpoint)
-        env["RSSH_FUNCTIONAL_OBSERVER_TOKEN"] = "00" * 32
+        env["RTERM_FUNCTIONAL_OBSERVER_ENDPOINT"] = str(endpoint)
+        env["RTERM_FUNCTIONAL_OBSERVER_TOKEN"] = "00" * 32
         if args.startup_probe == "desktop-cli":
             probe = run([str(binary), "version", "--json"], cwd=root, env=env)
             if probe.returncode != 0:

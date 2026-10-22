@@ -18,8 +18,8 @@ pollster = "0.4"
 raw-window-handle = { version = "0.6", features = ["std"] }
 rterm-render-core = { path = "../rterm-render-core", version = "0.1.0" }
 rterm-render-cpu = { path = "../rterm-render-cpu", version = "0.1.0", default-features = false }
-rssh-fonts = { package = "rterm-fonts", path = "../rterm-fonts", version = "0.1.0" }
-rssh-terminal = { package = "rterm-terminal", path = "../rssh-terminal", version = "0.1.0" }
+rterm-fonts = { package = "rterm-fonts", path = "../rterm-fonts", version = "0.1.0" }
+rterm-terminal = { package = "rterm-terminal", path = "../rterm-terminal", version = "0.1.0" }
 wgpu = { version = "=30.0.0", default-features = false, features = ["std", "wgsl"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]

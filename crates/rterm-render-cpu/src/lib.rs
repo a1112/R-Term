@@ -7,7 +7,7 @@ use std::{
 use font8x8::{BASIC_FONTS, UnicodeFonts};
 #[cfg(feature = "image-gif")]
 use image::AnimationDecoder;
-use rssh_terminal::{Color, CursorShape, InlineImageFormat, UnderlineStyle, VerticalAlign};
+use rterm_terminal::{Color, CursorShape, InlineImageFormat, UnderlineStyle, VerticalAlign};
 #[cfg(feature = "image-gif")]
 use std::io::Cursor;
 

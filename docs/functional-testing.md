@@ -1,10 +1,10 @@
 # Functional testing
 
-R-SSH's functional gate is a versioned, deterministic test system. The non-published
-`rssh-functional-tests` crate builds two binaries:
+R-Term's functional gate is a versioned, deterministic test system. The non-published
+`rterm-functional-tests` crate builds two binaries:
 
-- `rssh-functional`: validates, shards, executes, and aggregates scenarios.
-- `rssh-functional-fixture`: provides hermetic PTY/terminal fixture modes.
+- `rterm-functional`: validates, shards, executes, and aggregates scenarios.
+- `rterm-functional-fixture`: provides hermetic PTY/terminal fixture modes.
 
 ## Suite layout
 
@@ -20,9 +20,9 @@ libtests and Playwright tests to behavior IDs.
 Useful local commands:
 
 ```text
-cargo run --locked -p rssh-functional-tests --bin rssh-functional -- validate --suite functional-tests
-cargo run --locked -p rssh-functional-tests --bin rssh-functional -- list --suite functional-tests
-cargo run --locked -p rssh-functional-tests --bin rssh-functional -- shard --suite functional-tests --count 4
+cargo run --locked -p rterm-functional-tests --bin rterm-functional -- validate --suite functional-tests
+cargo run --locked -p rterm-functional-tests --bin rterm-functional -- list --suite functional-tests
+cargo run --locked -p rterm-functional-tests --bin rterm-functional -- shard --suite functional-tests --count 4
 ```
 
 A scenario run requires an explicit target, evidence directory, application path,

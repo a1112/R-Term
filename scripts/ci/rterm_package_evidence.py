@@ -68,7 +68,7 @@ def verify_archive(archive, payload, expected_binary_hash, consumer_commit):
     if archive.suffix != ".zip":
         if os.name != "nt" and archive_modes != expected_modes:
             raise ValueError("package archive permissions differ from payload")
-        for relative in (binary, "rssh-console.sh", "rssh-app"):
+        for relative in (binary, "rterm-console.sh", "rterm"):
             member = "payload/" + relative
             if member in actual and not archive_modes[member] & 0o111:
                 raise ValueError("packaged executable lacks execute permission")
@@ -81,15 +81,15 @@ def verify_archive(archive, payload, expected_binary_hash, consumer_commit):
 
 def run_package_tests(consumer, binary, environment, run_command):
     scenarios = [
-        ("openssh_loopback", "rssh_app_native_ssh_disconnects_and_reconnects_with_closed_lifecycle", False),
+        ("openssh_loopback", "rterm_app_native_ssh_disconnects_and_reconnects_with_closed_lifecycle", False),
         ("native_window_e2e", "native_window_e2e_presents_ten_frames_from_a_real_pty", False),
         ("native_window_e2e", "native_window_e2e_preserves_gpu_text_at_scale_100", True),
     ]
     result = {"ok": False, "binary": str(binary), "binary_sha256": digest_file(binary),
               "cargo_target_dir": environment["CARGO_TARGET_DIR"], "commands": []}
-    env = {**environment, "RSSH_TEST_APP_EXECUTABLE": str(binary), "RSSH_REQUIRE_OPENSSH": "1"}
+    env = {**environment, "RTERM_TEST_APP_EXECUTABLE": str(binary), "RTERM_REQUIRE_OPENSSH": "1"}
     for suite, scenario, ignored in scenarios:
-        command = ["cargo", "test", "--locked", "-p", "rssh-app",
+        command = ["cargo", "test", "--locked", "-p", "rterm-app",
                    "--no-default-features", "--features", "production-gui,transfer-tools",
                    "--test", suite, scenario, "--", "--exact", "--nocapture", "--test-threads=1"]
         if ignored:
@@ -114,14 +114,14 @@ def assemble_package(consumer, target, artifact, receipt, output, mode, environm
         runtime = f"{host}-{arch}"
         pty = "windows-conpty" if host == "windows" else "unix-pty"
         extension = "zip" if host == "windows" else "tar.gz"
-        name = f"rssh-{mode}-{runtime}-unsigned.{extension}"
+        name = f"rterm-{mode}-{runtime}-unsigned.{extension}"
         package_output = output / f"{mode}-package"
         verify_path(output, package_output)
         package_output.mkdir(parents=True, exist_ok=False)
         verify_path(output, package_output)
         payload = package_output / "payload"
         archive = package_output / name
-        app = tomllib.loads((consumer / "crates/rssh-app/Cargo.toml").read_text())["package"]
+        app = tomllib.loads((consumer / "crates/rterm-app/Cargo.toml").read_text())["package"]
         version = app["version"]
         if isinstance(version, dict):
             version = tomllib.loads((consumer / "Cargo.toml").read_text())["workspace"]["package"]["version"]

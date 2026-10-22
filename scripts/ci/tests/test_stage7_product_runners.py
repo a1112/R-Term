@@ -26,7 +26,7 @@ class ProductRunnerTests(unittest.TestCase):
 
     def fixture(self):
         protocol = dict(stabilization_ms=5000, sample_interval_ms=100, samples_per_process=10)
-        data = dict(schema='rssh.diagnostics/v2', failures=[],
+        data = dict(schema='rterm.diagnostics/v2', failures=[],
                     run=dict(platform='macos', architecture={'arm64': 'aarch64', 'x86_64': 'x86_64', 'AMD64': 'x86_64'}.get(platform.machine(), platform.machine()), scenario='ssh1', app_path='/tmp/app'),
                     configuration=dict(stabilization_ms=5000, sample_interval_ms=100, sample_count=10,
                                        columns=80, rows=24, scale_factor_milli=1000),

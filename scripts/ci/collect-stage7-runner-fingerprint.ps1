@@ -81,13 +81,13 @@ function Assert-Sha256([string] $Value, [string] $Label) {
 }
 
 function Get-ActiveDisplays {
-    if (-not ("RsshStage7DisplayProbe" -as [type])) {
+    if (-not ("RTermStage7DisplayProbe" -as [type])) {
         Add-Type -TypeDefinition @'
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-public sealed class RsshStage7DisplayRecord {
+public sealed class RTermStage7DisplayRecord {
     public uint WidthPx { get; set; }
     public uint HeightPx { get; set; }
     public uint DpiX { get; set; }
@@ -95,7 +95,7 @@ public sealed class RsshStage7DisplayRecord {
     public bool Primary { get; set; }
 }
 
-public static class RsshStage7DisplayProbe {
+public static class RTermStage7DisplayProbe {
     private const uint MONITORINFOF_PRIMARY = 1;
     private const int MDT_EFFECTIVE_DPI = 0;
 
@@ -121,8 +121,8 @@ public static class RsshStage7DisplayProbe {
     [DllImport("shcore.dll")]
     private static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint dpiX, out uint dpiY);
 
-    public static RsshStage7DisplayRecord[] GetActive() {
-        var result = new List<RsshStage7DisplayRecord>();
+    public static RTermStage7DisplayRecord[] GetActive() {
+        var result = new List<RTermStage7DisplayRecord>();
         MonitorEnumProc callback = delegate(IntPtr monitor, IntPtr dc, ref RECT rect, IntPtr data) {
             var info = new MONITORINFOEX();
             info.Size = Marshal.SizeOf(typeof(MONITORINFOEX));
@@ -139,7 +139,7 @@ public static class RsshStage7DisplayProbe {
             if (width <= 0 || height <= 0) {
                 throw new InvalidOperationException("active display has non-positive dimensions");
             }
-            result.Add(new RsshStage7DisplayRecord {
+            result.Add(new RTermStage7DisplayRecord {
                 WidthPx = checked((uint)width),
                 HeightPx = checked((uint)height),
                 DpiX = dpiX,
@@ -165,7 +165,7 @@ public static class RsshStage7DisplayProbe {
 '@
     }
     $records = @(
-        [RsshStage7DisplayProbe]::GetActive() |
+        [RTermStage7DisplayProbe]::GetActive() |
             Sort-Object @{ Expression = { -not $_.Primary } }, WidthPx, HeightPx, DpiX, DpiY |
             ForEach-Object {
                 [ordered]@{
@@ -220,7 +220,7 @@ function Resolve-RemoteSessionKind(
 }
 
 function Get-RemoteSessionMetric {
-    return [RsshStage7DisplayProbe]::IsRemoteSession()
+    return [RTermStage7DisplayProbe]::IsRemoteSession()
 }
 
 function Get-CurrentProcessSessionId {
@@ -289,7 +289,7 @@ function Get-WddmIdentity(
     $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "../..")).Path
     . (Join-Path $PSScriptRoot "process-harness.ps1")
     $temporaryRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
-    $xmlPath = Join-Path $temporaryRoot ("rssh-stage7-dxdiag-{0}-{1}.xml" -f $PID, [Guid]::NewGuid().ToString("N"))
+    $xmlPath = Join-Path $temporaryRoot ("rterm-stage7-dxdiag-{0}-{1}.xml" -f $PID, [Guid]::NewGuid().ToString("N"))
     try {
         try {
             $null = Invoke-BoundedProcess `
@@ -490,7 +490,7 @@ if ($TestFault -ceq "stderr-output") {
 }
 
 $result = [ordered]@{
-    schema = "rssh.stage7/runner-fingerprint/v1"
+    schema = "rterm.stage7/runner-fingerprint/v1"
     source = $source
     complete = $true
     fields = $fields
@@ -504,7 +504,7 @@ if (-not [string]::IsNullOrWhiteSpace($OutputPath)) {
     if (-not [string]::IsNullOrWhiteSpace($outputDirectory)) {
         New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
     }
-    $temporaryPath = Join-Path ([IO.Path]::GetTempPath()) ("rssh-stage7-runner-fingerprint-{0}-{1}.tmp" -f $PID, [Guid]::NewGuid().ToString("N"))
+    $temporaryPath = Join-Path ([IO.Path]::GetTempPath()) ("rterm-stage7-runner-fingerprint-{0}-{1}.tmp" -f $PID, [Guid]::NewGuid().ToString("N"))
     try {
         [IO.File]::WriteAllText($temporaryPath, $resultJson, [Text.UTF8Encoding]::new($false))
         Move-Item -LiteralPath $temporaryPath -Destination $OutputPath -Force

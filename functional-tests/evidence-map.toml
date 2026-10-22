@@ -73,22 +73,22 @@ identity = "source_precedence_matches_explicit_environment_portable_home_and_xdg
 [[evidence]]
 behavior_id = "BHV-SSH-AUTH-HOST-KEY"
 source = "libtest"
-identity = "rssh_app_required_matrix_enforces_auth_host_key_and_nonzero_remote_status"
+identity = "rterm_app_required_matrix_enforces_auth_host_key_and_nonzero_remote_status"
 
 [[evidence]]
 behavior_id = "BHV-SSH-RECONNECT"
 source = "libtest"
-identity = "rssh_app_native_ssh_disconnects_and_reconnects_with_closed_lifecycle"
+identity = "rterm_app_native_ssh_disconnects_and_reconnects_with_closed_lifecycle"
 
 [[evidence]]
 behavior_id = "BHV-SSH-FORWARD-LDR"
 source = "libtest"
-identity = "rssh_app_openssh_local_dynamic_and_remote_forwarding_bridge_real_loopback_tcp"
+identity = "rterm_app_openssh_local_dynamic_and_remote_forwarding_bridge_real_loopback_tcp"
 
 [[evidence]]
 behavior_id = "BHV-SSH-NONZERO-EXIT"
 source = "libtest"
-identity = "rssh_app_required_matrix_enforces_auth_host_key_and_nonzero_remote_status"
+identity = "rterm_app_required_matrix_enforces_auth_host_key_and_nonzero_remote_status"
 
 [[evidence]]
 behavior_id = "BHV-TRANSFER-RECURSIVE"

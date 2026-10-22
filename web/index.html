@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0d1117" />
-    <title>R-SSH Web Terminal</title>
+    <title>Terminal</title>
   </head>
   <body>
     <main class="terminal-shell">
@@ -20,16 +20,87 @@
             <span aria-hidden="true">□</span>
           </button>
         </div>
-        <div class="titlebar-drag-region">
-          <span class="brand" data-tauri-drag-region>R-SSH</span>
+        <div class="titlebar-drag-region" data-tauri-drag-region>
+          <nav id="session-tabs" class="session-tabs" role="tablist" aria-label="Terminal sessions"></nav>
+          <button id="new-session" class="new-session" type="button" aria-label="New terminal" title="New terminal">
+            <span aria-hidden="true">+</span>
+          </button>
           <span class="titlebar-drag-spacer" data-tauri-drag-region aria-hidden="true"></span>
         </div>
-        <span class="header-actions">
-          <span id="connection-status" class="status" data-state="connecting">Connecting</span>
-          <button id="restart" class="restart" type="button" hidden>Start new terminal</button>
-        </span>
+        <div class="header-tools" aria-label="Workspace tools">
+          <button id="search-toggle" class="header-tool" type="button" aria-label="Search terminal" aria-expanded="false" title="Search">
+            <span aria-hidden="true">⌕</span>
+          </button>
+          <button id="split-toggle" class="header-tool" type="button" aria-label="Split terminal" aria-expanded="false" title="Split terminal">
+            <span aria-hidden="true">◫</span>
+          </button>
+          <button id="settings-toggle" class="header-tool" type="button" aria-label="Terminal settings" aria-expanded="false" title="Settings">
+            <span aria-hidden="true">⚙</span>
+          </button>
+          <div id="search-popover" class="header-popover search-popover" role="dialog" aria-label="Search terminal" hidden>
+            <div class="popover-row">
+              <input id="search-input" class="popover-input" type="search" placeholder="Search output" autocomplete="off" spellcheck="false" />
+              <button id="search-previous" class="popover-icon" type="button" aria-label="Previous match" title="Previous match">↑</button>
+              <button id="search-next" class="popover-icon" type="button" aria-label="Next match" title="Next match">↓</button>
+            </div>
+            <span id="search-count" class="popover-hint">No matches</span>
+          </div>
+          <div id="split-popover" class="header-popover split-popover" role="menu" aria-label="Split terminal" hidden>
+            <button class="popover-action" type="button" data-split-action="right">Split right</button>
+            <button class="popover-action" type="button" data-split-action="down">Split down</button>
+            <button class="popover-action" type="button" data-split-action="three">Three-pane layout</button>
+          </div>
+          <div id="settings-popover" class="header-popover settings-popover" role="dialog" aria-label="Terminal settings" hidden>
+            <div class="settings-heading">Terminal settings</div>
+            <label class="settings-field" for="settings-font-size">
+              <span>Font size</span>
+              <input id="settings-font-size" type="number" min="10" max="24" step="1" />
+            </label>
+            <label class="settings-field" for="settings-theme">
+              <span>Theme</span>
+              <select id="settings-theme">
+                <option value="midnight">Midnight</option>
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+            </label>
+            <label class="settings-field" for="settings-renderer">
+              <span>Renderer</span>
+              <select id="settings-renderer">
+                <option value="auto">Auto</option>
+                <option value="gpu">GPU</option>
+                <option value="cpu">CPU</option>
+              </select>
+            </label>
+            <label class="settings-field" for="settings-scrollback">
+              <span>Scrollback</span>
+              <select id="settings-scrollback">
+                <option value="1000">1,000 lines</option>
+                <option value="5000">5,000 lines</option>
+                <option value="10000">10,000 lines</option>
+                <option value="20000">20,000 lines</option>
+              </select>
+            </label>
+          </div>
+        </div>
       </header>
-      <section id="terminal" class="terminal-container" aria-label="R-SSH terminal"></section>
+      <section id="terminal" class="terminal-workspace" aria-label="Terminal sessions"></section>
+      <footer class="terminal-statusbar">
+        <div class="statusbar-left">
+          <span id="connection-status" class="status" data-state="connecting">Connecting</span>
+          <span class="statusbar-divider" aria-hidden="true"></span>
+          <span id="session-context" class="session-context">Local terminal</span>
+          <span id="workspace-notice" class="workspace-notice" aria-live="polite"></span>
+        </div>
+        <div class="statusbar-right">
+          <span id="terminal-size" class="terminal-meta">— × —</span>
+          <span class="statusbar-divider" aria-hidden="true"></span>
+          <span class="terminal-meta">UTF-8</span>
+          <span class="statusbar-divider" aria-hidden="true"></span>
+          <span id="renderer-mode" class="terminal-meta">CPU</span>
+          <button id="restart" class="restart" type="button" hidden>Restart</button>
+        </div>
+      </footer>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

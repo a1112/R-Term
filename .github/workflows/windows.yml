@@ -1,4 +1,4 @@
-name: Windows repository boundary
+name: R-Term independence
 on:
   push:
     branches: [main]
@@ -6,17 +6,59 @@ on:
 permissions:
   contents: read
 jobs:
-  windows:
-    runs-on: windows-latest
+  rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
       RUST_TEST_THREADS: "4"
-      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@1.89.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Linux native dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libxkbcommon-x11-0 libvulkan1 mesa-vulkan-drivers xvfb xauth openssh-client
+      - run: python scripts/ci/test_rterm_independence.py
       - run: python scripts/ci/check-rterm-feature-boundary.py
+      - run: python scripts/ci/check-rust-architecture.py --policy scripts/ci/architecture-policy.json
+      - run: python scripts/ci/check-task10-provenance.py
       - run: cargo fmt --all --check
-      - run: cargo test --locked -p rssh-app --no-default-features --bin rterm -j 2
-      - run: cargo test --locked -p rssh-app --test feature_boundary --test local_pty --test native_window_e2e -j 2
-      - run: cargo check --locked -p rssh-app --features ssh -j 2
+      - run: cargo test --locked -p rterm-app --no-default-features --test feature_boundary -j 2
+      - run: cargo test --locked -p rterm-app --features developer-full --bin rterm -j 2
+      - run: cargo test --locked -p rterm-app --test feature_boundary --test local_pty -j 2
+      - run: cargo test --locked -p rterm-ssh --all-targets -j 2
+      - run: cargo test --locked -p rterm-app --features developer-full --test feature_boundary --test openssh_loopback --test transfer_loopback -j 2
+      - run: cargo check --locked --manifest-path contracts/rterm-consumer/Cargo.toml -j 2
+      - run: cargo test --locked -p rterm-terminal batched_scroll_prune_matches_incremental_prune -j 2
+      - run: cargo test --locked -p rterm-app --test package_release_contract -j 2
       - run: cargo build --locked -j 2
+      - name: Native window (Windows/macOS)
+        if: runner.os != 'Linux'
+        run: cargo test --locked -p rterm-app --test native_window_e2e -j 2 -- --test-threads=1
+      - name: Native window (X11)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a env -u WAYLAND_DISPLAY cargo test --locked -p rterm-app --test native_window_e2e -j 2 -- --test-threads=1
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm --prefix web ci
+      - run: npm --prefix web run lint
+      - run: npm --prefix web test
+      - run: npm --prefix web run build

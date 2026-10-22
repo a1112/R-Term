@@ -7,7 +7,7 @@ if (($# < 2)); then
 fi
 pid="$1"
 action="$2"
-window_title="${RSSH_FUNCTIONAL_X11_WINDOW_TITLE:-}"
+window_title="${RTERM_FUNCTIONAL_X11_WINDOW_TITLE:-}"
 shift 2
 
 process_tree() {

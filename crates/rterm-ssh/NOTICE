@@ -1,0 +1,8 @@
+R-Term native SSH backend
+
+This crate retains source inherited from the R-SSH project at commit
+3fdda8299ff6e066b4272a7a064d135e3be38647.
+
+Copyright (c) 2026 a1112 and R-SSH contributors.
+The inherited source is distributed under the MIT license; see the repository
+LICENSE for the complete license text.

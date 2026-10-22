@@ -11,7 +11,7 @@ use sha2::{Digest, Sha256};
 
 const TRACE_PACK_GZIP: &[u8] = include_bytes!("fixtures/task10_legacy_trace_pack.gz");
 const FIXTURE_RECORDS: &str =
-    include_str!("../crates/rssh-runtime/tests/fixtures/task10_legacy_fixture_records.txt");
+    include_str!("../crates/rterm-runtime/tests/fixtures/task10_legacy_fixture_records.txt");
 const PACK_MAGIC: &[u8] = b"rssh.task10.trace-pack/v1\n";
 const TRACE_COUNT: usize = 356;
 const PACK_GZIP_LEN: usize = 949_468;

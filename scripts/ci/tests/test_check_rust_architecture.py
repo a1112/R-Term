@@ -8,52 +8,51 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 CHECKER = REPOSITORY_ROOT / "scripts" / "ci" / "check-rust-architecture.py"
+ACTIVE_CI_WORKFLOW = REPOSITORY_ROOT / ".github" / "workflows" / "windows.yml"
 
 
 class RustArchitectureCheckerTests(unittest.TestCase):
     def test_stage1_workspace_declares_types_domain_and_compatibility_facade(self):
         workspace = (REPOSITORY_ROOT / "Cargo.toml").read_text(encoding="utf-8")
-        core = (REPOSITORY_ROOT / "crates" / "rssh-core" / "Cargo.toml").read_text(
+        core = (REPOSITORY_ROOT / "crates" / "rterm-core" / "Cargo.toml").read_text(
             encoding="utf-8"
         )
 
         self.assertIn('"crates/rterm-types"', workspace)
-        self.assertIn('"crates/rssh-domain"', workspace)
+        self.assertIn('"crates/rterm-domain"', workspace)
         self.assertIn("rterm-types", core)
-        self.assertIn("rssh-domain", core)
+        self.assertIn("rterm-domain", core)
 
     def test_stage1_foundation_manifests_obey_one_way_dependency_direction(self):
         types = (
             REPOSITORY_ROOT / "crates" / "rterm-types" / "Cargo.toml"
         ).read_text(encoding="utf-8")
         domain = (
-            REPOSITORY_ROOT / "crates" / "rssh-domain" / "Cargo.toml"
+            REPOSITORY_ROOT / "crates" / "rterm-domain" / "Cargo.toml"
         ).read_text(encoding="utf-8")
 
         self.assertNotIn("rssh-", types)
         self.assertIn("rterm-types", domain)
-        for forbidden in ("rssh-app", "rssh-runtime", "rssh-renderer", "rssh-ssh"):
+        for forbidden in ("rterm-app", "rterm-runtime", "rterm-renderer", "rterm-ssh"):
             self.assertNotIn(forbidden, domain)
 
     def test_stage1_renames_terminal_and_font_packages_without_losing_compatibility_aliases(self):
         workspace = (REPOSITORY_ROOT / "Cargo.toml").read_text(encoding="utf-8")
         terminal = (
-            REPOSITORY_ROOT / "crates" / "rssh-terminal" / "Cargo.toml"
+            REPOSITORY_ROOT / "crates" / "rterm-terminal" / "Cargo.toml"
         ).read_text(encoding="utf-8")
         fonts = (
             REPOSITORY_ROOT / "crates" / "rterm-fonts" / "Cargo.toml"
         ).read_text(encoding="utf-8")
 
-        self.assertIn('"crates/rssh-terminal"', workspace)
+        self.assertIn('"crates/rterm-terminal"', workspace)
         self.assertIn('"crates/rterm-fonts"', workspace)
         self.assertNotIn('"crates/rssh-fonts"', workspace)
         self.assertIn('name = "rterm-terminal"', terminal)
         self.assertIn('name = "rterm-fonts"', fonts)
 
     def test_deterministic_performance_uses_the_stage1_terminal_package_name(self):
-        workflow = (
-            REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
-        ).read_text(encoding="utf-8")
+        workflow = ACTIVE_CI_WORKFLOW.read_text(encoding="utf-8")
 
         self.assertIn(
             "cargo test --locked -p rterm-terminal "
@@ -63,18 +62,18 @@ class RustArchitectureCheckerTests(unittest.TestCase):
 
     def test_stage1_foundational_crates_import_owned_types_without_the_core_facade(self):
         expectations = {
-            "rssh-terminal": ("rterm-types",),
+            "rterm-terminal": ("rterm-types",),
             "rterm-render-core": ("rterm-types",),
             "rterm-render-cpu": ("rterm-render-core",),
             "rterm-render-wgpu": ("rterm-render-core",),
-            "rssh-renderer": (
+            "rterm-renderer": (
                 "rterm-render-core",
                 "rterm-render-cpu",
                 "rterm-render-wgpu",
             ),
-            "rssh-ssh": ("rterm-types",),
-            "rssh-runtime": ("rterm-types",),
-            "rssh-native": ("rterm-types", "rssh-domain"),
+            "rterm-ssh": ("rterm-types",),
+            "rterm-runtime": ("rterm-types",),
+            "rterm-native": ("rterm-types", "rterm-domain"),
         }
 
         for crate, required in expectations.items():
@@ -82,7 +81,7 @@ class RustArchitectureCheckerTests(unittest.TestCase):
                 encoding="utf-8"
             )
             production = manifest.split("[dev-dependencies]", maxsplit=1)[0]
-            self.assertNotIn("rssh-core", production, crate)
+            self.assertNotIn("rterm-core", production, crate)
             for package in required:
                 self.assertIn(package, manifest, crate)
 
@@ -91,25 +90,25 @@ class RustArchitectureCheckerTests(unittest.TestCase):
 
         for required in (
             "rterm-types",
-            "rssh-domain",
+            "rterm-domain",
             "rterm-terminal",
             "rterm-fonts",
-            "rssh-core compatibility facade",
+            "rterm-core compatibility facade",
         ):
             self.assertIn(required, readme)
 
     def test_stage2_runtime_package_is_transport_neutral(self):
         manifest = (
-            REPOSITORY_ROOT / "crates" / "rssh-runtime" / "Cargo.toml"
+            REPOSITORY_ROOT / "crates" / "rterm-runtime" / "Cargo.toml"
         ).read_text(encoding="utf-8")
         transport = (
-            REPOSITORY_ROOT / "crates" / "rssh-runtime" / "src" / "transport.rs"
+            REPOSITORY_ROOT / "crates" / "rterm-runtime" / "src" / "transport.rs"
         ).read_text(encoding="utf-8")
 
         self.assertIn('name = "rterm-runtime"', manifest)
         for forbidden in (
-            "rssh-pty",
-            "rssh-ssh",
+            "rterm-pty",
+            "rterm-ssh",
             "local-transport",
             "ssh-transport",
             "transport-adapters",
@@ -118,14 +117,14 @@ class RustArchitectureCheckerTests(unittest.TestCase):
         self.assertNotIn("mod local", transport)
         self.assertNotIn("mod ssh", transport)
         self.assertFalse(
-            (REPOSITORY_ROOT / "crates" / "rssh-runtime" / "src" / "transport" / "local.rs").exists()
+            (REPOSITORY_ROOT / "crates" / "rterm-runtime" / "src" / "transport" / "local.rs").exists()
         )
         self.assertFalse(
-            (REPOSITORY_ROOT / "crates" / "rssh-runtime" / "src" / "transport" / "ssh.rs").exists()
+            (REPOSITORY_ROOT / "crates" / "rterm-runtime" / "src" / "transport" / "ssh.rs").exists()
         )
 
     def test_stage2_concrete_crates_own_opt_in_runtime_adapters(self):
-        for crate in ("rssh-pty", "rssh-ssh"):
+        for crate in ("rterm-pty", "rterm-ssh"):
             root = REPOSITORY_ROOT / "crates" / crate
             manifest = (root / "Cargo.toml").read_text(encoding="utf-8")
             library = (root / "src" / "lib.rs").read_text(encoding="utf-8")
@@ -143,8 +142,8 @@ class RustArchitectureCheckerTests(unittest.TestCase):
             "rterm-runtime",
             "transport-neutral",
             "runtime-adapter",
-            "rssh-pty",
-            "rssh-ssh",
+            "rterm-pty",
+            "rterm-ssh",
         ):
             self.assertIn(required, readme)
 
@@ -155,7 +154,7 @@ class RustArchitectureCheckerTests(unittest.TestCase):
             '"crates/rterm-render-core"',
             '"crates/rterm-render-cpu"',
             '"crates/rterm-render-wgpu"',
-            '"crates/rssh-renderer"',
+            '"crates/rterm-renderer"',
         ):
             self.assertIn(member, workspace)
 
@@ -163,7 +162,7 @@ class RustArchitectureCheckerTests(unittest.TestCase):
             "rterm-render-core": "rterm-render-core",
             "rterm-render-cpu": "rterm-render-cpu",
             "rterm-render-wgpu": "rterm-render-wgpu",
-            "rssh-renderer": "rssh-renderer",
+            "rterm-renderer": "rterm-renderer",
         }
         for directory, package in packages.items():
             manifest = (
@@ -184,9 +183,9 @@ class RustArchitectureCheckerTests(unittest.TestCase):
             "glyphon",
             "raw-window-handle",
             "image =",
-            "rssh-app",
-            "rssh-pty",
-            "rssh-ssh",
+            "rterm-app",
+            "rterm-pty",
+            "rterm-ssh",
             "winit",
             "tauri",
         ):
@@ -210,14 +209,14 @@ class RustArchitectureCheckerTests(unittest.TestCase):
             self.assertIn(root, policy["roots"])
 
     def test_stage3_app_composes_owned_renderers_without_the_compatibility_facade(self):
-        app = (REPOSITORY_ROOT / "crates" / "rssh-app" / "Cargo.toml").read_text(
+        app = (REPOSITORY_ROOT / "crates" / "rterm-app" / "Cargo.toml").read_text(
             encoding="utf-8"
         )
         facade = (
-            REPOSITORY_ROOT / "crates" / "rssh-renderer" / "Cargo.toml"
+            REPOSITORY_ROOT / "crates" / "rterm-renderer" / "Cargo.toml"
         ).read_text(encoding="utf-8")
         facade_library = (
-            REPOSITORY_ROOT / "crates" / "rssh-renderer" / "src" / "lib.rs"
+            REPOSITORY_ROOT / "crates" / "rterm-renderer" / "src" / "lib.rs"
         ).read_text(encoding="utf-8")
 
         for package in (
@@ -227,7 +226,7 @@ class RustArchitectureCheckerTests(unittest.TestCase):
         ):
             self.assertIn(package, app)
             self.assertIn(package, facade)
-        self.assertNotIn("rssh-renderer =", app)
+        self.assertNotIn("rterm-renderer =", app)
         self.assertNotIn("\nwgpu =", facade)
         self.assertNotIn("\nimage =", facade)
         self.assertIn("pub use rterm_render_core", facade_library)
@@ -241,14 +240,12 @@ class RustArchitectureCheckerTests(unittest.TestCase):
             "rterm-render-core",
             "rterm-render-cpu",
             "rterm-render-wgpu",
-            "rssh-renderer compatibility facade",
+            "rterm-renderer compatibility facade",
         ):
             self.assertIn(required, readme)
 
     def test_quality_workflow_runs_the_checked_in_architecture_policy(self):
-        workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
-        )
+        workflow = ACTIVE_CI_WORKFLOW.read_text(encoding="utf-8")
 
         self.assertIn(
             "python scripts/ci/check-rust-architecture.py --policy scripts/ci/architecture-policy.json",
@@ -442,7 +439,7 @@ def policy(limits=None):
 
 
 def run_checker(files, configured_policy):
-    with tempfile.TemporaryDirectory(prefix="rssh-architecture-test-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="rterm-architecture-test-") as temporary:
         root = Path(temporary)
         for relative, contents in files.items():
             path = root / relative

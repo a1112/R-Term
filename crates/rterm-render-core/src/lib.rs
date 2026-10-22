@@ -7,7 +7,7 @@ use std::{
 };
 
 use font8x8::{BASIC_FONTS, UnicodeFonts as _};
-use rssh_terminal::{
+use rterm_terminal::{
     Cell, Color, CursorShape, InlineImageFormat, InlineImageFragment, ItermInlineImage, Terminal,
     TerminalGrid, UnderlineStyle, VerticalAlign,
 };
@@ -368,7 +368,17 @@ impl TerminalSnapshotCache {
     }
 
     fn canonicalize(&mut self, snapshot: &mut TerminalRenderSnapshot) {
-        for row in &mut snapshot.rows {
+        for (index, row) in snapshot.rows.iter_mut().enumerate() {
+            // Damage updates clone the prior snapshot, so unchanged rows keep
+            // their Arc identity. Avoid re-comparing their cells and styles.
+            if self
+                .rows
+                .get(index)
+                .is_some_and(|cached| Arc::ptr_eq(cached, row))
+            {
+                self.metrics.row_hits = self.metrics.row_hits.saturating_add(1);
+                continue;
+            }
             if let Some(cached) = self
                 .rows
                 .iter()
@@ -614,7 +624,7 @@ pub fn terminal_snapshot_content_digest(
     snapshot: &TerminalRenderSnapshot,
 ) -> TerminalContentDigest {
     let mut digest = Sha256::new();
-    digest.update(b"rssh-terminal-render-plan-v1\0");
+    digest.update(b"rterm-terminal-render-plan-v1\0");
     digest.update(
         u64::try_from(snapshot.iter_cells().count())
             .unwrap_or(u64::MAX)
@@ -884,7 +894,7 @@ impl TerminalRenderSnapshot {
         &self,
         row: u16,
         columns: u16,
-    ) -> Vec<rssh_fonts::TerminalCluster> {
+    ) -> Vec<rterm_fonts::TerminalCluster> {
         let mut by_column = self
             .iter_cells()
             .filter(|cell| cell.row == row)
@@ -895,7 +905,7 @@ impl TerminalRenderSnapshot {
         while column < columns {
             match by_column.remove(&column) {
                 Some(cell) if cell.continuation => {
-                    clusters.push(rssh_fonts::TerminalCluster::new(
+                    clusters.push(rterm_fonts::TerminalCluster::new(
                         " ",
                         usize::from(column)..usize::from(column.saturating_add(1)),
                     ));
@@ -905,14 +915,14 @@ impl TerminalRenderSnapshot {
                     let width = u16::from(cell.columns.max(1))
                         .min(columns.saturating_sub(column))
                         .max(1);
-                    clusters.push(rssh_fonts::TerminalCluster::new(
+                    clusters.push(rterm_fonts::TerminalCluster::new(
                         cell.text.as_ref().to_owned(),
                         usize::from(column)..usize::from(column.saturating_add(width)),
                     ));
                     column = column.saturating_add(width);
                 }
                 None => {
-                    clusters.push(rssh_fonts::TerminalCluster::new(
+                    clusters.push(rterm_fonts::TerminalCluster::new(
                         " ",
                         usize::from(column)..usize::from(column.saturating_add(1)),
                     ));
@@ -1483,7 +1493,7 @@ impl TerminalRenderSnapshot {
 /// compatibility diagnostic from reporting known fallback-backed UI glyphs
 /// as missing before the GPU pass has shaped them.
 fn modern_ui_fallback_glyph(character: char) -> bool {
-    matches!(character, '×' | '▾' | '—' | '□')
+    matches!(character, '×' | '▾' | '—' | '□' | '●')
 }
 
 fn blend_selection_background(selection_background: Color, cell_background: Color) -> Color {

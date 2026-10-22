@@ -15,8 +15,8 @@ ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "scripts/ci/prepare-rterm-consumer.py"
 PACKAGES = {
     "rterm-types": "crates/rterm-types",
-    "rterm-terminal": "crates/rssh-terminal",
-    "rterm-runtime": "crates/rssh-runtime",
+    "rterm-terminal": "crates/rterm-terminal",
+    "rterm-runtime": "crates/rterm-runtime",
     "rterm-fonts": "crates/rterm-fonts",
     "rterm-render-core": "crates/rterm-render-core",
     "rterm-render-cpu": "crates/rterm-render-cpu",
@@ -43,9 +43,9 @@ class PrepareConsumerTests(unittest.TestCase):
         git(self.repo, "config", "user.email", "fixture@example.invalid")
         self.write(".gitattributes", "* text=auto eol=lf\n")
         self.write(".gitignore", "ignored.txt\n")
-        self.write("Cargo.toml", '[workspace]\nmembers = ["crates/rssh-app"]\nresolver = "2"\n')
-        self.write("crates/rssh-app/Cargo.toml", APP.decode())
-        self.write("crates/rssh-app/src/main.rs", "fn main() {}\n")
+        self.write("Cargo.toml", '[workspace]\nmembers = ["crates/rterm-app"]\nresolver = "2"\n')
+        self.write("crates/rterm-app/Cargo.toml", APP.decode())
+        self.write("crates/rterm-app/src/main.rs", "fn main() {}\n")
         for name, path in PACKAGES.items():
             self.write(f"{path}/Cargo.toml", f'[package]\nname = "{name}"\nversion = "0.1.0"\nedition = "2021"\n')
             self.write(f"{path}/src/lib.rs", "// immutable fixture source\n")
@@ -99,8 +99,8 @@ class PrepareConsumerTests(unittest.TestCase):
         if os.name == "nt":
             subprocess.run(
                 ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
-                 "New-Item -ItemType Junction -Path $env:RSSH_TEST_LINK -Target $env:RSSH_TEST_TARGET | Out-Null"],
-                env={**os.environ, "RSSH_TEST_LINK": str(link), "RSSH_TEST_TARGET": str(target)},
+                 "New-Item -ItemType Junction -Path $env:RTERM_TEST_LINK -Target $env:RTERM_TEST_TARGET | Out-Null"],
+                env={**os.environ, "RTERM_TEST_LINK": str(link), "RTERM_TEST_TARGET": str(target)},
                 capture_output=True, check=True,
             )
         else:
@@ -118,7 +118,7 @@ class PrepareConsumerTests(unittest.TestCase):
         self.assertEqual(len(receipt["source_trees"]), 9)
         self.assertEqual(receipt["manifest_before_sha256"], receipt["manifest_after_sha256"])
         self.assertEqual(receipt["lockfile_sha256"], hashlib.sha256((self.output / "consumer/Cargo.lock").read_bytes()).hexdigest())
-        self.assertEqual((self.output / "consumer/crates/rssh-app/Cargo.toml").read_bytes(), APP)
+        self.assertEqual((self.output / "consumer/crates/rterm-app/Cargo.toml").read_bytes(), APP)
         self.assertEqual(git(self.repo, "status", "--porcelain"), "")
 
     def test_frozen_preparation_uses_same_product_and_unmodified_old_packages(self):
@@ -129,8 +129,8 @@ class PrepareConsumerTests(unittest.TestCase):
         self.assertEqual(receipt["source_commit"], self.lkg)
         self.assertNotEqual(receipt["manifest_before_sha256"], receipt["manifest_after_sha256"])
         self.assertEqual((self.output / "consumer/crates/rterm-fonts/Cargo.toml").read_bytes(), OLD_FONTS)
-        self.assertEqual((self.output / "consumer/crates/rssh-app/src/main.rs").read_text(), "fn main() {}\n")
-        self.assertEqual((self.repo / "crates/rssh-app/Cargo.toml").read_bytes(), APP)
+        self.assertEqual((self.output / "consumer/crates/rterm-app/src/main.rs").read_text(), "fn main() {}\n")
+        self.assertEqual((self.repo / "crates/rterm-app/Cargo.toml").read_bytes(), APP)
 
     def test_mutable_or_unavailable_refs_fail_before_creating_output(self):
         for source in ("HEAD", "f" * 40):
@@ -165,12 +165,12 @@ class PrepareConsumerTests(unittest.TestCase):
 
     def test_source_worktree_edits_and_untracked_files_are_not_exported(self):
         self.write("crates/rterm-fonts/src/lib.rs", "dirty\n")
-        self.write("crates/rssh-app/src/untracked.rs", "injected\n")
+        self.write("crates/rterm-app/src/untracked.rs", "injected\n")
         self.write("ignored.txt", "ignored injection\n")
         result = self.run_prepare()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((self.output / "consumer/crates/rterm-fonts/src/lib.rs").read_text(), "// immutable fixture source\n")
-        self.assertFalse((self.output / "consumer/crates/rssh-app/src/untracked.rs").exists())
+        self.assertFalse((self.output / "consumer/crates/rterm-app/src/untracked.rs").exists())
         self.assertFalse((self.output / "consumer/ignored.txt").exists())
         self.assertEqual((self.repo / "crates/rterm-fonts/src/lib.rs").read_text(), "dirty\n")
 
@@ -191,7 +191,7 @@ class PrepareConsumerTests(unittest.TestCase):
         self.assertFalse(self.output.exists())
 
     def test_path_escape_and_product_overlay_are_rejected(self):
-        for path in ("../escape", "crates/rssh-app", "C:/escape"):
+        for path in ("../escape", "crates/rterm-app", "C:/escape"):
             with self.subTest(path=path):
                 self.contract["packages"][0]["path"] = path
                 self.contract_path.write_text(json.dumps(self.contract))
@@ -229,7 +229,7 @@ class PrepareConsumerTests(unittest.TestCase):
         expected = module.expected_files(self.repo, self.candidate, self.candidate, list(PACKAGES.values()) + list(VENDORS.values()))
         overrides = {"Cargo.lock": (checkout / "Cargo.lock").read_bytes()}
         module.verify_checkout(checkout, expected, overrides)
-        for path in ("crates/rssh-app/src/main.rs", "crates/rterm-fonts/src/lib.rs", "ignored.txt"):
+        for path in ("crates/rterm-app/src/main.rs", "crates/rterm-fonts/src/lib.rs", "ignored.txt"):
             target = checkout / path
             previous = target.read_bytes() if target.exists() else None
             target.write_text("tampered")
@@ -261,7 +261,7 @@ class PrepareConsumerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "reparse"):
             module.verify_checkout(checkout, {}, {})
         with self.assertRaisesRegex(ValueError, "allowlist"):
-            module.verify_checkout(checkout, {}, {"crates/rssh-app/src/main.rs": b"changed"})
+            module.verify_checkout(checkout, {}, {"crates/rterm-app/src/main.rs": b"changed"})
 
     def test_output_cannot_be_nested_in_the_source_worktree(self):
         self.output = self.repo / "disposable"

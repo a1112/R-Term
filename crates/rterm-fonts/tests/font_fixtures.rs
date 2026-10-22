@@ -154,7 +154,7 @@ fn portable_fixture_paths_reject_windows_aliases_and_illegal_components() {
 #[test]
 fn license_enumeration_includes_nested_extra_files() {
     let unique = format!(
-        "rssh-font-license-enumeration-{}-{}",
+        "rterm-font-license-enumeration-{}-{}",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

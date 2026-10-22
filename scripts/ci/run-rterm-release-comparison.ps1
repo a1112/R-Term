@@ -289,8 +289,8 @@ function Invoke-RtermReleaseMode(
   $sourcePath = New-DetachedCheckout $Name $Commit
   $targetPath = Join-Path $workPath $TargetDirectoryName
   $packageParent = Join-Path $workPath "$Name-package"
-  $packageRoot = Join-Path $packageParent "R-SSH-$Name-windows-x64-unsigned"
-  $artifactName = "R-SSH-$Name-windows-x64-unsigned.zip"
+  $packageRoot = Join-Path $packageParent "R-Term-$Name-windows-x64-unsigned"
+  $artifactName = "R-Term-$Name-windows-x64-unsigned.zip"
   New-Item -ItemType Directory -Path $packageParent | Out-Null
 
   $oldTarget = $env:CARGO_TARGET_DIR
@@ -300,12 +300,12 @@ function Invoke-RtermReleaseMode(
   try {
     Push-Location $sourcePath
     try {
-      & cargo build --locked --release -p rssh-app --no-default-features --features production-gui
+      & cargo build --locked --release -p rterm-app --no-default-features --features production-gui
       if ($LASTEXITCODE -ne 0) {
         throw "$Name production-gui build failed with exit code $LASTEXITCODE"
       }
 
-      $binary = Join-Path $targetPath "release/rssh-app.exe"
+      $binary = Join-Path $targetPath "release/rterm.exe"
       $versionJson = & $binary version --json
       if ($LASTEXITCODE -ne 0) {
         throw "$Name version query failed with exit code $LASTEXITCODE"

@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           policy_path=/usr/sbin/policy-rc.d
-          backup_path="$RUNNER_TEMP/rssh-policy-rc.d.backup"
+          backup_path="$RUNNER_TEMP/rterm-policy-rc.d.backup"
           policy_existed=false
           restore_policy_rc() {
             phase_status=$?
@@ -103,9 +103,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export XDG_RUNTIME_DIR="$RUNNER_TEMP/rssh-wayland"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/rterm-wayland"
           install -d -m 700 "$XDG_RUNTIME_DIR"
-          export WAYLAND_DISPLAY="wayland-rssh"
+          export WAYLAND_DISPLAY="wayland-rterm"
           weston --backend=headless-backend.so --socket="$WAYLAND_DISPLAY" --idle-time=0 >"$RUNNER_TEMP/weston.log" 2>&1 &
           weston_pid=$!
           cleanup() {

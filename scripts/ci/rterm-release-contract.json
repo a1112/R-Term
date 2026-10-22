@@ -14,7 +14,7 @@
   "consumer_package": "native-unsigned-v1",
   "consumer_package_tests": "native-gui-ssh-gpu-v1",
   "consumer_artifacts": [
-    {"after_command": 4, "path": "debug/rssh-app{exe_suffix}"}
+    {"after_command": 4, "path": "debug/rterm{exe_suffix}"}
   ],
   "consumer_commands": [
     [
@@ -22,20 +22,20 @@
       "check",
       "--locked",
       "-p",
-      "rssh-app",
+      "rterm-app",
       "--no-default-features",
       "--features",
       "production-gui"
     ],
-    ["cargo", "test", "--locked", "-p", "rssh-ssh", "--all-targets"],
-    ["cargo", "test", "--locked", "-p", "rssh-pty", "--all-targets"],
-    ["cargo", "test", "--locked", "-p", "rssh-native", "--all-targets"],
+    ["cargo", "test", "--locked", "-p", "rterm-ssh", "--all-targets"],
+    ["cargo", "test", "--locked", "-p", "rterm-pty", "--all-targets"],
+    ["cargo", "test", "--locked", "-p", "rterm-native", "--all-targets"],
     [
       "cargo",
       "build",
       "--locked",
       "-p",
-      "rssh-app",
+      "rterm-app",
       "--no-default-features",
       "--features",
       "production-gui,transfer-tools"
@@ -45,7 +45,7 @@
       "test",
       "--locked",
       "-p",
-      "rssh-functional-tests",
+      "rterm-functional-tests",
       "--all-targets"
     ]
   ],
@@ -58,13 +58,13 @@
     },
     {
       "name": "rterm-terminal",
-      "path": "crates/rssh-terminal",
+      "path": "crates/rterm-terminal",
       "version": "0.1.0",
       "dependencies": ["rterm-types"]
     },
     {
       "name": "rterm-runtime",
-      "path": "crates/rssh-runtime",
+      "path": "crates/rterm-runtime",
       "version": "0.1.0",
       "dependencies": ["rterm-terminal", "rterm-types"]
     },

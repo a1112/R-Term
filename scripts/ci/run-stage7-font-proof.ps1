@@ -66,7 +66,7 @@ function New-FunctionalSchedule {
 }
 
 $plan = [ordered]@{
-    schema = "rssh.stage7/font-ownership-proof-plan/v1"
+    schema = "rterm.stage7/font-ownership-proof-plan/v1"
     renderer = "auto"
     explicit_backend_override = $false
     warmups_per_mode = $Warmups
@@ -356,7 +356,7 @@ if (Test-Path -LiteralPath $OutputDirectory) {
 }
 $outputRoot = (Resolve-Path -LiteralPath $OutputDirectory).Path
 $temporaryBase = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
-$stagingRoot = Join-Path $temporaryBase ("rssh-stage7-font-proof-{0}-{1}" -f $PID, [Guid]::NewGuid().ToString("N"))
+$stagingRoot = Join-Path $temporaryBase ("rterm-stage7-font-proof-{0}-{1}" -f $PID, [Guid]::NewGuid().ToString("N"))
 $outputBoundary = $outputRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
 $outputPrefix = $outputBoundary + [System.IO.Path]::DirectorySeparatorChar
 if (
@@ -378,8 +378,8 @@ if ($hasAppOverride) {
     $app = (Resolve-Path -LiteralPath $AppPath).Path
     $launcher = (Resolve-Path -LiteralPath $LauncherPath).Path
 } else {
-    $app = Join-Path (Join-Path $targetRoot $profileDirectory) "rssh-app$executableSuffix"
-    $launcher = Join-Path (Join-Path $targetRoot $profileDirectory) "rssh-bench-launcher$executableSuffix"
+    $app = Join-Path (Join-Path $targetRoot $profileDirectory) "rterm$executableSuffix"
+    $launcher = Join-Path (Join-Path $targetRoot $profileDirectory) "rterm-bench-launcher$executableSuffix"
 }
 
 if (-not $SkipBuild) {
@@ -389,13 +389,13 @@ if (-not $SkipBuild) {
     }
     Push-Location $repoRoot
     try {
-        cargo build --locked -p rssh-app --no-default-features --features production-gui,diagnostic-tools @profileArguments
+        cargo build --locked -p rterm-app --no-default-features --features production-gui,diagnostic-tools @profileArguments
         if ($LASTEXITCODE -ne 0) {
-            throw "cargo build failed for diagnostic rssh-app with exit code $LASTEXITCODE"
+            throw "cargo build failed for diagnostic rterm-app with exit code $LASTEXITCODE"
         }
-        cargo build --locked -p rssh-diagnostics --bin rssh-bench-launcher @profileArguments
+        cargo build --locked -p rterm-diagnostics --bin rterm-bench-launcher @profileArguments
         if ($LASTEXITCODE -ne 0) {
-            throw "cargo build failed for rssh-bench-launcher with exit code $LASTEXITCODE"
+            throw "cargo build failed for rterm-bench-launcher with exit code $LASTEXITCODE"
         }
     }
     finally {
@@ -420,8 +420,8 @@ if ($certificationEligible) {
 }
 $producerScriptSha256 = Get-FileSha256 $PSCommandPath
 $initialBinaryHashes = [ordered]@{
-    "rssh-app.exe" = Get-FileSha256 $app
-    "rssh-bench-launcher.exe" = Get-FileSha256 $launcher
+    "rterm.exe" = Get-FileSha256 $app
+    "rterm-bench-launcher.exe" = Get-FileSha256 $launcher
 }
 $runId = "stage7-font-proof-{0}-{1}" -f ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds()), $PID
 $identity = $null
@@ -451,8 +451,8 @@ function Assert-BinaryIdentityUnchanged {
     $currentAppHash = Get-FileSha256 $app
     $currentLauncherHash = Get-FileSha256 $launcher
     if (
-        $currentAppHash -cne $initialBinaryHashes["rssh-app.exe"] -or
-        $currentLauncherHash -cne $initialBinaryHashes["rssh-bench-launcher.exe"]
+        $currentAppHash -cne $initialBinaryHashes["rterm.exe"] -or
+        $currentLauncherHash -cne $initialBinaryHashes["rterm-bench-launcher.exe"]
     ) {
         throw "diagnostic binary identity changed during collection"
     }
@@ -506,7 +506,7 @@ function Invoke-FontDiagnostic([string] $Mode, [string] $Specimen) {
         throw "launcher output was not valid JSON"
     }
     if (
-        $record.schema -cne "rssh.diagnostics/v2" -or
+        $record.schema -cne "rterm.diagnostics/v2" -or
         $record.readiness.status -cne "ready" -or
         $record.failures.Count -ne 0
     ) {
@@ -729,7 +729,7 @@ function Assert-RunnerFingerprintObservation([object] $Observation, [string] $Ex
         "schema", "source", "complete", "fields", "fingerprint_sha256", "collector_script_sha256", "collector_timeout_seconds"
     ) -Label "runner fingerprint observation"
     if (
-        $Observation.schema -cne "rssh.stage7/runner-fingerprint/v1" -or
+        $Observation.schema -cne "rterm.stage7/runner-fingerprint/v1" -or
         $Observation.source -cne $ExpectedSource -or
         $Observation.complete -isnot [bool] -or
         $Observation.complete -ne $true
@@ -775,20 +775,20 @@ function Assert-RunnerFingerprintObservation([object] $Observation, [string] $Ex
     }
 }
 
-$previousScale = $env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR
+$previousScale = $env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR
 $script:benchmarkEnvironmentRestored = $false
 function Restore-BenchmarkEnvironment([switch] $AllowTestFault) {
     if ($AllowTestFault -and $TestRunnerFingerprintFault -ceq "final-environment-failure") {
         throw "simulated final environment restoration failpoint"
     }
     if ($null -eq $previousScale) {
-        Remove-Item Env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR -ErrorAction Stop
+        Remove-Item Env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR -ErrorAction Stop
     } else {
-        $env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR = $previousScale
+        $env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR = $previousScale
     }
     $script:benchmarkEnvironmentRestored = $true
 }
-$env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR = "1"
+$env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR = "1"
 try {
     $warmupProcessIds = [System.Collections.Generic.List[string]]::new()
     $warmupProcessIdSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
@@ -928,7 +928,7 @@ try {
             $atomicRelativePath = "raw/{0}/round-{1:D3}.json" -f $mode, $round
             $atomicPath = Join-Path $stagingRoot $atomicRelativePath
             $atomicPayload = [ordered]@{
-                schema = "rssh.stage7/font-ownership-process/v1"
+                schema = "rterm.stage7/font-ownership-process/v1"
                 certification_eligible = $certificationEligible
                 identity = $identity
                 requested_backend = "auto"
@@ -994,7 +994,7 @@ try {
         })
     }
     $rawPayload = [ordered]@{
-        schema = "rssh.stage7.metric-raw/v1"
+        schema = "rterm.stage7.metric-raw/v1"
         certification_eligible = $certificationEligible
         identity = $identity
         warmups = $Warmups * $modes.Count
@@ -1018,7 +1018,7 @@ try {
     }
 
     $aggregatePayload = [ordered]@{
-        schema = "rssh.stage7.metric-aggregate/v1"
+        schema = "rterm.stage7.metric-aggregate/v1"
         certification_eligible = $certificationEligible
         identity = $identity
         ok = $true
@@ -1066,7 +1066,7 @@ try {
     }
 
     $runnerPayload = [ordered]@{
-        schema = "rssh.stage7.result/v1"
+        schema = "rterm.stage7.result/v1"
         certification_eligible = $certificationEligible
         identity = $runnerAnchorIdentity
         ok = $true
@@ -1084,7 +1084,7 @@ try {
     Write-AtomicJson $runnerPath $runnerPayload
 
     $catalogPayload = [ordered]@{
-        schema = "rssh.stage7.result/v1"
+        schema = "rterm.stage7.result/v1"
         certification_eligible = $certificationEligible
         identity = $identity
         ok = $true
@@ -1148,22 +1148,22 @@ try {
     }
 
     $entries = @(
-        New-FragmentEntry "font-ownership-raw" "font-ownership-raw" "raw" "rssh.stage7.metric-raw/v1" $rawPath @()
-        New-FragmentEntry "font-ownership-aggregate" "font-ownership-aggregate" "aggregate" "rssh.stage7.metric-aggregate/v1" $aggregatePath @("font-ownership-raw")
-        New-FragmentEntry "runner-fingerprint" "runner-fingerprint" "proof" "rssh.stage7.result/v1" $runnerPath @()
-        New-FragmentEntry "font-catalog-fingerprint" "font-catalog-fingerprint" "proof" "rssh.stage7.result/v1" $catalogPath @()
+        New-FragmentEntry "font-ownership-raw" "font-ownership-raw" "raw" "rterm.stage7.metric-raw/v1" $rawPath @()
+        New-FragmentEntry "font-ownership-aggregate" "font-ownership-aggregate" "aggregate" "rterm.stage7.metric-aggregate/v1" $aggregatePath @("font-ownership-raw")
+        New-FragmentEntry "runner-fingerprint" "runner-fingerprint" "proof" "rterm.stage7.result/v1" $runnerPath @()
+        New-FragmentEntry "font-catalog-fingerprint" "font-catalog-fingerprint" "proof" "rterm.stage7.result/v1" $catalogPath @()
     )
     $fragment = [ordered]@{
-        schema = "rssh.stage7-artifact-manifest-fragment/v1"
+        schema = "rterm.stage7-artifact-manifest-fragment/v1"
         requested_state = "attribution-ready"
         certified_commit = $sourceSha
         epoch_id = Get-CanonicalSha256 ([ordered]@{
             state = "attribution-ready"
             certified_commit = $sourceSha
-            rssh = $null
+            rterm = $null
             rterm = $null
         })
-        rssh = $null
+        rterm = $null
         rterm = $null
         entries = $entries
     }
@@ -1181,7 +1181,7 @@ try {
             throw "simulated final summary serialization failpoint"
         }
         $summaryJson = [ordered]@{
-            schema = "rssh.stage7/font-ownership-proof-run/v1"
+            schema = "rterm.stage7/font-ownership-proof-run/v1"
             ok = $true
             certification_eligible = $certificationEligible
             raw_sample_count = $modes.Count * $MeasuredRounds * $samplesPerProcess

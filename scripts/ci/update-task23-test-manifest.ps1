@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $sources = @(
-    Get-ChildItem -LiteralPath (Join-Path $root 'crates/rssh-app/src') -Recurse -Filter '*.rs' -File |
+    Get-ChildItem -LiteralPath (Join-Path $root 'crates/rterm-app/src') -Recurse -Filter '*.rs' -File |
         ForEach-Object {
             $_.FullName.Substring($root.Length + 1).Replace('\', '/')
         } |
@@ -32,14 +32,14 @@ function Get-Domain([string]$Name) {
 
 function Get-TargetModule([string]$Source) {
     $stem = [IO.Path]::GetFileNameWithoutExtension($Source)
-    if ($Source -like 'crates/rssh-app/src/window_compat_tests/*') {
+    if ($Source -like 'crates/rterm-app/src/window_compat_tests/*') {
         return 'window::tests'
     }
     switch ($Source) {
-        'crates/rssh-app/src/window_inspect_pane_tests.rs' { return 'window::window_inspect_pane_tests' }
-        'crates/rssh-app/src/window_restart_pane_tests.rs' { return 'window::window_restart_pane_tests' }
-        'crates/rssh-app/src/window.rs' { return 'window::tests' }
-        'crates/rssh-app/src/main.rs' { return 'crate' }
+        'crates/rterm-app/src/window_inspect_pane_tests.rs' { return 'window::window_inspect_pane_tests' }
+        'crates/rterm-app/src/window_restart_pane_tests.rs' { return 'window::window_restart_pane_tests' }
+        'crates/rterm-app/src/window.rs' { return 'window::tests' }
+        'crates/rterm-app/src/main.rs' { return 'crate' }
         default { return "$stem::tests" }
     }
 }
@@ -85,11 +85,11 @@ foreach ($source in $sources) {
         $hash = Get-Sha256Prefix $bytes
         $behavior = "T23-$($domain.ToUpperInvariant())-$hash"
         $targetModule = Get-TargetModule $source
-        $rows.Add("$behavior|$source|$name|$occurrence|rssh-app|$targetModule|$domain")
+        $rows.Add("$behavior|$source|$name|$occurrence|rterm-app|$targetModule|$domain")
     }
 }
 
-$output = Join-Path $root 'crates/rssh-app/tests/fixtures/task23_app_test_manifest.txt'
+$output = Join-Path $root 'crates/rterm-app/tests/fixtures/task23_app_test_manifest.txt'
 $null = New-Item -ItemType Directory -Path (Split-Path $output) -Force
 $header = @(
     '# task23_app_test_manifest_v1',

@@ -15,7 +15,7 @@ fn release_renderer_excludes_identifier_limit_test_api_and_artifacts() {
         .join("renderer-release-api");
     let source = probe.join("src");
     fs::create_dir_all(&source).expect("create release API probe");
-    let renderer = toml_path(&workspace.join("crates/rssh-renderer"));
+    let renderer = toml_path(&workspace.join("crates/rterm-renderer"));
     let fonts = toml_path(&workspace.join("crates/rterm-fonts"));
     let glyphon = toml_path(&workspace.join("vendor/glyphon-0.12.0"));
     let gpu_allocator = toml_path(&workspace.join("vendor/gpu-allocator-0.28.0"));
@@ -23,8 +23,8 @@ fn release_renderer_excludes_identifier_limit_test_api_and_artifacts() {
         probe.join("Cargo.toml"),
         format!(
             "[package]\nname = \"renderer-release-api-probe\"\nversion = \"0.0.0\"\n\
-             edition = \"2024\"\n\n[workspace]\n\n[dependencies]\nrssh-renderer = {{ path = \"{renderer}\" }}\n\
-             rssh-fonts = {{ package = \"rterm-fonts\", path = \"{fonts}\" }}\n\n[patch.crates-io]\n\
+             edition = \"2024\"\n\n[workspace]\n\n[dependencies]\nrterm-renderer = {{ path = \"{renderer}\" }}\n\
+             rterm-fonts = {{ package = \"rterm-fonts\", path = \"{fonts}\" }}\n\n[patch.crates-io]\n\
              glyphon = {{ path = \"{glyphon}\" }}\n\
              gpu-allocator = {{ path = \"{gpu_allocator}\" }}\n"
         ),
@@ -32,8 +32,8 @@ fn release_renderer_excludes_identifier_limit_test_api_and_artifacts() {
     .expect("write release API probe manifest");
     fs::write(
         source.join("main.rs"),
-        "use rssh_fonts::RasterCacheConfig;\n\
-         use rssh_renderer::gpu::GpuTextConfig;\n\
+        "use rterm_fonts::RasterCacheConfig;\n\
+         use rterm_renderer::gpu::GpuTextConfig;\n\
          fn main() {\n\
              let _ = GpuTextConfig::new(1024, RasterCacheConfig::new(1024))\n\
                  .with_identifier_limit_for_tests(1);\n\
@@ -125,7 +125,7 @@ fn verify_release_mode(probe: &Path, mode: &str, debug_assertions: bool, rustfla
     let artifacts = messages
         .into_iter()
         .filter(|message| message["reason"] == "compiler-artifact")
-        .filter(|message| message["target"]["name"] == "rssh_renderer")
+        .filter(|message| message["target"]["name"] == "rterm_renderer")
         .flat_map(|message| message["filenames"].as_array().cloned().unwrap_or_default())
         .filter_map(|filename| filename.as_str().map(ToOwned::to_owned))
         .filter(|filename| {
@@ -140,7 +140,7 @@ fn verify_release_mode(probe: &Path, mode: &str, debug_assertions: bool, rustfla
         .collect::<Vec<_>>();
     assert!(
         !artifacts.is_empty(),
-        "{mode} release probe emitted no current rssh-renderer rlib/rmeta artifacts"
+        "{mode} release probe emitted no current rterm-renderer rlib/rmeta artifacts"
     );
     for artifact in artifacts {
         let bytes = fs::read(&artifact).unwrap_or_else(|error| {

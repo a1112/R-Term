@@ -2,92 +2,92 @@
   "schema": 1,
   "cases": [
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "visual_bell",
       "name": "window::tests::window_app_cursor_visual_bell_fades_from_force_reverse_cursor_color"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "process_ownership",
       "name": "window::tests::exact_gpu_stop_stage::exact_gpu_stop_stage_wrapper_reaps_descendants_on_timeout"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "visual_bell",
       "name": "window::tests::window_app_cursor_visual_bell_uses_foreground_without_tinting_background"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "input_bytes",
       "name": "window::tests::window_app_delivered_shift_text_reaches_pty_with_ime_enabled"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "input_bytes",
       "name": "window::tests::window_app_ime_commits_fullwidth_punctuation_once"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "input_bytes",
       "name": "window::tests::window_app_writes_ime_commit_text_when_ime_is_enabled"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "input_bytes",
       "name": "window::tests::window_app_ignores_ime_commit_text_when_ime_is_disabled"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "input_bytes",
       "name": "window::tests::window_app_clears_ime_preedit_on_commit"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "input_bytes",
       "name": "local::tests::encodes_paste_event_as_utf8_bytes"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "input_bytes",
       "name": "local::tests::encodes_paste_event_as_bracketed_paste_when_enabled"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "input_bytes",
       "name": "window::tests::window_app_reload_configuration_shortcut_dispatches_reload_without_renaming_workspace"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "session_lifecycle",
       "name": "runtime_composition::tests::close_drains_every_published_runtime_batch_before_closed_event"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "session_lifecycle",
       "name": "runtime_composition::tests::one_runtime_revision_is_not_split_into_stale_host_batches"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "session_lifecycle",
       "name": "runtime_composition::tests::scheduled_runtime_continuation_wakes_the_window_without_another_transport_notice"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "session_lifecycle",
       "name": "runtime_composition::tests::window_runtime_owns_multiple_pane_workers_and_active_selection"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "session_lifecycle",
       "name": "window::tests::new_split_and_tab_launches_use_reloaded_defaults"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "session_lifecycle",
       "name": "window::tests::window_app_duplicate_and_reopen_closed_tab_restore_the_full_tab_layout"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "session_lifecycle",
       "name": "window::tests::window_manager_reload_rebuilds_input_runtime_renderer_and_future_launch_state"
     },
@@ -97,7 +97,7 @@
       "name": "console_process_ownership_rejects_reused_pids_but_detects_retained_children"
     },
     {
-      "target": "rssh-app",
+      "target": "rterm",
       "group": "session_lifecycle",
       "name": "window::tests::pane_pty_stop_reaps_real_child_and_joins_real_reader"
     },
@@ -119,12 +119,12 @@
     {
       "target": "openssh_loopback",
       "group": "real_ssh",
-      "name": "rssh_app_system_openssh_entrypoint_runs_a_real_loopback_exec"
+      "name": "rterm_app_system_openssh_entrypoint_runs_a_real_loopback_exec"
     },
     {
       "target": "openssh_loopback",
       "group": "real_ssh",
-      "name": "rssh_app_native_ssh_disconnects_and_reconnects_with_closed_lifecycle"
+      "name": "rterm_app_native_ssh_disconnects_and_reconnects_with_closed_lifecycle"
     }
   ],
   "manual_pending": [

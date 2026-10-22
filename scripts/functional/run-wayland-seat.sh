@@ -5,13 +5,13 @@ if (($# == 0)); then
   echo "usage: run-wayland-seat.sh COMMAND [ARG ...]" >&2
   exit 2
 fi
-runtime="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/rssh-functional-wayland-$RANDOM"
+runtime="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/rterm-functional-wayland-$RANDOM"
 mkdir -m 700 "$runtime"
 export XDG_RUNTIME_DIR="$runtime"
 export DISPLAY=:98
-export WAYLAND_DISPLAY=wayland-rssh-functional
-export RSSH_FUNCTIONAL_XDOTOOL="${RSSH_FUNCTIONAL_XDOTOOL:-$(command -v xdotool)}"
-weston_shell="${RSSH_FUNCTIONAL_WESTON_SHELL:-kiosk-shell.so}"
+export WAYLAND_DISPLAY=wayland-rterm-functional
+export RTERM_FUNCTIONAL_XDOTOOL="${RTERM_FUNCTIONAL_XDOTOOL:-$(command -v xdotool)}"
+weston_shell="${RTERM_FUNCTIONAL_WESTON_SHELL:-kiosk-shell.so}"
 
 dump_startup_logs() {
   for log in xvfb weston; do
@@ -63,7 +63,7 @@ wait_for_weston_window() {
   for _ in {1..300}; do
     window="$(xdotool search --onlyvisible --class weston 2>/dev/null | head -n1 || true)"
     if [[ -n "$window" ]]; then
-      export RSSH_FUNCTIONAL_WESTON_WINDOW="$window"
+      export RTERM_FUNCTIONAL_WESTON_WINDOW="$window"
       return 0
     fi
     require_live_process "$weston_pid" Weston || return
@@ -96,7 +96,7 @@ wait_for_x11_display
 weston --backend=x11-backend.so --shell="$weston_shell" --socket="$WAYLAND_DISPLAY" --idle-time=0 >"$runtime/weston.log" 2>&1 &
 weston_pid=$!
 wait_for_weston_socket
-export RSSH_FUNCTIONAL_WESTON_BACKEND=x11
-export RSSH_FUNCTIONAL_COMPOSITOR_LOG="$runtime/weston.log"
+export RTERM_FUNCTIONAL_WESTON_BACKEND=x11
+export RTERM_FUNCTIONAL_COMPOSITOR_LOG="$runtime/weston.log"
 wait_for_weston_window
 "$@"

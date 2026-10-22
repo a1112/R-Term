@@ -49,7 +49,7 @@ def main() -> None:
             lockfiles[name] = sha256(path)
 
     manifest = {
-        "schema": "rssh-ci-evidence-v1",
+        "schema": "rterm-ci-evidence-v1",
         "commit": os.environ.get("GITHUB_SHA") or tool_version(["git", "rev-parse", "HEAD"]),
         "repository": os.environ.get("GITHUB_REPOSITORY"),
         "ref": os.environ.get("GITHUB_REF"),

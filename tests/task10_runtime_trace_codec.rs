@@ -1,8 +1,8 @@
 use std::fmt::Write as _;
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
-use rssh_core::DamageRegion;
-use rssh_terminal::{
+use rterm_core::DamageRegion;
+use rterm_terminal::{
     Cell, CellAttachment, CellContent, Color, CursorShape, InlineImageFormat, InlineImageFragment,
     ItermInlineImage, SemanticType, Terminal, TerminalScreenDomain, UnderlineStyle, VerticalAlign,
 };

@@ -1,75 +1,113 @@
 # R-Term
 
-This repository owns the native graphical application, window handling, terminal
-emulation and runtime, CPU/GPU renderers, fonts, clipboard/input, local PTY,
-Web UI, Tauri application, graphical configuration and graphical diagnostics.
-The executable is `rterm`. Internal `rssh-*` crate names are retained for source compatibility.
+R-Term is an independent graphical terminal with local PTY sessions, terminal
+emulation, CPU/GPU rendering, fonts, clipboard/input, a Web UI and a Tauri app.
+The executable is `rterm`; all workspace packages and runtime identifiers belong
+to R-Term. Building any feature requires no R-SSH checkout, binary, Git source
+or service.
 
-## Local terminal (default, SSH disabled)
+## Local terminal
 
-```powershell
+```sh
 cargo build --locked
-cargo run --locked -- local -- powershell.exe
-cargo run --locked -- window -- cmd.exe
+cargo run --locked
+cargo run --locked -- local
+cargo run --locked -- window --cwd /path/to/project
+cargo install --locked --path crates/rterm-app --bin rterm
 ```
 
-To install the command into Cargo's bin directory (which must be on `PATH`):
+Running `rterm` without arguments opens the graphical terminal. `rterm local`
+or `rterm console` runs the local shell in the current console. `--cwd` and
+`-- <program> [args...]` select a directory and command, for example
+`rterm local -- powershell.exe` on Windows or `rterm local -- /bin/zsh` on macOS.
 
-```powershell
-cargo install --locked --path crates/rssh-app --bin rterm
-rterm local -- powershell.exe
-```
+Default and `--no-default-features` production builds exclude the native SSH
+backend and password-input library. `rterm version --json` reports the compiled
+capabilities. Remote commands and profiles fail before starting a transport
+when SSH is disabled.
 
-Running `rterm` without arguments opens the local graphical terminal. `rterm local`
-or `rterm console` runs the local shell in the current console; `--cwd` and
-`-- <program> [args...]` select a working directory and command. `rterm version
---json` reports `native_ssh_backend: "disabled"` in this build. SSH, SCP and SFTP
-requests, including remote profiles, fail before launching any transport.
+## Optional SSH
 
-Both the default build and `cargo build --locked --no-default-features` exclude
-the SSH backend, adapter, protocol types and password-input library from the
-production dependency graph. Terminal dimensions are owned by R-Term itself.
-
-## Optional SSH extension
-
-```powershell
+```sh
 cargo build --locked --features ssh
 cargo run --locked --features ssh -- ssh --native user@host
 cargo run --locked --features ssh -- ssh --gui user@host
 ```
 
-`--features transfer-tools` also enables SSH and the SCP/SFTP command entries.
-`--features developer-full` includes SSH, transfer tools, diagnostic commands and
-the extended image decoders. SSH is a compile-time extension, not a dynamic plugin.
+`--features transfer-tools` adds SCP/SFTP; `--features developer-full` adds SSH,
+transfers, diagnostics and extended image decoders. The optional `rterm-ssh`
+crate is maintained here and uses upstream `russh` directly. System OpenSSH
+commands use the installed `ssh`/`scp`/`sftp` tools. Neither backend calls R-SSH.
+`rterm-types` has no dependencies or transport features.
 
-For explicit package selection use `-p rssh-app --bin rterm`. The workspace's
-default member is the terminal application; `--workspace` additionally builds
-the adapter and other auxiliary packages, so it is not the SSH-free build command.
+Use `-p rterm-app --bin rterm` for explicit application selection. The default
+workspace member is the application; `--workspace` also builds auxiliary
+packages including the optional backend and Tauri.
+
+GUI SSH supports `--renderer auto`, `--renderer cpu` and `--renderer gpu`.
+Use `--benchmark-startup` to report startup metrics. A remote profile can set:
+
+```toml
+[profiles.remote]
+kind = "ssh"
+target = "user@host"
+gui = true
+renderer = "auto"
+host_key_policy = "prompt"
+```
+
+GUI SSH does not support forwarding. GUI SSH does not support `--no-shell`.
+GUI SSH does not support OpenSSH passthrough options.
+
+## Package ownership
+
+`rterm-types` owns neutral values; `rterm-domain` owns application state;
+`rterm-terminal` owns emulation; `rterm-fonts` owns font resources. The
+rterm-core compatibility facade re-exports these boundaries for existing
+internal consumers.
+
+`rterm-runtime` is transport-neutral. The `runtime-adapter` interfaces in
+`rterm-pty` and `rterm-ssh` connect local and remote sessions to that runtime.
+`rterm-render-core`, `rterm-render-cpu` and `rterm-render-wgpu` own rendering;
+the rterm-renderer compatibility facade remains available to existing consumers.
 
 ## Web and Tauri
 
-The Web and Tauri sources remain in `web/` and `tauri/`. Before checking/building
-the entire workspace, run `npm --prefix web ci` and `npm --prefix web run build`;
-Tauri embeds the resulting Web assets.
+```sh
+npm --prefix web ci
+# Start the Rust backend and Vite in separate terminals:
+cargo run --locked -p rterm-web
+npm --prefix web run dev
+# Or build the Tauri application:
+npm --prefix tauri ci
+npm --prefix tauri run build
+```
 
-When enabled, SSH transport comes from the separate R-SSH repository, pinned to an immutable
-GitHub commit in Cargo.toml/Cargo.lock. There are no sibling path dependencies.
-The GUI-owned `rterm-ssh-adapter` bridges SSH sessions to the terminal runtime.
-Cargo may resolve/fetch the pinned optional Git source for its lockfile/cache,
-even when the extension is disabled. No local trial directory is required.
+The Web page and Tauri bundle use the R-Term identity and isolated browser
+storage/cookies. Before a Rust workspace-wide check, run
+`npm --prefix web run build`; Tauri embeds `web/dist`.
+Native unsigned archives are created by `scripts/ci/package-native.sh` or
+`scripts/ci/package-native.ps1`. See [console packaging](docs/release-console.md).
 
 ## Validation
 
-```powershell
-python scripts/ci/check-rterm-feature-boundary.py
-cargo test --locked -p rssh-app --test feature_boundary --test local_pty --test native_window_e2e
-cargo test --locked -p rssh-app --features developer-full --bin rterm --test feature_boundary --test openssh_loopback
+```sh
+python3 scripts/ci/test_rterm_independence.py
+python3 scripts/ci/check-rterm-feature-boundary.py
+cargo fmt --all --check
+cargo test --locked -p rterm-app --test feature_boundary --test local_pty --test native_window_e2e
+cargo test --locked -p rterm-app --features developer-full --test feature_boundary --test openssh_loopback --test transfer_loopback
+cargo test --locked -p rterm-ssh
 ```
 
-The graph check covers default, no-default-features and SSH-enabled builds.
-See [Windows validation](docs/trial/2026-09-20-optional-ssh.md) for the trial results.
+The boundary check covers every local manifest, both lockfiles, outside-checkout
+paths, dependency-free terminal types and four production feature graphs.
+CI runs repository checks and local/SSH tests on Windows, macOS and Linux;
+Web tests run separately. Historical split/performance records and frozen test
+fixtures retain their original provenance; they are not current certification.
+See [repository independence](docs/formal-split.md) and
+[source provenance](SOURCE-PROVENANCE.json).
 
-Historical monolith workflows remain archived under `docs/trial/legacy-workflows`.
-Active Windows CI validates the split repository. Cross-platform protected CI
-certification remains outstanding. See [formal split record](docs/formal-split.md)
-for provenance, ownership and rollback.
+Developer diagnostics can be collected with `scripts/ci/run-stage0-diagnostics.sh`
+or `scripts/ci/run-stage0-diagnostics.ps1`. Their metric definitions and historical
+gates are documented in [Stage 0 metric schema](docs/benchmarks/stage0-schema-v2.md).

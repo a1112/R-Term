@@ -1,6 +1,10 @@
-# R-SSH Native Architecture
+# R-Term Native Architecture
 
-R-SSH is a native Rust SSH terminal client at the **production-parity
+Current repository ownership and optional SSH boundaries are described in
+[repository independence](formal-split.md). Historical implementation notes below
+record behavior at their original checkpoints.
+
+R-Term is an independent native Rust graphical terminal at the **production-parity
 foundation** stage. The design separates terminal state, connection I/O,
 rendering, and product UI so each layer can be tested and replaced
 independently. The current foundation is bounded and evidence-driven; it is not
@@ -92,28 +96,28 @@ keyboard, mouse, paste, resize
 
 ## Crate Boundaries
 
-- `rssh-core`: shared domain types, terminal session and application-shell state
+- `rterm-core`: shared domain types, terminal session and application-shell state
   (`Workspace`, `Tab`, `Pane`, actions, IDs) used before runtime ownership.
-- `rssh-terminal`: VT parser boundary, grid, scrollback, selection, and input
+- `rterm-terminal`: VT parser boundary, grid, scrollback, selection, and input
   encoding.
-- `rssh-renderer`: deterministic CPU/offscreen rendering plus direct `wgpu`
+- `rterm-renderer`: deterministic CPU/offscreen rendering plus direct `wgpu`
   surface presentation and bounded `glyphon` GPU text state.
-- `rssh-fonts`: `cosmic-text` shaping, configured font fallback, color-glyph
+- `rterm-fonts`: `cosmic-text` shaping, configured font fallback, color-glyph
   metadata, and deterministic bundled test fonts.
-- `rssh-ssh`: native `russh` sessions, authentication, full-duplex channels,
+- `rterm-ssh`: native `russh` sessions, authentication, full-duplex channels,
   status propagation, and forwarding lifecycles. System OpenSSH SSH/SFTP/SCP
   execution is integrated at the application boundary.
-- `rssh-pty`: local shell support through Windows ConPTY and Unix PTY.
-- `rssh-test-support`: hermetic SSH/SFTP fixtures and bounded process-tree test
+- `rterm-pty`: local shell support through Windows ConPTY and Unix PTY.
+- `rterm-test-support`: hermetic SSH/SFTP fixtures and bounded process-tree test
   support shared by integration and package smokes.
-- `rssh-app`: desktop entry point, native window, and user-facing action dispatch
+- `rterm-app`: desktop entry point, native window, and user-facing action dispatch
   for app-shell state transitions.
 
 ## App Shell Status
 
-- Completed in v1: deterministic shell state model in `rssh-core` for one startup
+- Completed in v1: deterministic shell state model in `rterm-core` for one startup
   workspace, tab, and pane with typed IDs and tab/pane/workspace actions.
-- Completed in v1: `rssh-app` startup initializes this model from the local PTY
+- Completed in v1: `rterm-app` startup initializes this model from the local PTY
   command and updates the native window title with workspace/tab/pane state.
 - Completed in v1: native PTY command construction honors the WezTerm-style
   `term` effective-config value for `TERM`, defaulting to `xterm-256color` and
@@ -674,7 +678,7 @@ keyboard, mouse, paste, resize
   `SwitchToWorkspace` subset. Existing named workspaces become active without
   duplication, and missing named workspaces are created with the requested spawn
   command and selected. Native `SwitchToWorkspaceArgs` payloads expose that
-  spawn command path through `rssh-app`, while existing named workspaces keep
+  spawn command path through `rterm-app`, while existing named workspaces keep
   their current pane launch. Missing workspaces created without an explicit
   spawn command use native `default_prog` for the new pane when configured.
   Structured workspace spawn queries can omit the program and apply supported
@@ -1328,7 +1332,7 @@ keyboard, mouse, paste, resize
   show/unminimize/focus; `ActivateWindow*` reuses that same request path.
   Observable focus still changes only when the OS confirms it. `HideApplication`
   is consumed once by the manager and dispatches winit's native application hide
-  on macOS without synthesizing focus changes. `rssh-app` app/unit tests on the
+  on macOS without synthesizing focus changes. `rterm-app` app/unit tests on the
   Windows host/build verify the logical lifecycle; neither Windows nor macOS has
   a real native multi-window focus-event end-to-end run in this slice. The macOS
   call was checked against the locked winit API type and signature, while the
@@ -1346,7 +1350,7 @@ keyboard, mouse, paste, resize
   Moving a pane across a native-window boundary preserves terminal runtime,
   scrollback, and viewport but clears GUI selection and overlay state.
   Immediate pane/tab close cleanup removes only the closed owner state as an
-  intentional R-SSH robustness enhancement over pinned WezTerm retention.
+  intentional R-Term robustness enhancement over pinned WezTerm retention.
 - Completed after v1: bounded width-resize parity is verified against pinned
   WezTerm `093bf6bf2b82b929ed80c04fd54ebc80464f715e`. Main scrollback and the
   main screen, including a dormant main screen, reflow by logical lines;
@@ -2550,24 +2554,24 @@ keyboard, mouse, paste, resize
 - Implemented in v1: command-palette Scroll To Prompt Previous and Scroll To
   Prompt Next use OSC 133 `A`/`N`/`P` prompt row markers to jump the active
   viewport between retained prompt rows.
-- Implemented in v1: `rssh-terminal` records OSC 133 Prompt/Input/Output
+- Implemented in v1: `rterm-terminal` records OSC 133 Prompt/Input/Output
   semantic types on retained cells, exposes semantic zone queries over
   scrollback plus the visible grid, and handles `I` input markers as
   line-scoped input until cursor movement.
-- Implemented in v1: `rssh-terminal` records WezTerm shell-integration OSC 133
+- Implemented in v1: `rterm-terminal` records WezTerm shell-integration OSC 133
   `D` command-finished metadata with retained row, exit status, and `aid`.
-- Implemented in v1: `rssh-terminal` exposes retained row/column text extraction
+- Implemented in v1: `rterm-terminal` exposes retained row/column text extraction
   for semantic zones and general regions, unwrapping soft-wrapped physical rows
   into logical-line text. WezTerm-style Lua pane APIs and configurable key-table
   bindings remain future parity work.
-- Implemented in v1: `rssh-terminal` records OSC 7 and iTerm2
-  `OSC 1337;CurrentDir` current working directory metadata. `rssh-app` syncs
+- Implemented in v1: `rterm-terminal` records OSC 7 and iTerm2
+  `OSC 1337;CurrentDir` current working directory metadata. `rterm-app` syncs
   that metadata into per-pane launch models for active and inactive panes,
   falling back to local session process tree cwd when the PTY backend exposes a
   pid and preferring child processes over the session root, so new tabs/splits
   inherit it and local PTY spawns receive a decoded filesystem cwd.
-- Implemented in v1: `rssh-terminal` base64-decodes iTerm2/WezTerm
-  `OSC 1337;SetUserVar` metadata into terminal user vars. `rssh-app` syncs
+- Implemented in v1: `rterm-terminal` base64-decodes iTerm2/WezTerm
+  `OSC 1337;SetUserVar` metadata into terminal user vars. `rterm-app` syncs
   those values into per-pane app-shell metadata for active and inactive pane
   runtimes and emits a typed native-window user-var change hook when a stored
   pane value changes, carrying the window id, pane id, name, and value. Static
@@ -2585,9 +2589,9 @@ keyboard, mouse, paste, resize
   static `or` fallbacks for the triggering pane and
   `window:active_pane():get_user_vars()` reads for the active pane, including
   callback-local variables assigned from those user-var reads.
-- Implemented in v1: `rssh-terminal` base64-decodes iTerm2
+- Implemented in v1: `rterm-terminal` base64-decodes iTerm2
   `OSC 1337;SetBadgeFormat` metadata into terminal badge format state.
-  `rssh-app` syncs that value into per-pane app-shell metadata for active and
+  `rterm-app` syncs that value into per-pane app-shell metadata for active and
   inactive pane runtimes, interpolates `\(user.NAME)` badge variables from pane
   user vars, interpolates `\(iterm2.pid)` from the current app process id,
   interpolates `\(iterm2.localhostName)` from the local host name,
@@ -2711,7 +2715,7 @@ keyboard, mouse, paste, resize
   title/session title source, job-name and process-title using the
   pane launch program, command-line using launch program plus args,
   home-directory using the local host home directory, profile-name using the
-  loaded TOML profile name exported as `RSSH_PROFILE` when present, and SSH
+  loaded TOML profile name exported as `RTERM_PROFILE` when present, and SSH
   integration level currently reporting `0` for native/local sessions, username using the local
   host user name, hostname using the local host name, shell using the local host
   shell, uname using the local host OS/architecture description, and mouse-info
@@ -2719,9 +2723,9 @@ keyboard, mouse, paste, resize
   iTerm2 up/down/drag event-type values `0`/`1`/`2` and modifier arrays rendered
   as ordered numeric arrays such as `[2, 4]`, then renders
   non-empty badge text as a pane-local top-right overlay.
-- Implemented in v1: `rssh-terminal` records iTerm2/WezTerm
+- Implemented in v1: `rterm-terminal` records iTerm2/WezTerm
   `OSC 1337;File=...` inline image metadata and decoded payload bytes at the
-  current retained-history cursor position. `rssh-renderer` carries those image
+  current retained-history cursor position. `rterm-renderer` carries those image
   items through live, scrollback, and overlaid pane render snapshots, and draws
   PNG, JPEG, and GIF payloads into the RGBA framebuffer with delay-aware
   animated GIF frame selection by elapsed render time, cell/`px` dimensions,
@@ -2785,10 +2789,10 @@ keyboard, mouse, paste, resize
   controls, broader query responses beyond current direct/local-file payload
   validation and stored-image existence checks, full Sixel protocol coverage,
   and remote sync remain future parity work.
-- Implemented in v1: `rssh-app` responds to xterm cell/window size queries and
+- Implemented in v1: `rterm-app` responds to xterm cell/window size queries and
   WezTerm/iTerm2-compatible `OSC 1337;ReportCellSize` requests using the native
   fixed cell pixel dimensions.
-- Implemented in v1: `rssh-app` answers XTGETTCAP `Sync` queries with the
+- Implemented in v1: `rterm-app` answers XTGETTCAP `Sync` queries with the
   WezTerm synchronized-output terminfo template for the existing
   `ESC[?2026h/l` path.
 - Implemented in v1: XTGETTCAP style/color replies include WezTerm-style
@@ -2884,13 +2888,13 @@ keyboard, mouse, paste, resize
 - Implemented in v1: XTGETTCAP replies expose WezTerm cursor-position and
   device-attribute query templates (`u6`, `u7`, `u8`, `u9`) for the existing
   CSI query response paths.
-- Implemented in v1: `rssh-terminal` tracks `DECSCA` protected-cell state and
+- Implemented in v1: `rterm-terminal` tracks `DECSCA` protected-cell state and
   applies it to DEC selective display/line erase (`DECSED`/`DECSEL`) while
   ordinary `ED`/`EL` still clears the addressed cell range.
 - Implemented in v1: XTGETTCAP replies expose WezTerm title/status-line and
   palette-initialization templates (`tsl`, `fsl`, `dsl`, `initc`) for existing
   OSC title and OSC 4 color handling paths.
-- Implemented in v1: `rssh-terminal` handles DECSTR `CSI ! p` soft reset for
+- Implemented in v1: `rterm-terminal` handles DECSTR `CSI ! p` soft reset for
   insert/replace mode, cursor visibility, origin mode, scroll region, G0
   character set, and saved-cursor state without clearing cells; app runtime and
   console filtering track ESC/C1 DECSTR for mode reports and expose XTGETTCAP
@@ -2901,51 +2905,51 @@ keyboard, mouse, paste, resize
 - Implemented in v1: XTGETTCAP replies expose WezTerm keypad-center `kb2`,
   and console input encodes `KeypadBegin` as `ESC O E` while preserving keypad
   digit 5 as `ESC O u` in application-keypad mode.
-- Implemented in v1: `rssh-app` tracks xterm OSC 4/10/11/12 color changes and
+- Implemented in v1: `rterm-app` tracks xterm OSC 4/10/11/12 color changes and
   answers color queries, including WezTerm-style multiple OSC 4 palette
   index/color update pairs and index query pairs in one sequence, plus
   `#RGB`/`#RRGGBB` hex color specs and RGBA `OSC 10`/`11`/`12` dynamic colors.
-- Implemented in v1: `rssh-terminal` records OSC 0/1/2 title updates and Sun
+- Implemented in v1: `rterm-terminal` records OSC 0/1/2 title updates and Sun
   OSC L/l aliases without rendering those control bytes, giving the app shell
   WezTerm-compatible active-pane title fallback state.
-- Implemented in v1: `rssh-terminal` saves and restores the tracked terminal
+- Implemented in v1: `rterm-terminal` saves and restores the tracked terminal
   title through xterm title-stack `CSI 22;0;0t` and `CSI 23;0;0t`, and
   XTGETTCAP `smcup`/`rmcup` expose WezTerm's alternate-screen plus title-stack
   templates.
-- Implemented in v1: `rssh-terminal` handles DECALN `ESC # 8` screen alignment
+- Implemented in v1: `rterm-terminal` handles DECALN `ESC # 8` screen alignment
   display by filling the visible grid with `E` cells and resetting
   margins/origin mode.
-- Implemented in v1: `rssh-terminal` ignores WezTerm-documented non-printing
+- Implemented in v1: `rterm-terminal` ignores WezTerm-documented non-printing
   C0 controls while preserving BEL/BS/HT/LF/VT/FF/CR/ESC special handling.
-- Implemented in v1: `rssh-terminal` matches WezTerm line-feed semantics for
+- Implemented in v1: `rterm-terminal` matches WezTerm line-feed semantics for
   bare `LF`, `VT`, and `FF` by moving down within the active scroll context
   while preserving the current column; `CR` remains the explicit return to the
   active left margin and `NEL`/`CRLF` provide next-line-at-left-margin behavior.
-- Implemented in v1: `rssh-terminal` consumes `ESC =`/`ESC >`
+- Implemented in v1: `rterm-terminal` consumes `ESC =`/`ESC >`
   application-keypad mode escapes so those non-printing DEC controls do not
   enter the rendered grid.
-- Implemented in v1: `rssh-terminal` plus app/runtime output filtering consume
+- Implemented in v1: `rterm-terminal` plus app/runtime output filtering consume
   standalone ST controls (`ESC \`, UTF-8 C1 `U+009C`, and legacy raw C1
   `0x9C`) as no-effect sequences so string terminators do not enter the
   rendered grid or visible output when seen outside a control string.
-- Implemented in v1: `rssh-terminal` tracks reverse-wrap mode `?45`; with
+- Implemented in v1: `rterm-terminal` tracks reverse-wrap mode `?45`; with
   auto-wrap enabled, BS at the left boundary wraps to the previous row's right
   boundary, and shared runtime mode tracking reports `?45` through DECRQM.
-- Implemented in v1: `rssh-terminal` tracks DEC screen reverse-video mode
-  `?5`; `rssh-renderer` applies it as a full-viewport inverse-video overlay,
+- Implemented in v1: `rterm-terminal` tracks DEC screen reverse-video mode
+  `?5`; `rterm-renderer` applies it as a full-viewport inverse-video overlay,
   and shared runtime mode tracking reports `?5` through DECRQM.
-- Implemented in v1: `rssh-terminal` models WezTerm SGR mode 6 RGBA colors for
-  foreground, background, and underline color state; `rssh-renderer` preserves
+- Implemented in v1: `rterm-terminal` models WezTerm SGR mode 6 RGBA colors for
+  foreground, background, and underline color state; `rterm-renderer` preserves
   alpha in RGBA pixel conversion, and app-shell DECRQSS SGR responses serialize
   alpha-bearing colors.
-- Implemented in v1: `rssh-terminal` maps WezTerm SGR `6` rapid blink onto the
+- Implemented in v1: `rterm-terminal` maps WezTerm SGR `6` rapid blink onto the
   existing blink cell attribute, sharing SGR `5` visibility behavior and SGR
   `25` reset handling.
-- Implemented in v1: `rssh-terminal` models WezTerm SGR 73/74/75 vertical-align
-  state for superscript, subscript, and baseline; `rssh-renderer` offsets the
+- Implemented in v1: `rterm-terminal` models WezTerm SGR 73/74/75 vertical-align
+  state for superscript, subscript, and baseline; `rterm-renderer` offsets the
   glyph baseline, and app-shell DECRQSS SGR responses serialize active 73/74
   state.
-- Implemented in v1: `rssh-app` answers WezTerm-documented DECRQSS `"` `p`
+- Implemented in v1: `rterm-app` answers WezTerm-documented DECRQSS `"` `p`
   conformance-level and `s` left/right-margin queries in both native runtime and
   console output filter paths. The `s` query reports the modeled DECSLRM state,
   and DECRQM reports DECLRMM `?69` for ESC and C1 CSI forms.
@@ -3117,7 +3121,7 @@ Current foundation stack:
 - direct `wgpu` surfaces for GPU presentation, with `glyphon`-backed text
   batches and bounded glyph caches; the CPU/offscreen renderer remains a
   deterministic test and benchmark-proxy path.
-- `rssh-fonts` with `cosmic-text` for shaping and configured fallback.
+- `rterm-fonts` with `cosmic-text` for shaping and configured fallback.
 - native `russh` for in-process SSH and forwarding, alongside system OpenSSH
   for interactive compatibility plus SFTP/SCP workflows.
 - platform PTY adapters for Windows ConPTY and Unix PTYs.

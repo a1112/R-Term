@@ -13,16 +13,16 @@ $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 . (Join-Path $PSScriptRoot 'scorecard-common.ps1')
 
-$repoRoot = Get-RsshRepositoryRoot
+$repoRoot = Get-RTermRepositoryRoot
 $schemaPath = Join-Path $PSScriptRoot 'scorecard.schema.json'
 if ([string]::IsNullOrWhiteSpace($Baseline)) {
     $Baseline = Join-Path $PSScriptRoot 'baselines\windows-x64-rust-1.89.json'
 }
-Test-RsshPerformanceSchema -Path $schemaPath
-$baselineDocument = Read-RsshPerformanceBaseline -Path $Baseline
+Test-RTermPerformanceSchema -Path $schemaPath
+$baselineDocument = Read-RTermPerformanceBaseline -Path $Baseline
 
 if ($ValidationOnly) {
-    Write-RsshScorecardResult -Result ([ordered]@{
+    Write-RTermScorecardResult -Result ([ordered]@{
         ok = $true
         mode = 'validation-only'
         schema_version = $baselineDocument.schema_version
@@ -35,15 +35,15 @@ if ($Candidate -ne 'current') {
     throw "unsupported candidate '$Candidate'; this runner currently measures the checked-out source as 'current'"
 }
 
-$fingerprint = Get-RsshMachineFingerprint
+$fingerprint = Get-RTermMachineFingerprint
 $fingerprintMismatches = @(
-    Assert-RsshComparableMachine `
+    Assert-RTermComparableMachine `
         -Baseline $baselineDocument `
         -Actual $fingerprint `
         -AllowDifferentMachine:$AllowDifferentMachine
 )
 
-function Invoke-RsshMeasuredCommand {
+function Invoke-RTermMeasuredCommand {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][string]$Program,
@@ -60,7 +60,7 @@ function Invoke-RsshMeasuredCommand {
     return [long]$stopwatch.ElapsedMilliseconds
 }
 
-function Get-RsshDirectoryBytes {
+function Get-RTermDirectoryBytes {
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)][string]$Path)
 
@@ -77,13 +77,13 @@ if ([string]::IsNullOrWhiteSpace($TemporaryRoot)) {
 }
 $temporaryRoot = [IO.Path]::GetFullPath($TemporaryRoot)
 $null = New-Item -ItemType Directory -Path $temporaryRoot -Force
-$targetName = "rssh-build-scorecard-$([Guid]::NewGuid().ToString('N'))"
+$targetName = "rterm-build-scorecard-$([Guid]::NewGuid().ToString('N'))"
 $targetDirectory = [IO.Path]::GetFullPath((Join-Path $temporaryRoot $targetName))
 $temporaryPrefix = $temporaryRoot.TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 if (-not $targetDirectory.StartsWith($temporaryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
     throw "refusing to create scorecard target outside the temporary directory: $targetDirectory"
 }
-if ([IO.Path]::GetFileName($targetDirectory) -notlike 'rssh-build-scorecard-*') {
+if ([IO.Path]::GetFileName($targetDirectory) -notlike 'rterm-build-scorecard-*') {
     throw "refusing unexpected scorecard target name: $targetDirectory"
 }
 $null = New-Item -ItemType Directory -Path $targetDirectory
@@ -94,45 +94,45 @@ $previousTmp = $env:TMP
 try {
     Push-Location $repoRoot
     try {
-        $null = Invoke-RsshMeasuredCommand -Program 'npm' -Arguments @('--prefix', 'web', 'ci')
-        $null = Invoke-RsshMeasuredCommand -Program 'npm' -Arguments @('--prefix', 'web', 'run', 'build')
+        $null = Invoke-RTermMeasuredCommand -Program 'npm' -Arguments @('--prefix', 'web', 'ci')
+        $null = Invoke-RTermMeasuredCommand -Program 'npm' -Arguments @('--prefix', 'web', 'run', 'build')
 
         $env:CARGO_TARGET_DIR = $targetDirectory
         $env:TEMP = $temporaryRoot
         $env:TMP = $temporaryRoot
-        $cleanCheckMs = Invoke-RsshMeasuredCommand -Program 'cargo' -Arguments @(
-            'check', '--locked', '-p', 'rssh-app', '--tests'
+        $cleanCheckMs = Invoke-RTermMeasuredCommand -Program 'cargo' -Arguments @(
+            'check', '--locked', '-p', 'rterm-app', '--tests'
         )
-        $warmCheckMs = Invoke-RsshMeasuredCommand -Program 'cargo' -Arguments @(
-            'check', '--locked', '-p', 'rssh-app', '--tests'
+        $warmCheckMs = Invoke-RTermMeasuredCommand -Program 'cargo' -Arguments @(
+            'check', '--locked', '-p', 'rterm-app', '--tests'
         )
-        $null = Invoke-RsshMeasuredCommand -Program 'cargo' -Arguments @(
-            'clean', '-p', 'rssh-app'
+        $null = Invoke-RTermMeasuredCommand -Program 'cargo' -Arguments @(
+            'clean', '-p', 'rterm-app'
         )
-        $packageRebuildMs = Invoke-RsshMeasuredCommand -Program 'cargo' -Arguments @(
-            'check', '--locked', '-p', 'rssh-app', '--tests'
+        $packageRebuildMs = Invoke-RTermMeasuredCommand -Program 'cargo' -Arguments @(
+            'check', '--locked', '-p', 'rterm-app', '--tests'
         )
-        $testNoRunMs = Invoke-RsshMeasuredCommand -Program 'cargo' -Arguments @(
-            'test', '--locked', '--no-run', '-p', 'rssh-app'
+        $testNoRunMs = Invoke-RTermMeasuredCommand -Program 'cargo' -Arguments @(
+            'test', '--locked', '--no-run', '-p', 'rterm-app'
         )
 
-        $targetBytes = Get-RsshDirectoryBytes -Path $targetDirectory
+        $targetBytes = Get-RTermDirectoryBytes -Path $targetDirectory
         $harnesses = @(
             Get-ChildItem -LiteralPath (Join-Path $targetDirectory 'debug\deps') `
-                -Filter 'rssh_app-*.exe' -File -ErrorAction SilentlyContinue
+                -Filter 'rterm_app-*.exe' -File -ErrorAction SilentlyContinue
         )
         $largestHarnessBytes = if ($harnesses.Count -eq 0) {
             0L
         } else {
             [long](($harnesses | Sort-Object Length -Descending | Select-Object -First 1).Length)
         }
-        $unitExecutionMs = Invoke-RsshMeasuredCommand -Program 'cargo' -Arguments @(
-            'test', '--locked', '-p', 'rssh-app', '--bin', 'rssh-app', '--quiet'
+        $unitExecutionMs = Invoke-RTermMeasuredCommand -Program 'cargo' -Arguments @(
+            'test', '--locked', '-p', 'rterm-app', '--bin', 'rterm', '--quiet'
         )
-        $null = Invoke-RsshMeasuredCommand -Program 'cargo' -Arguments @(
-            'build', '--locked', '--release', '-p', 'rssh-app'
+        $null = Invoke-RTermMeasuredCommand -Program 'cargo' -Arguments @(
+            'build', '--locked', '--release', '-p', 'rterm-app'
         )
-        $releaseExecutable = Join-Path $targetDirectory 'release\rssh-app.exe'
+        $releaseExecutable = Join-Path $targetDirectory 'release\rterm.exe'
         if (-not (Test-Path -LiteralPath $releaseExecutable -PathType Leaf)) {
             throw "release executable was not produced: $releaseExecutable"
         }
@@ -185,7 +185,7 @@ try {
         measured = $candidateMetrics
         threshold_violations = @($violations)
     }
-    Write-RsshScorecardResult -Result $result -Output $Output
+    Write-RTermScorecardResult -Result $result -Output $Output
     if (-not $result.ok) {
         exit 1
     }
@@ -201,7 +201,7 @@ try {
     if (-not $resolvedTarget.StartsWith($temporaryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
         throw "refusing to clean scorecard target outside the temporary directory: $resolvedTarget"
     }
-    if ([IO.Path]::GetFileName($resolvedTarget) -notlike 'rssh-build-scorecard-*') {
+    if ([IO.Path]::GetFileName($resolvedTarget) -notlike 'rterm-build-scorecard-*') {
         throw "refusing to clean unexpected scorecard target: $resolvedTarget"
     }
     if (Test-Path -LiteralPath $resolvedTarget) {

@@ -15,7 +15,7 @@ PROVENANCE = REPOSITORY_ROOT / "tests" / "fixtures" / "task10_trace_provenance.j
 RECORDS = (
     REPOSITORY_ROOT
     / "crates"
-    / "rssh-runtime"
+    / "rterm-runtime"
     / "tests"
     / "fixtures"
     / "task10_legacy_fixture_records.txt"
@@ -44,7 +44,7 @@ def load_codec():
 
 class Task10ProvenanceCheckerTests(unittest.TestCase):
     def test_quality_workflow_fetches_c69_and_runs_provenance_gate(self):
-        workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml").read_text(
+        workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "windows.yml").read_text(
             encoding="utf-8"
         )
         quality = workflow.split("  msrv:", maxsplit=1)[0]

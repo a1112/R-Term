@@ -4884,7 +4884,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rssh-app"
+name = "rterm-app"
 version = "0.1.0"
 dependencies = [
  "arboard",
@@ -4894,20 +4894,20 @@ dependencies = [
  "pollster",
  "regex",
  "rpassword",
- "rssh-config",
- "rssh-core",
- "rssh-diagnostics",
- "rssh-functional-tests",
- "rssh-native",
- "rssh-pty",
- "rssh-test-support",
+ "rterm-config",
+ "rterm-core",
+ "rterm-diagnostics",
  "rterm-fonts",
+ "rterm-functional-tests",
+ "rterm-native",
+ "rterm-pty",
  "rterm-render-core",
  "rterm-render-cpu",
  "rterm-render-wgpu",
  "rterm-runtime",
- "rterm-ssh-adapter",
+ "rterm-ssh",
  "rterm-terminal",
+ "rterm-test-support",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -4924,7 +4924,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rssh-config"
+name = "rterm-config"
 version = "0.1.0"
 dependencies = [
  "serde_json",
@@ -4933,130 +4933,29 @@ dependencies = [
 ]
 
 [[package]]
-name = "rssh-core"
+name = "rterm-core"
 version = "0.1.0"
 dependencies = [
- "rssh-domain",
+ "rterm-domain",
  "rterm-types",
 ]
 
 [[package]]
-name = "rssh-diagnostics"
+name = "rterm-diagnostics"
 version = "0.1.0"
 dependencies = [
  "libc",
- "rssh-test-support",
+ "rterm-test-support",
  "serde",
  "serde_json",
  "windows-sys 0.61.2",
 ]
 
 [[package]]
-name = "rssh-domain"
+name = "rterm-domain"
 version = "0.1.0"
 dependencies = [
  "rterm-types",
-]
-
-[[package]]
-name = "rssh-functional-tests"
-version = "0.1.0"
-dependencies = [
- "interprocess",
- "rand 0.10.1",
- "rssh-pty",
- "rssh-test-support",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "tempfile",
- "toml 0.8.2",
- "widestring",
-]
-
-[[package]]
-name = "rssh-native"
-version = "0.1.0"
-dependencies = [
- "rssh-config",
- "rssh-domain",
- "rterm-runtime",
- "rterm-types",
-]
-
-[[package]]
-name = "rssh-pty"
-version = "0.1.0"
-dependencies = [
- "portable-pty",
- "rssh-domain",
- "rterm-runtime",
- "rterm-types",
-]
-
-[[package]]
-name = "rssh-renderer"
-version = "0.1.0"
-dependencies = [
- "rterm-render-core",
- "rterm-render-cpu",
- "rterm-render-wgpu",
-]
-
-[[package]]
-name = "rssh-ssh"
-version = "0.1.0"
-source = "git+https://github.com/a1112/R-SSH.git?rev=3fdda8299ff6e066b4272a7a064d135e3be38647#3fdda8299ff6e066b4272a7a064d135e3be38647"
-dependencies = [
- "rssh-types",
- "russh",
- "tokio",
-]
-
-[[package]]
-name = "rssh-tauri"
-version = "0.1.0"
-dependencies = [
- "rssh-functional-tests",
- "rssh-web",
- "serde",
- "tauri",
- "tauri-build",
- "tokio",
-]
-
-[[package]]
-name = "rssh-test-support"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "futures",
- "junction",
- "rand 0.10.1",
- "russh",
- "russh-sftp",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "rssh-types"
-version = "0.1.0"
-source = "git+https://github.com/a1112/R-SSH.git?rev=3fdda8299ff6e066b4272a7a064d135e3be38647#3fdda8299ff6e066b4272a7a064d135e3be38647"
-
-[[package]]
-name = "rssh-web"
-version = "0.1.0"
-dependencies = [
- "axum",
- "base64 0.22.1",
- "futures-util",
- "rand 0.10.1",
- "rssh-pty",
- "serde",
- "serde_json",
- "tokio",
- "tokio-tungstenite",
 ]
 
 [[package]]
@@ -5068,6 +4967,42 @@ dependencies = [
  "ttf-parser",
  "unicode-segmentation",
  "unicode-width",
+]
+
+[[package]]
+name = "rterm-functional-tests"
+version = "0.1.0"
+dependencies = [
+ "interprocess",
+ "rand 0.10.1",
+ "rterm-pty",
+ "rterm-test-support",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "tempfile",
+ "toml 0.8.2",
+ "widestring",
+]
+
+[[package]]
+name = "rterm-native"
+version = "0.1.0"
+dependencies = [
+ "rterm-config",
+ "rterm-domain",
+ "rterm-runtime",
+ "rterm-types",
+]
+
+[[package]]
+name = "rterm-pty"
+version = "0.1.0"
+dependencies = [
+ "portable-pty",
+ "rterm-domain",
+ "rterm-runtime",
+ "rterm-types",
 ]
 
 [[package]]
@@ -5113,6 +5048,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rterm-renderer"
+version = "0.1.0"
+dependencies = [
+ "rterm-render-core",
+ "rterm-render-cpu",
+ "rterm-render-wgpu",
+]
+
+[[package]]
 name = "rterm-runtime"
 version = "0.1.0"
 dependencies = [
@@ -5126,13 +5070,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "rterm-ssh-adapter"
+name = "rterm-ssh"
 version = "0.1.0"
 dependencies = [
- "rssh-domain",
- "rssh-ssh",
+ "rterm-domain",
  "rterm-runtime",
+ "rterm-test-support",
  "rterm-types",
+ "russh",
+ "tokio",
+]
+
+[[package]]
+name = "rterm-tauri"
+version = "0.1.0"
+dependencies = [
+ "rterm-functional-tests",
+ "rterm-web",
+ "serde",
+ "tauri",
+ "tauri-build",
+ "tokio",
 ]
 
 [[package]]
@@ -5152,10 +5110,36 @@ dependencies = [
 ]
 
 [[package]]
-name = "rterm-types"
+name = "rterm-test-support"
 version = "0.1.0"
 dependencies = [
- "rssh-types",
+ "base64 0.22.1",
+ "futures",
+ "junction",
+ "rand 0.10.1",
+ "russh",
+ "russh-sftp",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "rterm-types"
+version = "0.1.0"
+
+[[package]]
+name = "rterm-web"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "base64 0.22.1",
+ "futures-util",
+ "rand 0.10.1",
+ "rterm-pty",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite",
 ]
 
 [[package]]

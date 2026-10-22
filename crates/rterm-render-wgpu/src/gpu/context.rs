@@ -373,7 +373,7 @@ impl WindowedGpuContextBootstrap {
         let info = adapter.get_info();
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
-                label: Some("rssh-native-device"),
+                label: Some("rterm-native-device"),
                 required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::downlevel_defaults()
                     .using_resolution(adapter.limits()),
@@ -474,7 +474,7 @@ impl GpuContext {
         let info = adapter.get_info();
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
-                label: Some("rssh-native-device"),
+                label: Some("rterm-native-device"),
                 required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::downlevel_defaults()
                     .using_resolution(adapter.limits()),
@@ -653,7 +653,7 @@ impl GpuContext {
             let info = adapter.get_info();
             let (device, queue) = adapter
                 .request_device(&wgpu::DeviceDescriptor {
-                    label: Some("rssh-native-recovered-device"),
+                    label: Some("rterm-native-recovered-device"),
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::downlevel_defaults()
                         .using_resolution(adapter.limits()),
@@ -872,7 +872,7 @@ impl GpuContext {
     ) -> Result<(), GpuContextError> {
         self.check_runtime_faults("before headless submission probe")?;
         let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("rssh-headless-probe"),
+            label: Some("rterm-headless-probe"),
             size: 4,
             usage: wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -883,7 +883,7 @@ impl GpuContext {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("rssh-headless-probe-submit"),
+                label: Some("rterm-headless-probe-submit"),
             });
         encoder.clear_buffer(&buffer, 0, None);
         self.queue.submit([encoder.finish()]);
@@ -1010,7 +1010,7 @@ impl GpuContext {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("rssh-compatibility-frame"),
+                label: Some("rterm-compatibility-frame"),
             });
         {
             let color_attachments = [Some(wgpu::RenderPassColorAttachment {
@@ -1023,7 +1023,7 @@ impl GpuContext {
                 },
             })];
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("rssh-compatibility-present"),
+                label: Some("rterm-compatibility-present"),
                 color_attachments: &color_attachments,
                 ..wgpu::RenderPassDescriptor::default()
             });
@@ -1091,7 +1091,7 @@ impl GpuContext {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("rssh-direct-terminal-frame"),
+                label: Some("rterm-direct-terminal-frame"),
             });
         if let Err(error) = renderer.encode_render_pass(&mut encoder, &surface_view) {
             self.check_runtime_faults("during direct frame encoding")?;
@@ -1131,7 +1131,7 @@ impl GpuContext {
         let format = Self::preferred_surface_format(&capabilities.formats)
             .ok_or_else(|| GpuContextError::message("surface exposes no formats".into()))?;
         #[cfg(debug_assertions)]
-        let test_present_mode = std::env::var("RSSH_TEST_PRESENT_MODE").ok();
+        let test_present_mode = std::env::var("RTERM_TEST_PRESENT_MODE").ok();
         #[cfg(not(debug_assertions))]
         let test_present_mode: Option<&str> = None;
         let present_mode =
@@ -1519,7 +1519,7 @@ impl CompatibilityPipeline {
         surface_height: u32,
     ) -> Self {
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("rssh-compatibility-bindings"),
+            label: Some("rterm-compatibility-bindings"),
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
@@ -1550,23 +1550,23 @@ impl CompatibilityPipeline {
             ],
         });
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("rssh-compatibility-sampler"),
+            label: Some("rterm-compatibility-sampler"),
             mag_filter: wgpu::FilterMode::Nearest,
             min_filter: wgpu::FilterMode::Nearest,
             ..wgpu::SamplerDescriptor::default()
         });
         let layout_uniform = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("rssh-compatibility-layout"),
+            label: Some("rterm-compatibility-layout"),
             size: 16,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("rssh-compatibility-shader"),
+            label: Some("rterm-compatibility-shader"),
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(COMPATIBILITY_SHADER)),
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("rssh-compatibility-pipeline-layout"),
+            label: Some("rterm-compatibility-pipeline-layout"),
             bind_group_layouts: &[Some(&bind_group_layout)],
             immediate_size: 0,
         });
@@ -1576,7 +1576,7 @@ impl CompatibilityPipeline {
             write_mask: wgpu::ColorWrites::ALL,
         })];
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("rssh-compatibility-pipeline"),
+            label: Some("rterm-compatibility-pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
@@ -1666,7 +1666,7 @@ impl UploadFrame {
         height: u32,
     ) -> Self {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("rssh-compatibility-framebuffer"),
+            label: Some("rterm-compatibility-framebuffer"),
             size: wgpu::Extent3d {
                 width,
                 height,
@@ -1685,7 +1685,7 @@ impl UploadFrame {
         });
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("rssh-compatibility-frame-bind-group"),
+            label: Some("rterm-compatibility-frame-bind-group"),
             layout: bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -1859,7 +1859,7 @@ impl InitializationClearTransactionDriver for GpuContext {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("rssh-attribution-clear-frame"),
+                label: Some("rterm-attribution-clear-frame"),
             });
         {
             let color_attachments = [Some(wgpu::RenderPassColorAttachment {
@@ -1872,7 +1872,7 @@ impl InitializationClearTransactionDriver for GpuContext {
                 },
             })];
             let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("rssh-attribution-clear-present"),
+                label: Some("rterm-attribution-clear-present"),
                 color_attachments: &color_attachments,
                 ..wgpu::RenderPassDescriptor::default()
             });

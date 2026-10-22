@@ -5,8 +5,7 @@ use std::{
     time::Duration,
 };
 
-use rssh_fonts::{FontCatalog, FontConfig, FontSource, RasterCacheConfig};
-use rssh_terminal::{CursorShape, Terminal};
+use rterm_fonts::{FontCatalog, FontConfig, FontSource, RasterCacheConfig};
 use rterm_render_cpu::{
     CpuTextRenderer, DamageRegion, PixelRenderer, RenderBoldBrightensAnsiColors, RenderGeometry,
     TerminalRenderSnapshot, TextPaintConfig, terminal_snapshot_content_digest,
@@ -15,6 +14,7 @@ use rterm_render_wgpu::gpu::{
     GpuContext, GpuContextOptions, GpuImage, GpuLayer, GpuLayerRenderer, GpuQuad, GpuTextConfig,
     ImageProtocol, PixelRect, RenderGraph,
 };
+use rterm_terminal::{CursorShape, Terminal};
 use rterm_types::TerminalSize;
 
 static GPU_TEST_LOCK: Mutex<()> = Mutex::new(());
@@ -467,7 +467,7 @@ fn gpu_paint_uses_custom_palette_inverse_and_bold_bright_policy() {
 }
 
 #[test]
-fn paint_phase_change_rebuilds_all_cached_rows_after_local_damage() {
+fn paint_phase_change_rebuilds_only_blink_rows_after_local_damage() {
     let _gpu = gpu_test_guard();
     let context = pollster::block_on(GpuContext::new_headless(GpuContextOptions::default()))
         .expect("headless adapter");
@@ -476,7 +476,7 @@ fn paint_phase_change_rebuilds_all_cached_rows_after_local_damage() {
     renderer
         .enable_text(catalog(), font_config(), config(4 * 1024 * 1024))
         .expect("enable GPU text");
-    let snapshot = multiline_snapshot("\x1b[5mA\r\nB", 2, 2);
+    let snapshot = multiline_snapshot("\x1b[5mA\x1b[25m\r\nB", 2, 2);
     let geometry = RenderGeometry::new(32, 48, 16, 24);
     renderer
         .prepare_text(
@@ -503,13 +503,16 @@ fn paint_phase_change_rebuilds_all_cached_rows_after_local_damage() {
             1.0,
         )
         .expect("prepare hidden blink phase");
-    assert_eq!(report.prepared_rows, vec![0, 1]);
+    assert_eq!(report.prepared_rows, vec![0]);
     let pixels = render_prepared(&mut renderer, geometry, hidden.default_background);
-    assert_eq!(
-        rgb_energy(&pixels, hidden.default_background),
-        0,
-        "paint phase change must not retain visible blink glyphs on an untouched row"
-    );
+    let row_energy = |row: usize| {
+        let start = row * geometry.target_width as usize * 4;
+        rgb_energy(
+            &pixels[start..start + geometry.target_width as usize * 4],
+            hidden.default_background,
+        )
+    };
+    assert_eq!(row_energy(0), 0, "hidden blink row must be repainted");
 }
 
 #[test]
@@ -538,6 +541,10 @@ fn prepared_gpu_text_uses_shaped_runs_and_mask_and_color_atlas_entries() {
     assert!(report.mask_glyphs > 0);
     assert!(report.color_glyphs > 0);
     assert!(report.custom_block_glyphs > 0);
+    assert!(report.retained_glyphs > 0);
+    assert!(report.retained_mask_glyphs > 0);
+    assert!(report.retained_color_glyphs > 0);
+    assert!(report.retained_custom_block_glyphs > 0);
     assert_eq!(report.second_shape_calls, 0);
     renderer
         .upload(&RenderGraph::new(48 * 16, 24))
@@ -990,7 +997,7 @@ fn local_row_damage_preserves_cached_glyphs_on_untouched_rows() {
         .expect("enable GPU text");
     let snapshot = multiline_snapshot("A\r\nB", 4, 2);
     let geometry = RenderGeometry::new(64, 48, 16, 24);
-    renderer
+    let first = renderer
         .prepare_text(
             &snapshot,
             geometry,
@@ -1011,6 +1018,13 @@ fn local_row_damage_preserves_cached_glyphs_on_untouched_rows() {
         )
         .expect("prepare only first damaged row");
     assert_eq!(report.prepared_rows, vec![0]);
+    assert_eq!(report.retained_glyphs, first.retained_glyphs);
+    assert_eq!(report.retained_mask_glyphs, first.retained_mask_glyphs);
+    assert_eq!(report.retained_color_glyphs, first.retained_color_glyphs);
+    assert_eq!(
+        report.retained_custom_block_glyphs,
+        first.retained_custom_block_glyphs
+    );
 
     let mut graph = RenderGraph::new(64, 48);
     graph.push_quad(GpuQuad::new(
@@ -1027,6 +1041,135 @@ fn local_row_damage_preserves_cached_glyphs_on_untouched_rows() {
             .any(|pixel| pixel[0] > 0 || pixel[1] > 0 || pixel[2] > 0),
         "row 1 must remain in glyphon's complete prepared batch after row 0 damage"
     );
+}
+
+#[test]
+fn unchanged_full_frame_reuses_prepared_rows() {
+    let _gpu = gpu_test_guard();
+    let context = pollster::block_on(GpuContext::new_headless(GpuContextOptions::default()))
+        .expect("headless adapter");
+    let mut renderer = GpuLayerRenderer::new(&context, wgpu::TextureFormat::Rgba8Unorm, 4096)
+        .expect("layer renderer");
+    renderer
+        .enable_text(catalog(), font_config(), config(4 * 1024 * 1024))
+        .expect("enable GPU text");
+    let geometry = RenderGeometry::new(64, 48, 16, 24);
+    let paint = TextPaintConfig::default();
+    let snapshot = multiline_snapshot("A\r\nB", 4, 2);
+
+    let first = renderer
+        .prepare_text(&snapshot, geometry, &[], &paint, 1.0, 1.0)
+        .expect("prepare initial full frame");
+    assert_eq!(first.prepared_rows, vec![0, 1]);
+
+    let second = renderer
+        .prepare_text(&snapshot, geometry, &[], &paint, 1.0, 1.0)
+        .expect("reuse unchanged full frame");
+    assert!(
+        second.prepared_rows.is_empty(),
+        "unchanged full frames must retain shaped rows instead of reshaping every row"
+    );
+    assert_eq!(second.shaped_glyphs, 0);
+    assert_eq!(second.mask_glyphs, 0);
+    assert_eq!(second.color_glyphs, 0);
+    assert_eq!(second.custom_block_glyphs, 0);
+    assert_eq!(second.retained_glyphs, first.retained_glyphs);
+    assert_eq!(second.retained_mask_glyphs, first.retained_mask_glyphs);
+    assert_eq!(second.retained_color_glyphs, first.retained_color_glyphs);
+    assert_eq!(
+        second.retained_custom_block_glyphs,
+        first.retained_custom_block_glyphs
+    );
+}
+
+#[test]
+fn full_frame_style_change_rebuilds_cached_rows() {
+    let _gpu = gpu_test_guard();
+    let context = pollster::block_on(GpuContext::new_headless(GpuContextOptions::default()))
+        .expect("headless adapter");
+    let mut renderer = GpuLayerRenderer::new(&context, wgpu::TextureFormat::Rgba8Unorm, 4096)
+        .expect("layer renderer");
+    renderer
+        .enable_text(catalog(), font_config(), config(4 * 1024 * 1024))
+        .expect("enable GPU text");
+    let geometry = RenderGeometry::new(64, 48, 16, 24);
+    let paint = TextPaintConfig::default();
+    let plain = multiline_snapshot("A\r\nB", 4, 2);
+    let styled = multiline_snapshot("\x1b[31mA\r\nB", 4, 2);
+
+    renderer
+        .prepare_text(&plain, geometry, &[], &paint, 1.0, 1.0)
+        .expect("prepare initial full frame");
+    let changed = renderer
+        .prepare_text(&styled, geometry, &[], &paint, 1.0, 1.0)
+        .expect("prepare changed style full frame");
+    assert_eq!(
+        changed.prepared_rows,
+        vec![0, 1],
+        "style changes must rebuild rows even when text and coordinates are unchanged"
+    );
+}
+
+#[test]
+fn stable_missing_glyph_full_frame_reuses_rows_and_report_metadata() {
+    let _gpu = gpu_test_guard();
+    let context = pollster::block_on(GpuContext::new_headless(GpuContextOptions::default()))
+        .expect("headless adapter");
+    let mut renderer = GpuLayerRenderer::new(&context, wgpu::TextureFormat::Rgba8Unorm, 4096)
+        .expect("layer renderer");
+    renderer
+        .enable_text(catalog(), font_config(), config(4 * 1024 * 1024))
+        .expect("enable GPU text");
+    let geometry = RenderGeometry::new(64, 24, 16, 24);
+    let paint = TextPaintConfig::default();
+    let snapshot = multiline_snapshot("\u{10ffff}", 4, 1);
+
+    let first = renderer
+        .prepare_text(&snapshot, geometry, &[], &paint, 1.0, 1.0)
+        .expect("prepare stable tofu frame");
+    assert_eq!(first.missing_glyphs, ['\u{10ffff}']);
+    let second = renderer
+        .prepare_text(&snapshot, geometry, &[], &paint, 1.0, 1.0)
+        .expect("reuse stable tofu frame");
+    assert!(second.prepared_rows.is_empty());
+    assert_eq!(second.missing_glyphs, first.missing_glyphs);
+}
+
+#[test]
+fn text_blink_opacity_only_rebuilds_rows_with_blinking_cells() {
+    let _gpu = gpu_test_guard();
+    let context = pollster::block_on(GpuContext::new_headless(GpuContextOptions::default()))
+        .expect("headless adapter");
+    let mut renderer = GpuLayerRenderer::new(&context, wgpu::TextureFormat::Rgba8Unorm, 4096)
+        .expect("layer renderer");
+    renderer
+        .enable_text(catalog(), font_config(), config(4 * 1024 * 1024))
+        .expect("enable GPU text");
+    let geometry = RenderGeometry::new(64, 24, 16, 24);
+    let plain = multiline_snapshot("A", 4, 1);
+    let blinking = multiline_snapshot("\x1b[5mA", 4, 1);
+    let visible = TextPaintConfig::default();
+    let hidden = TextPaintConfig {
+        text_blink_opacity_alpha: 0,
+        rapid_text_blink_opacity_alpha: 0,
+        ..visible.clone()
+    };
+
+    renderer
+        .prepare_text(&plain, geometry, &[], &visible, 1.0, 1.0)
+        .expect("prepare plain frame");
+    let plain_alpha_change = renderer
+        .prepare_text(&plain, geometry, &[], &hidden, 1.0, 1.0)
+        .expect("reuse plain frame after blink alpha change");
+    assert!(plain_alpha_change.prepared_rows.is_empty());
+
+    renderer
+        .prepare_text(&blinking, geometry, &[], &visible, 1.0, 1.0)
+        .expect("prepare blinking frame");
+    let blinking_alpha_change = renderer
+        .prepare_text(&blinking, geometry, &[], &hidden, 1.0, 1.0)
+        .expect("rebuild blinking frame after blink alpha change");
+    assert_eq!(blinking_alpha_change.prepared_rows, vec![0]);
 }
 
 #[test]

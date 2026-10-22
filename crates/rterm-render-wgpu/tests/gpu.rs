@@ -88,7 +88,7 @@ fn uncaptured_validation_is_reported_without_panicking_or_counting_a_frame() {
 
     let creation = catch_unwind(AssertUnwindSafe(|| {
         context.device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some("rssh-invalid-buffer-probe"),
+            label: Some("rterm-invalid-buffer-probe"),
             size: invalid_size,
             usage: wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -116,7 +116,7 @@ fn uncaptured_validation_is_reported_without_panicking_or_counting_a_frame() {
 }
 
 mod attribution_stage {
-    use rssh_fonts::{FontCatalog, FontConfig, FontSource, RasterCacheConfig};
+    use rterm_fonts::{FontCatalog, FontConfig, FontSource, RasterCacheConfig};
     use rterm_render_wgpu::gpu::{
         GpuContext, GpuContextOptions, GpuInitializationResourceSnapshot, GpuInitializationStage,
         GpuLayerRenderer, GpuTextConfig,
@@ -214,14 +214,14 @@ mod attribution_stage {
                 .expect("layer renderer");
         let enable = |renderer: &mut GpuLayerRenderer| {
             let source = FontSource::new(
-                "R-SSH Stage 7 Fixture",
+                "R-Term Stage 7 Fixture",
                 include_bytes!("../../../tests/fixtures/fonts/NotoSans-Latin.fixture.ttf").to_vec(),
             );
             let catalog = FontCatalog::from_sources("en-US", [source]).expect("fixture catalog");
             renderer
                 .enable_text(
                     catalog,
-                    FontConfig::new("R-SSH Stage 7 Fixture"),
+                    FontConfig::new("R-Term Stage 7 Fixture"),
                     GpuTextConfig::new(4 * 1024 * 1024, RasterCacheConfig::new(4 * 1024 * 1024)),
                 )
                 .expect("enable fixture text");

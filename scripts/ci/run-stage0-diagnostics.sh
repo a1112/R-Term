@@ -28,20 +28,20 @@ if ((warmups < 0 || samples < 1)); then
 fi
 
 profile_directory=$profile
-app="target/$profile_directory/rssh-app"
-launcher="target/$profile_directory/rssh-bench-launcher"
+app="target/$profile_directory/rterm"
+launcher="target/$profile_directory/rterm-bench-launcher"
 if ((skip_build == 0)); then
   profile_args=()
   if [[ "$profile" == release ]]; then profile_args+=(--release); fi
-  cargo build --locked -p rssh-app "${profile_args[@]}"
-  cargo build --locked -p rssh-diagnostics --bin rssh-bench-launcher "${profile_args[@]}"
+  cargo build --locked -p rterm-app --features developer-full "${profile_args[@]}"
+  cargo build --locked -p rterm-diagnostics --bin rterm-bench-launcher "${profile_args[@]}"
 fi
 [[ -x "$app" ]] || { echo "missing app executable: $app" >&2; exit 1; }
 [[ -x "$launcher" ]] || { echo "missing launcher executable: $launcher" >&2; exit 1; }
 
 raw_directory="$output_directory/raw"
 mkdir -p "$raw_directory"
-export RSSH_BENCHMARK_WINDOW_SCALE_FACTOR=1
+export RTERM_BENCHMARK_WINDOW_SCALE_FACTOR=1
 
 run_one() {
   local scenario=$1
@@ -96,7 +96,7 @@ for scenario, target in targets.items():
         print(f"warning: Stage 0 report-only memory observation: {scenario} p95={p95} target={target}", file=sys.stderr)
 
 aggregate = {
-    "schema": "rssh.diagnostics/aggregate-v1",
+    "schema": "rterm.diagnostics/aggregate-v1",
     "profile": profile,
     "warmups": warmups,
     "measured_runs": runs,

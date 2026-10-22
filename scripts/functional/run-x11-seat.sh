@@ -6,14 +6,14 @@ if (($# == 0)); then
   exit 2
 fi
 
-runtime="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/rssh-functional-x11-$RANDOM"
+runtime="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/rterm-functional-x11-$RANDOM"
 mkdir -m 700 "$runtime"
 export XDG_RUNTIME_DIR="$runtime"
 export GDK_BACKEND=x11
 export NO_AT_BRIDGE=1
 export WEBKIT_DISABLE_DMABUF_RENDERER=1
 export WEBKIT_DISABLE_COMPOSITING_MODE=1
-export RSSH_FUNCTIONAL_XDOTOOL="${RSSH_FUNCTIONAL_XDOTOOL:-$(command -v xdotool)}"
+export RTERM_FUNCTIONAL_XDOTOOL="${RTERM_FUNCTIONAL_XDOTOOL:-$(command -v xdotool)}"
 
 cleanup() {
   status=$?

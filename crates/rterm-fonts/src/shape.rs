@@ -1190,7 +1190,7 @@ fn estimate_shape_entry_bytes(row: &ShapedRow) -> usize {
 
 fn shape_request_fingerprint(clusters: &[TerminalCluster], config: &FontConfig) -> [u8; 32] {
     let mut digest = Sha256::new();
-    digest.update(b"rssh-shape-cache-v1");
+    digest.update(b"rterm-shape-cache-v1");
     digest.update(clusters.len().to_le_bytes());
     for cluster in clusters {
         digest.update(cluster.text.len().to_le_bytes());

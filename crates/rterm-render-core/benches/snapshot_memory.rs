@@ -1,7 +1,7 @@
 use std::time::Instant;
 
-use rssh_terminal::Terminal;
 use rterm_render_core::{SnapshotCacheConfig, TerminalRenderSnapshot, TerminalSnapshotCache};
+use rterm_terminal::Terminal;
 use rterm_types::TerminalSize;
 
 const FULL_ITERATIONS: u32 = 200;

@@ -8,8 +8,8 @@ use std::{
 };
 
 use font8x8::UnicodeFonts as _;
-use rssh_terminal::{Cell, Color, CursorShape, InlineImageFormat, Terminal, TerminalGrid};
 use rterm_render_core::render_inline_images_from_terminal;
+use rterm_terminal::{Cell, Color, CursorShape, InlineImageFormat, Terminal, TerminalGrid};
 use rterm_types::TerminalSize;
 
 use super::{
@@ -974,7 +974,7 @@ fn render_snapshot_preserves_colon_separated_underline_style() {
 
     assert_eq!(
         snapshot.cells()[0].underline_style,
-        rssh_terminal::UnderlineStyle::Dotted
+        rterm_terminal::UnderlineStyle::Dotted
     );
 }
 
@@ -2180,7 +2180,7 @@ fn pixel_renderer_draws_kitty_rgb_simple_file_transfer_slice() {
 
 #[test]
 fn pixel_renderer_draws_kitty_rgb_temporary_file_transfer_and_deletes_safe_temp_file() {
-    let file = KittyTestFile::new_with_prefix("tty-graphics-protocol-rssh", &[255, 0, 0]);
+    let file = KittyTestFile::new_with_prefix("tty-graphics-protocol-rterm", &[255, 0, 0]);
     let mut terminal = Terminal::new(TerminalSize::new(1, 1));
     feed_kitty_rgb_temporary_file_image(&mut terminal, &file.path, "");
     let snapshot = TerminalRenderSnapshot::from_terminal(&terminal);
@@ -2805,7 +2805,7 @@ fn pixel_renderer_draws_dotted_underlines_with_gaps() {
     let snapshot = TerminalRenderSnapshot::from_terminal(&terminal);
     assert_eq!(
         snapshot.cells()[0].underline_style,
-        rssh_terminal::UnderlineStyle::Dotted
+        rterm_terminal::UnderlineStyle::Dotted
     );
     let renderer = PixelRenderer::new();
     let mut target = vec![0; 16 * 8 * 4];
@@ -3058,7 +3058,7 @@ fn pixel_renderer_offsets_subscript_text_baseline() {
     let baseline_snapshot = TerminalRenderSnapshot::from_terminal(&baseline);
     assert_eq!(
         baseline_snapshot.cells()[0].vertical_align,
-        rssh_terminal::VerticalAlign::Baseline
+        rterm_terminal::VerticalAlign::Baseline
     );
     let mut baseline_target = vec![0; 16 * 16 * 4];
 
@@ -3069,7 +3069,7 @@ fn pixel_renderer_offsets_subscript_text_baseline() {
     let subscript_snapshot = TerminalRenderSnapshot::from_terminal(&subscript);
     assert_eq!(
         subscript_snapshot.cells()[0].vertical_align,
-        rssh_terminal::VerticalAlign::Subscript
+        rterm_terminal::VerticalAlign::Subscript
     );
     let mut subscript_target = vec![0; 16 * 16 * 4];
 
@@ -3537,7 +3537,7 @@ struct KittyTestFile {
 
 impl KittyTestFile {
     fn new(data: &[u8]) -> Self {
-        Self::new_with_prefix("rssh-kitty-file", data)
+        Self::new_with_prefix("rterm-kitty-file", data)
     }
 
     fn new_with_prefix(prefix: &str, data: &[u8]) -> Self {

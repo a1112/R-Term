@@ -3,7 +3,6 @@ use std::{
     time::Duration,
 };
 
-use rssh_terminal::Terminal;
 use rterm_render_cpu::{
     DamageRegion, PixelRenderer, RenderBackgroundGradient, RenderBackgroundGradientBlend,
     RenderBackgroundGradientHsb, RenderBackgroundGradientInterpolation,
@@ -14,9 +13,10 @@ use rterm_render_cpu::{
 };
 use rterm_render_wgpu::GpuFramePlanner;
 use rterm_render_wgpu::gpu::{
-    GpuContext, GpuContextOptions, GpuImage, GpuLayer, GpuLayerRenderer, GpuQuad, ImageProtocol,
-    PixelRect, RenderGraph, SignedPixelRect,
+    DEFAULT_GPU_INSTANCE_BYTE_BUDGET, GpuContext, GpuContextOptions, GpuImage, GpuLayer,
+    GpuLayerRenderer, GpuQuad, ImageProtocol, PixelRect, RenderGraph, SignedPixelRect,
 };
+use rterm_terminal::Terminal;
 use rterm_types::TerminalSize;
 
 static GPU_TEST_LOCK: Mutex<()> = Mutex::new(());
@@ -841,6 +841,26 @@ fn renderer_owned_gpu_planner_emits_decorations_and_cursor() {
 }
 
 #[test]
+fn renderer_owned_gpu_planner_omits_cursor_when_snapshot_hides_it() {
+    let terminal = Terminal::new(TerminalSize::new(2, 1));
+    let mut snapshot = TerminalRenderSnapshot::from_terminal(&terminal);
+    assert!(snapshot.cursor().is_some(), "fixture must contain a cursor");
+    snapshot.cursor = None;
+
+    let graph = GpuFramePlanner::default().prepare_gpu_frame(
+        &snapshot,
+        RenderGeometry::new(8, 4, 4, 4),
+        None,
+        0,
+    );
+
+    assert!(
+        !graph.ordered_content_layers().contains(&GpuLayer::Cursor),
+        "a snapshot-level cursor suppression must reach the real GPU display list"
+    );
+}
+
+#[test]
 fn renderer_owned_gpu_planner_clips_scrollbar_below_protected_ui_rows() {
     let _gpu = gpu_test_guard();
     let terminal = Terminal::new(TerminalSize::new(1, 1));
@@ -1040,6 +1060,51 @@ fn persistent_capacity_grows_geometrically_reuses_allocation_and_never_draws_sta
     );
     assert_eq!(renderer.upload_metrics().capacity_bytes, grown_capacity);
     assert!(!renderer.upload_metrics().reallocated);
+}
+
+#[test]
+fn default_instance_budget_accepts_maximized_three_pane_workspace_graph() {
+    const MAX_WINDOW_WIDTH: u32 = 3456;
+    const MAX_WINDOW_HEIGHT: u32 = 2010;
+    const PANE_COUNT: u32 = 3;
+    const GRID_COLUMNS: u32 = 32;
+    const GRID_ROWS: u32 = 32;
+
+    let _gpu = gpu_test_guard();
+    let context = pollster::block_on(GpuContext::new_headless(GpuContextOptions::default()))
+        .expect("headless adapter");
+    let mut renderer = GpuLayerRenderer::new_headless(&context, DEFAULT_GPU_INSTANCE_BYTE_BUDGET)
+        .expect("default bounded instance budget");
+    let mut graph = RenderGraph::new(MAX_WINDOW_WIDTH, MAX_WINDOW_HEIGHT);
+    let pane_width = MAX_WINDOW_WIDTH / PANE_COUNT;
+    for pane in 0..PANE_COUNT {
+        let pane_x = pane.saturating_mul(pane_width);
+        graph.push_quad(GpuQuad::new(
+            GpuLayer::PaneBackground,
+            PixelRect::new(pane_x, 0, pane_width, MAX_WINDOW_HEIGHT),
+            rgba(12, 16, 22, 255),
+        ));
+        for row in 0..GRID_ROWS {
+            for column in 0..GRID_COLUMNS {
+                graph.push_quad(GpuQuad::new(
+                    GpuLayer::CellBackground,
+                    PixelRect::new(pane_x + column, row, 1, 1),
+                    rgba(24, 30, 38, 255),
+                ));
+            }
+        }
+    }
+    let expected_nodes = usize::try_from(PANE_COUNT)
+        .unwrap_or(usize::MAX)
+        .saturating_mul(
+            1 + usize::try_from(GRID_COLUMNS.saturating_mul(GRID_ROWS)).unwrap_or(usize::MAX),
+        );
+    let expected_bytes = expected_nodes.saturating_mul(std::mem::size_of::<[f32; 8]>());
+    assert!(expected_bytes > 64 * 1024);
+
+    renderer.upload(&graph).expect("maximized three-pane graph");
+    assert_eq!(renderer.upload_metrics().bytes_written, expected_bytes);
+    assert!(renderer.upload_metrics().capacity_bytes >= expected_bytes);
 }
 
 #[test]

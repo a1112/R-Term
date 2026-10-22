@@ -9,7 +9,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  RSSH_FUNCTIONAL_SUITE: functional-tests
+  RTERM_FUNCTIONAL_SUITE: functional-tests
 
 jobs:
   contract-catalog:
@@ -28,15 +28,15 @@ jobs:
           python -m unittest scripts.ci.tests.test_check_functional_matrix -v
           python -m unittest scripts.ci.tests.test_check_functional_hermeticity -v
           python scripts/ci/check-functional-hermeticity.py
-          cargo build --locked -p rssh-app
-          cargo test --locked -p rssh-functional-tests -- --nocapture 2>&1 | tee functional-tests.libtest
+          cargo build --locked -p rterm-app
+          cargo test --locked -p rterm-functional-tests -- --nocapture 2>&1 | tee functional-tests.libtest
           cargo test --locked -p rterm-runtime --features test-support --test pane_worker -- --nocapture 2>&1 | tee -a functional-tests.libtest
-          cargo test --locked -p rssh-pty --features runtime-adapter --test runtime_adapter -- --nocapture 2>&1 | tee -a functional-tests.libtest
+          cargo test --locked -p rterm-pty --features runtime-adapter --test runtime_adapter -- --nocapture 2>&1 | tee -a functional-tests.libtest
           cargo test --locked -p rterm-runtime --test terminal_delta -- --nocapture 2>&1 | tee -a functional-tests.libtest
-          cargo test --locked -p rssh-ssh --features runtime-adapter --test runtime_adapter -- --nocapture 2>&1 | tee -a functional-tests.libtest
-          cargo test --locked -p rssh-config --test reload -- --nocapture 2>&1 | tee -a functional-tests.libtest
-          cargo test --locked -p rssh-app --test openssh_loopback -- --nocapture 2>&1 | tee -a functional-tests.libtest
-          cargo test --locked -p rssh-app --test transfer_loopback -- --nocapture 2>&1 | tee -a functional-tests.libtest
+          cargo test --locked -p rterm-ssh --features runtime-adapter --test runtime_adapter -- --nocapture 2>&1 | tee -a functional-tests.libtest
+          cargo test --locked -p rterm-config --test reload -- --nocapture 2>&1 | tee -a functional-tests.libtest
+          cargo test --locked -p rterm-app --test openssh_loopback -- --nocapture 2>&1 | tee -a functional-tests.libtest
+          cargo test --locked -p rterm-app --test transfer_loopback -- --nocapture 2>&1 | tee -a functional-tests.libtest
           for test_name in \
             local::tests::tracks_combined_mouse_reporting_modes_from_pty_output \
             local::tests::encodes_focus_events_when_focus_reporting_is_enabled \
@@ -67,20 +67,20 @@ jobs:
             window::tests::window_app_main_viewport_restores_after_alternate_screen \
             window::tests::window_app_configured_dpi_overrides_detected_scale_factor \
             window::window_restart_pane_tests::window_app_restart_pane_installs_fresh_runtime_without_touching_other_owner; do
-            cargo test --locked -p rssh-app --bin rssh-app "$test_name" -- --exact --nocapture 2>&1 | tee -a functional-tests.libtest
+            cargo test --locked -p rterm-app --bin rterm-app "$test_name" -- --exact --nocapture 2>&1 | tee -a functional-tests.libtest
           done
-          cargo test --locked -p rssh-ssh --test loopback_native -- --nocapture 2>&1 | tee -a functional-tests.libtest
+          cargo test --locked -p rterm-ssh --test loopback_native -- --nocapture 2>&1 | tee -a functional-tests.libtest
           for test_name in \
             ssh::server::tests::real_ssh_authenticates_through_the_in_memory_agent_protocol \
             ssh::sftp::tests::real_sftp_subsystem_rejects_traversal_absolute_and_directory_redirect_escape \
             ssh::scp::tests::real_scp_sink_rejects_incomplete_control_record_at_eof; do
-            cargo test --locked -p rssh-test-support "$test_name" -- --exact --nocapture 2>&1 | tee -a functional-tests.libtest
+            cargo test --locked -p rterm-test-support "$test_name" -- --exact --nocapture 2>&1 | tee -a functional-tests.libtest
           done
-          cargo test --locked -p rssh-web --lib -- --nocapture 2>&1 | tee -a functional-tests.libtest
+          cargo test --locked -p rterm-web --lib -- --nocapture 2>&1 | tee -a functional-tests.libtest
           cargo test --locked -p rterm-render-cpu --lib tests::pixel_renderer_draws_kitty_rgb_direct_inline_image -- --exact --nocapture 2>&1 | tee -a functional-tests.libtest
           cargo test --locked -p rterm-render-wgpu --test gpu_layers headless_gpu_readback_matches_cpu_layering_invariants_with_tolerance -- --exact --nocapture 2>&1 | tee -a functional-tests.libtest
           cargo test --locked -p rterm-render-wgpu --test gpu surface_fault_policy_reconfigures_lost_and_outdated_surfaces -- --exact --nocapture 2>&1 | tee -a functional-tests.libtest
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- validate --suite "$RSSH_FUNCTIONAL_SUITE"
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- validate --suite "$RTERM_FUNCTIONAL_SUITE"
       - if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -100,33 +100,33 @@ jobs:
           - runner: windows-2025
             target: windows-x86_64
             shard_index: 0
-            executable: target/debug/rssh-app.exe
-            fixture: target/debug/rssh-functional-fixture.exe
+            executable: target/debug/rterm.exe
+            fixture: target/debug/rterm-functional-fixture.exe
           - runner: windows-2025
             target: windows-x86_64
             shard_index: 1
-            executable: target/debug/rssh-app.exe
-            fixture: target/debug/rssh-functional-fixture.exe
+            executable: target/debug/rterm.exe
+            fixture: target/debug/rterm-functional-fixture.exe
           - runner: ubuntu-24.04
             target: linux-x86_64
             shard_index: 0
-            executable: target/debug/rssh-app
-            fixture: target/debug/rssh-functional-fixture
+            executable: target/debug/rterm
+            fixture: target/debug/rterm-functional-fixture
           - runner: ubuntu-24.04
             target: linux-x86_64
             shard_index: 1
-            executable: target/debug/rssh-app
-            fixture: target/debug/rssh-functional-fixture
+            executable: target/debug/rterm
+            fixture: target/debug/rterm-functional-fixture
           - runner: macos-14
             target: macos-aarch64
             shard_index: 0
-            executable: target/debug/rssh-app
-            fixture: target/debug/rssh-functional-fixture
+            executable: target/debug/rterm
+            fixture: target/debug/rterm-functional-fixture
           - runner: macos-14
             target: macos-aarch64
             shard_index: 1
-            executable: target/debug/rssh-app
-            fixture: target/debug/rssh-functional-fixture
+            executable: target/debug/rterm
+            fixture: target/debug/rterm-functional-fixture
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -138,15 +138,15 @@ jobs:
           sudo apt-get update
           sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes libx11-dev libxkbcommon-dev openssh-client
       - name: Build real CLI, transport, and fixture entries
-        run: cargo build --locked -p rssh-app -p rssh-functional-tests --bins
+        run: cargo build --locked -p rterm-app -p rterm-functional-tests --bins
       - name: Run fixed CLI and transport journeys
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "evidence/${{ matrix.target }}"
-          cargo run --quiet --locked -p rssh-functional-tests --bin rssh-functional -- \
+          cargo run --quiet --locked -p rterm-functional-tests --bin rterm-functional -- \
             run-shard --count 2 --index "${{ matrix.shard_index }}" --surface console \
-            --suite "$RSSH_FUNCTIONAL_SUITE" --target "${{ matrix.target }}" \
+            --suite "$RTERM_FUNCTIONAL_SUITE" --target "${{ matrix.target }}" \
             --evidence "evidence/${{ matrix.target }}" --app "${{ matrix.executable }}" \
             --fixture-bin "${{ matrix.fixture }}" --capability real_stdin_pty \
             --capability system_openssh --capability native_ssh
@@ -165,24 +165,24 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { persist-credentials: false }
       - uses: dtolnay/rust-toolchain@451ce45ce31d200b52705aadd15ce75018b006de # 1.89.0
-      - run: cargo build --locked -p rssh-app --features functional-test-observer -p rssh-functional-tests --bins
+      - run: cargo build --locked -p rterm-app --features functional-test-observer -p rterm-functional-tests --bins
       - name: Precompile the Windows SendInput helper
         shell: pwsh
         env:
-          RSSH_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY: ${{ runner.temp }}\rssh-functional-input.dll
-        run: ./scripts/functional/windows-send-input.ps1 -CompileOnly -AssemblyPath $env:RSSH_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY
+          RTERM_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY: ${{ runner.temp }}\rterm-functional-input.dll
+        run: ./scripts/functional/windows-send-input.ps1 -CompileOnly -AssemblyPath $env:RTERM_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY
       - name: Run real Windows SendInput journey
         shell: pwsh
         env:
-          RSSH_FUNCTIONAL_POWERSHELL: pwsh.exe
-          RSSH_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY: ${{ runner.temp }}\rssh-functional-input.dll
+          RTERM_FUNCTIONAL_POWERSHELL: pwsh.exe
+          RTERM_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY: ${{ runner.temp }}\rterm-functional-input.dll
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.local-interaction --target windows-x86_64 --evidence evidence/native-windows --app target/debug/rssh-app.exe --fixture-bin target/debug/rssh-functional-fixture.exe --capability real_os_keyboard --capability real_os_pointer --capability system_clipboard --capability gpu_readback
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.observer-disconnect --target windows-x86_64 --evidence evidence/native-windows --app target/debug/rssh-app.exe --fixture-bin target/debug/rssh-functional-fixture.exe --capability real_os_keyboard
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.config-lifecycle --target windows-x86_64 --evidence evidence/native-windows --app target/debug/rssh-app.exe --fixture-bin target/debug/rssh-functional-fixture.exe --capability real_os_keyboard
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.forced-close-cleanup --target windows-x86_64 --evidence evidence/native-windows --app target/debug/rssh-app.exe --fixture-bin target/debug/rssh-functional-fixture.exe --capability real_os_keyboard
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.local-interaction --target windows-x86_64 --evidence evidence/native-windows --app target/debug/rterm.exe --fixture-bin target/debug/rterm-functional-fixture.exe --capability real_os_keyboard --capability real_os_pointer --capability system_clipboard --capability gpu_readback
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.observer-disconnect --target windows-x86_64 --evidence evidence/native-windows --app target/debug/rterm.exe --fixture-bin target/debug/rterm-functional-fixture.exe --capability real_os_keyboard
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.config-lifecycle --target windows-x86_64 --evidence evidence/native-windows --app target/debug/rterm.exe --fixture-bin target/debug/rterm-functional-fixture.exe --capability real_os_keyboard
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.forced-close-cleanup --target windows-x86_64 --evidence evidence/native-windows --app target/debug/rterm.exe --fixture-bin target/debug/rterm-functional-fixture.exe --capability real_os_keyboard
       - if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with: { name: functional-native-windows, path: evidence/native-windows, if-no-files-found: error, retention-days: 7 }
@@ -194,13 +194,13 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { persist-credentials: false }
       - uses: dtolnay/rust-toolchain@451ce45ce31d200b52705aadd15ce75018b006de # 1.89.0
-      - run: cargo build --locked -p rssh-app -p rssh-functional-tests --bins
+      - run: cargo build --locked -p rterm-app -p rterm-functional-tests --bins
       - name: Run real ConHost SendInput smoke
         shell: pwsh
         env:
-          RSSH_FUNCTIONAL_HOST_TERMINAL: conhost.exe
+          RTERM_FUNCTIONAL_HOST_TERMINAL: conhost.exe
         run: >-
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario host-terminal.smoke --target windows-conhost --evidence evidence/host-terminal-windows --app target/debug/rssh-app.exe --fixture-bin target/debug/rssh-functional-fixture.exe --capability real_host_terminal --capability real_os_keyboard
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario host-terminal.smoke --target windows-conhost --evidence evidence/host-terminal-windows --app target/debug/rterm.exe --fixture-bin target/debug/rterm-functional-fixture.exe --capability real_host_terminal --capability real_os_keyboard
       - if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with: { name: functional-host-terminal-windows, path: evidence/host-terminal-windows, if-no-files-found: error, retention-days: 7 }
@@ -220,15 +220,15 @@ jobs:
         with: { persist-credentials: false }
       - uses: dtolnay/rust-toolchain@451ce45ce31d200b52705aadd15ce75018b006de # 1.89.0
       - run: sudo apt-get update && sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes libx11-dev libxkbcommon-dev xvfb openbox x11-utils weston xdotool xterm xfonts-base foot imagemagick dbus-x11 mesa-vulkan-drivers libvulkan1 libgl1-mesa-dri
-      - run: cargo build --locked -p rssh-app -p rssh-functional-tests --bins
+      - run: cargo build --locked -p rterm-app -p rterm-functional-tests --bins
       - name: Run real host terminal OS-input smoke
         shell: bash
         env:
-          RSSH_FUNCTIONAL_HOST_TERMINAL: ${{ matrix.emulator }}
-          RSSH_FUNCTIONAL_XDOTOOL: xdotool
+          RTERM_FUNCTIONAL_HOST_TERMINAL: ${{ matrix.emulator }}
+          RTERM_FUNCTIONAL_XDOTOOL: xdotool
         run: |
           set -euo pipefail
-          command=(cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario host-terminal.smoke --target "${{ matrix.target }}" --evidence "evidence/${{ matrix.target }}" --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_host_terminal --capability real_os_keyboard)
+          command=(cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario host-terminal.smoke --target "${{ matrix.target }}" --evidence "evidence/${{ matrix.target }}" --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_host_terminal --capability real_os_keyboard)
           if [[ "${{ matrix.wayland }}" == true ]]; then
             command+=(--capability wayland)
             bash scripts/functional/run-wayland-seat.sh "${command[@]}"
@@ -251,16 +251,16 @@ jobs:
         with: { persist-credentials: false }
       - uses: dtolnay/rust-toolchain@451ce45ce31d200b52705aadd15ce75018b006de # 1.89.0
       - run: sudo apt-get update && sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes libx11-dev libxkbcommon-dev libxkbcommon-x11-0 xvfb openbox x11-utils xdotool xclip imagemagick dbus-x11 mesa-vulkan-drivers libvulkan1 libgl1-mesa-dri
-      - run: cargo build --locked -p rssh-app --features functional-test-observer -p rssh-functional-tests --bins
+      - run: cargo build --locked -p rterm-app --features functional-test-observer -p rterm-functional-tests --bins
       - name: Run real X11 XTEST journey
         run: |
           run_x11() {
             bash scripts/functional/run-x11-seat.sh "$@"
           }
-          run_x11 env RSSH_FUNCTIONAL_XDOTOOL=xdotool cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.local-interaction --target linux-x11 --evidence evidence/native-x11 --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard --capability real_os_pointer --capability system_clipboard --capability gpu_readback
-          run_x11 env RSSH_FUNCTIONAL_XDOTOOL=xdotool cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.observer-disconnect --target linux-x11 --evidence evidence/native-x11 --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard
-          run_x11 env RSSH_FUNCTIONAL_XDOTOOL=xdotool cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.config-lifecycle --target linux-x11 --evidence evidence/native-x11 --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard
-          run_x11 env RSSH_FUNCTIONAL_XDOTOOL=xdotool cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.forced-close-cleanup --target linux-x11 --evidence evidence/native-x11 --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard
+          run_x11 env RTERM_FUNCTIONAL_XDOTOOL=xdotool cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.local-interaction --target linux-x11 --evidence evidence/native-x11 --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard --capability real_os_pointer --capability system_clipboard --capability gpu_readback
+          run_x11 env RTERM_FUNCTIONAL_XDOTOOL=xdotool cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.observer-disconnect --target linux-x11 --evidence evidence/native-x11 --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard
+          run_x11 env RTERM_FUNCTIONAL_XDOTOOL=xdotool cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.config-lifecycle --target linux-x11 --evidence evidence/native-x11 --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard
+          run_x11 env RTERM_FUNCTIONAL_XDOTOOL=xdotool cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.forced-close-cleanup --target linux-x11 --evidence evidence/native-x11 --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard
       - if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with: { name: functional-native-x11, path: evidence/native-x11, if-no-files-found: error, retention-days: 7 }
@@ -273,16 +273,16 @@ jobs:
         with: { persist-credentials: false }
       - uses: dtolnay/rust-toolchain@451ce45ce31d200b52705aadd15ce75018b006de # 1.89.0
       - run: sudo apt-get update && sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes libx11-dev libxkbcommon-dev xvfb weston xdotool xclip imagemagick
-      - run: cargo build --locked -p rssh-app --features functional-test-observer -p rssh-functional-tests --bins
+      - run: cargo build --locked -p rterm-app --features functional-test-observer -p rterm-functional-tests --bins
       - name: Run nested Weston X11-backend seat journey
         env:
-          RSSH_FUNCTIONAL_XDOTOOL: xdotool
-          RSSH_FUNCTIONAL_WESTON_BACKEND: x11
+          RTERM_FUNCTIONAL_XDOTOOL: xdotool
+          RTERM_FUNCTIONAL_WESTON_BACKEND: x11
         run: |
-          bash scripts/functional/run-wayland-seat.sh cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.local-interaction --target linux-wayland --evidence evidence/native-wayland --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard --capability real_os_pointer --capability system_clipboard --capability gpu_readback --capability wayland
-          bash scripts/functional/run-wayland-seat.sh cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.observer-disconnect --target linux-wayland --evidence evidence/native-wayland --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard --capability wayland
-          bash scripts/functional/run-wayland-seat.sh cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.config-lifecycle --target linux-wayland --evidence evidence/native-wayland --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard --capability wayland
-          RSSH_FUNCTIONAL_WESTON_SHELL=desktop-shell.so bash scripts/functional/run-wayland-seat.sh cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.forced-close-cleanup --target linux-wayland --evidence evidence/native-wayland --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard --capability wayland
+          bash scripts/functional/run-wayland-seat.sh cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.local-interaction --target linux-wayland --evidence evidence/native-wayland --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard --capability real_os_pointer --capability system_clipboard --capability gpu_readback --capability wayland
+          bash scripts/functional/run-wayland-seat.sh cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.observer-disconnect --target linux-wayland --evidence evidence/native-wayland --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard --capability wayland
+          bash scripts/functional/run-wayland-seat.sh cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.config-lifecycle --target linux-wayland --evidence evidence/native-wayland --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard --capability wayland
+          RTERM_FUNCTIONAL_WESTON_SHELL=desktop-shell.so bash scripts/functional/run-wayland-seat.sh cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.forced-close-cleanup --target linux-wayland --evidence evidence/native-wayland --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard --capability wayland
       - if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with: { name: functional-native-wayland, path: evidence/native-wayland, if-no-files-found: error, retention-days: 7 }
@@ -294,27 +294,27 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { persist-credentials: false }
       - uses: dtolnay/rust-toolchain@451ce45ce31d200b52705aadd15ce75018b006de # 1.89.0
-      - run: cargo test --locked -p rssh-app --test native_window_e2e native_window_e2e_presents_ten_frames_from_a_real_pty -- --exact --nocapture
+      - run: cargo test --locked -p rterm-app --test native_window_e2e native_window_e2e_presents_ten_frames_from_a_real_pty -- --exact --nocapture
 
   native-macos-accessibility:
     if: github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, macOS, X64, rssh-accessibility]
+    runs-on: [self-hosted, macOS, X64, rterm-accessibility]
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { persist-credentials: false }
       - uses: dtolnay/rust-toolchain@451ce45ce31d200b52705aadd15ce75018b006de # 1.89.0
-      - run: cargo build --locked -p rssh-app --features functional-test-observer -p rssh-functional-tests --bins
+      - run: cargo build --locked -p rterm-app --features functional-test-observer -p rterm-functional-tests --bins
       - name: Require pre-authorized CGEventPost helper and run journey
         env:
-          RSSH_FUNCTIONAL_MACOS_ACCESSIBILITY: authorized
-          RSSH_FUNCTIONAL_MACOS_CGEVENT_HELPER: scripts/functional/macos-cgevent.swift
+          RTERM_FUNCTIONAL_MACOS_ACCESSIBILITY: authorized
+          RTERM_FUNCTIONAL_MACOS_CGEVENT_HELPER: scripts/functional/macos-cgevent.swift
         run: |
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.local-interaction --target macos-accessibility --evidence evidence/native-macos --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard --capability real_os_pointer --capability system_clipboard --capability gpu_readback --capability macos_accessibility
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.observer-disconnect --target macos-accessibility --evidence evidence/native-macos --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard --capability macos_accessibility
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.config-lifecycle --target macos-accessibility --evidence evidence/native-macos --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard --capability macos_accessibility
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario window.forced-close-cleanup --target macos-accessibility --evidence evidence/native-macos --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_os_keyboard --capability macos_accessibility
-          RSSH_FUNCTIONAL_HOST_TERMINAL=open cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario host-terminal.smoke --target macos-terminalapp --evidence evidence/native-macos --app target/debug/rssh-app --fixture-bin target/debug/rssh-functional-fixture --capability real_host_terminal --capability real_os_keyboard --capability macos_accessibility
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.local-interaction --target macos-accessibility --evidence evidence/native-macos --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard --capability real_os_pointer --capability system_clipboard --capability gpu_readback --capability macos_accessibility
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.observer-disconnect --target macos-accessibility --evidence evidence/native-macos --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard --capability macos_accessibility
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.config-lifecycle --target macos-accessibility --evidence evidence/native-macos --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard --capability macos_accessibility
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario window.forced-close-cleanup --target macos-accessibility --evidence evidence/native-macos --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_os_keyboard --capability macos_accessibility
+          RTERM_FUNCTIONAL_HOST_TERMINAL=open cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario host-terminal.smoke --target macos-terminalapp --evidence evidence/native-macos --app target/debug/rterm --fixture-bin target/debug/rterm-functional-fixture --capability real_host_terminal --capability real_os_keyboard --capability macos_accessibility
       - if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with: { name: functional-native-macos, path: evidence/native-macos, if-no-files-found: error, retention-days: 7 }
@@ -335,10 +335,10 @@ jobs:
         with: { node-version: 24, cache: npm, cache-dependency-path: web/package-lock.json }
       - run: npm --prefix web ci
       - run: npx --prefix web playwright install --with-deps ${{ matrix.browser }}
-      - run: npm --prefix web run build:functional && cargo build --locked -p rssh-web
+      - run: npm --prefix web run build:functional && cargo build --locked -p rterm-web
       - run: npm --prefix web run test:e2e -- --project=${{ matrix.browser }}
         env:
-          RSSH_PLAYWRIGHT_EVIDENCE: ../evidence/web.${{ matrix.browser }}.playwright.json
+          RTERM_PLAYWRIGHT_EVIDENCE: ../evidence/web.${{ matrix.browser }}.playwright.json
       - if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -355,9 +355,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { runner: windows-2025, target: windows-x86_64, binary: target/debug/rssh-tauri.exe }
-          - { runner: ubuntu-24.04, target: linux-x11, binary: target/debug/rssh-tauri }
-          - { runner: ubuntu-24.04, target: linux-wayland, binary: target/debug/rssh-tauri }
+          - { runner: windows-2025, target: windows-x86_64, binary: target/debug/rterm-tauri.exe }
+          - { runner: ubuntu-24.04, target: linux-x11, binary: target/debug/rterm-tauri }
+          - { runner: ubuntu-24.04, target: linux-wayland, binary: target/debug/rterm-tauri }
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { persist-credentials: false }
@@ -372,16 +372,16 @@ jobs:
         name: Precompile the Windows SendInput helper
         shell: pwsh
         env:
-          RSSH_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY: ${{ runner.temp }}\rssh-functional-input.dll
-        run: ./scripts/functional/windows-send-input.ps1 -CompileOnly -AssemblyPath $env:RSSH_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY
+          RTERM_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY: ${{ runner.temp }}\rterm-functional-input.dll
+        run: ./scripts/functional/windows-send-input.ps1 -CompileOnly -AssemblyPath $env:RTERM_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY
       - name: Run Tauri OS-input journey
         shell: bash
         env:
-          RSSH_FUNCTIONAL_POWERSHELL: pwsh.exe
-          RSSH_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY: ${{ runner.temp }}\rssh-functional-input.dll
+          RTERM_FUNCTIONAL_POWERSHELL: pwsh.exe
+          RTERM_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY: ${{ runner.temp }}\rterm-functional-input.dll
         run: |
           set -euo pipefail
-          command=(cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario tauri.local-pty --target "${{ matrix.target }}" --evidence "evidence/tauri-${{ matrix.target }}" --app "${{ matrix.binary }}" --capability real_os_keyboard --capability real_os_pointer --capability system_clipboard)
+          command=(cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario tauri.local-pty --target "${{ matrix.target }}" --evidence "evidence/tauri-${{ matrix.target }}" --app "${{ matrix.binary }}" --capability real_os_keyboard --capability real_os_pointer --capability system_clipboard)
           if [[ "${{ matrix.target }}" == linux-wayland ]]; then
             command+=(--capability wayland)
             bash scripts/functional/run-wayland-seat.sh "${command[@]}"
@@ -400,7 +400,7 @@ jobs:
 
   tauri-platform-macos:
     if: github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, macOS, X64, rssh-accessibility]
+    runs-on: [self-hosted, macOS, X64, rterm-accessibility]
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -412,12 +412,12 @@ jobs:
       - run: npm --prefix web run build:functional && cargo build --locked --manifest-path tauri/src-tauri/Cargo.toml --features functional-test-observer
       - name: Run authorized macOS Tauri OS-input journey
         env:
-          RSSH_FUNCTIONAL_MACOS_ACCESSIBILITY: authorized
-          RSSH_FUNCTIONAL_MACOS_CGEVENT_HELPER: scripts/functional/macos-cgevent.swift
+          RTERM_FUNCTIONAL_MACOS_ACCESSIBILITY: authorized
+          RTERM_FUNCTIONAL_MACOS_CGEVENT_HELPER: scripts/functional/macos-cgevent.swift
         run: >-
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run
           --suite functional-tests --scenario tauri.local-pty --target macos-accessibility
-          --evidence evidence/tauri-macos-accessibility --app target/debug/rssh-tauri
+          --evidence evidence/tauri-macos-accessibility --app target/debug/rterm-tauri
           --capability real_os_keyboard --capability real_os_pointer
           --capability system_clipboard --capability macos_accessibility
       - if: ${{ always() }}
@@ -436,28 +436,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { runner: windows-2025, target: windows-x86_64, binary: target/release/rssh-app.exe, packaged: dist/functional-package/rssh-app.exe, pty: windows-conpty }
-          - { runner: ubuntu-24.04, target: linux-x86_64, binary: target/release/rssh-app, packaged: dist/functional-package/rssh-app, pty: unix-pty }
-          - { runner: macos-14, target: macos-aarch64, binary: target/release/rssh-app, packaged: dist/functional-package/rssh-app, pty: unix-pty }
+          - { runner: windows-2025, target: windows-x86_64, binary: target/release/rterm.exe, packaged: dist/functional-package/rterm-app.exe, pty: windows-conpty }
+          - { runner: ubuntu-24.04, target: linux-x86_64, binary: target/release/rterm, packaged: dist/functional-package/rterm-app, pty: unix-pty }
+          - { runner: macos-14, target: macos-aarch64, binary: target/release/rterm, packaged: dist/functional-package/rterm-app, pty: unix-pty }
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with: { persist-credentials: false }
       - uses: dtolnay/rust-toolchain@451ce45ce31d200b52705aadd15ce75018b006de # 1.89.0
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes libx11-dev libxkbcommon-dev
-      - run: cargo build --locked --release -p rssh-app -p rssh-functional-tests --bins
+      - run: cargo build --locked --release -p rterm-app -p rterm-functional-tests --bins
       - name: Assemble unsigned Windows PR package
         if: runner.os == 'Windows'
         shell: pwsh
         run: >-
-          ./scripts/ci/package-native.ps1 -Binary "${{ matrix.binary }}" -PackageRoot dist/functional-package -ArtifactName rssh-functional-unsigned.zip -RuntimeTarget "${{ matrix.target }}" -PtyBackend "${{ matrix.pty }}" -Version 0.1.0 -Unsigned
+          ./scripts/ci/package-native.ps1 -Binary "${{ matrix.binary }}" -PackageRoot dist/functional-package -ArtifactName rterm-functional-unsigned.zip -RuntimeTarget "${{ matrix.target }}" -PtyBackend "${{ matrix.pty }}" -Version 0.1.0 -Unsigned
       - name: Assemble unsigned Unix PR package
         if: runner.os != 'Windows'
         run: >-
-          bash scripts/ci/package-native.sh --binary "${{ matrix.binary }}" --package-root dist/functional-package --artifact-name rssh-functional-unsigned.tar.gz --runtime-target "${{ matrix.target }}" --pty-backend "${{ matrix.pty }}" --version 0.1.0 --unsigned
+          bash scripts/ci/package-native.sh --binary "${{ matrix.binary }}" --package-root dist/functional-package --artifact-name rterm-functional-unsigned.tar.gz --runtime-target "${{ matrix.target }}" --pty-backend "${{ matrix.pty }}" --version 0.1.0 --unsigned
       - run: python scripts/ci/check-functional-observer-isolation.py --binary "${{ matrix.packaged }}"
       - run: >-
-            cargo run --locked -p rssh-functional-tests --bin rssh-functional -- run --suite functional-tests --scenario package.startup-smoke --target "${{ matrix.target }}" --evidence "evidence/package-${{ matrix.target }}" --app "${{ matrix.packaged }}" --capability production_observer_isolation
+            cargo run --locked -p rterm-functional-tests --bin rterm-functional -- run --suite functional-tests --scenario package.startup-smoke --target "${{ matrix.target }}" --evidence "evidence/package-${{ matrix.target }}" --app "${{ matrix.packaged }}" --capability production_observer_isolation
       - if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -477,12 +477,12 @@ jobs:
         with: { node-version: 24, cache: npm, cache-dependency-path: web/package-lock.json }
       - run: npm --prefix web ci && npm --prefix web run build
       - run: npx --prefix web playwright install --with-deps chromium
-      - run: cargo build --locked --release -p rssh-web
-      - run: python scripts/ci/check-functional-observer-isolation.py --binary target/release/rssh-web --package rssh-web --startup-probe web-server --web-dist web/dist
+      - run: cargo build --locked --release -p rterm-web
+      - run: python scripts/ci/check-functional-observer-isolation.py --binary target/release/rterm-web --package rterm-web --startup-probe web-server --web-dist web/dist
       - name: Black-box production Web PTY interaction and cleanup
         run: mkdir -p evidence/production-web && cd web && npx playwright test --config playwright.production.config.ts
         env:
-          RSSH_PRODUCTION_WEB_BINARY: ../target/release/rssh-web
+          RTERM_PRODUCTION_WEB_BINARY: ../target/release/rterm-web
       - if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with: { name: functional-production-web, path: evidence/production-web, if-no-files-found: error, retention-days: 7 }
@@ -511,22 +511,22 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $binary = Get-ChildItem target/release -Filter rssh-tauri.exe -Recurse | Select-Object -First 1 -ExpandProperty FullName
+          $binary = Get-ChildItem target/release -Filter rterm-tauri.exe -Recurse | Select-Object -First 1 -ExpandProperty FullName
           if (-not $binary) { throw "production Tauri binary is absent" }
           $bundles = Get-ChildItem target/release/bundle -File -Recurse
           if (-not $bundles) { throw "production Tauri bundle is absent" }
-          python scripts/ci/check-functional-observer-isolation.py --binary $binary --package rssh-tauri --startup-probe gui --web-dist web/dist
+          python scripts/ci/check-functional-observer-isolation.py --binary $binary --package rterm-tauri --startup-probe gui --web-dist web/dist
           ./scripts/functional/smoke-production-tauri.ps1 -Binary $binary -EvidenceDirectory evidence/production-tauri
       - name: Probe production Tauri executable on X11
         if: matrix.input == 'x11'
         run: |
           test -n "$(find target/release/bundle -type f -print -quit)"
           bash scripts/functional/run-x11-seat.sh \
-            bash scripts/functional/smoke-production-tauri.sh --binary target/release/rssh-tauri \
+            bash scripts/functional/smoke-production-tauri.sh --binary target/release/rterm-tauri \
             --evidence-directory evidence/production-tauri --input-backend x11
           bash scripts/functional/run-x11-seat.sh \
             python scripts/ci/check-functional-observer-isolation.py \
-            --binary target/release/rssh-tauri --package rssh-tauri \
+            --binary target/release/rterm-tauri --package rterm-tauri \
             --startup-probe gui --web-dist web/dist
       - if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -538,7 +538,7 @@ jobs:
 
   production-tauri-bundle-smoke-macos:
     if: github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, macOS, X64, rssh-accessibility]
+    runs-on: [self-hosted, macOS, X64, rterm-accessibility]
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -550,12 +550,12 @@ jobs:
       - run: npm --prefix tauri run build
       - name: Probe production Tauri app bundle on macOS
         env:
-          RSSH_FUNCTIONAL_MACOS_ACCESSIBILITY: authorized
-          RSSH_FUNCTIONAL_MACOS_CGEVENT_HELPER: scripts/functional/macos-cgevent.swift
+          RTERM_FUNCTIONAL_MACOS_ACCESSIBILITY: authorized
+          RTERM_FUNCTIONAL_MACOS_CGEVENT_HELPER: scripts/functional/macos-cgevent.swift
         run: |
           binary="$(find target/release/bundle/macos -path '*/Contents/MacOS/*' -type f -print -quit)"
           test -n "$binary"
-          python scripts/ci/check-functional-observer-isolation.py --binary "$binary" --package rssh-tauri --web-dist web/dist
+          python scripts/ci/check-functional-observer-isolation.py --binary "$binary" --package rterm-tauri --web-dist web/dist
           bash scripts/functional/smoke-production-tauri.sh --binary "$binary" \
             --evidence-directory evidence/production-tauri-macos --input-backend macos
       - if: ${{ always() }}
@@ -582,7 +582,7 @@ jobs:
           python scripts/ci/check-functional-matrix.py --suite functional-tests --matrix functional-tests/hosted-matrix.toml --evidence-root all-functional-evidence
       - name: Enforce hosted PR behavior evidence with no declarations-only coverage
         run: >-
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- coverage --suite functional-tests --map functional-tests/evidence-map.toml --evidence-root all-functional-evidence
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- coverage --suite functional-tests --map functional-tests/evidence-map.toml --evidence-root all-functional-evidence
 
   aggregate-evidence:
     if: github.event_name == 'workflow_dispatch'
@@ -600,4 +600,4 @@ jobs:
           python scripts/ci/check-functional-matrix.py --suite functional-tests --matrix functional-tests/matrix.toml --evidence-root all-functional-evidence
       - name: Enforce behavior evidence with no orphans or declarations-only coverage
         run: >-
-          cargo run --locked -p rssh-functional-tests --bin rssh-functional -- coverage --suite functional-tests --map functional-tests/evidence-map.toml --evidence-root all-functional-evidence
+          cargo run --locked -p rterm-functional-tests --bin rterm-functional -- coverage --suite functional-tests --map functional-tests/evidence-map.toml --evidence-root all-functional-evidence

@@ -14,16 +14,16 @@ $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 . (Join-Path $PSScriptRoot 'scorecard-common.ps1')
 
-$repoRoot = Get-RsshRepositoryRoot
+$repoRoot = Get-RTermRepositoryRoot
 $schemaPath = Join-Path $PSScriptRoot 'scorecard.schema.json'
 if ([string]::IsNullOrWhiteSpace($Baseline)) {
     $Baseline = Join-Path $PSScriptRoot 'baselines\windows-x64-rust-1.89.json'
 }
-Test-RsshPerformanceSchema -Path $schemaPath
-$baselineDocument = Read-RsshPerformanceBaseline -Path $Baseline
+Test-RTermPerformanceSchema -Path $schemaPath
+$baselineDocument = Read-RTermPerformanceBaseline -Path $Baseline
 
 if ($ValidationOnly) {
-    Write-RsshScorecardResult -Result ([ordered]@{
+    Write-RTermScorecardResult -Result ([ordered]@{
         ok = $true
         mode = 'validation-only'
         schema_version = $baselineDocument.schema_version
@@ -36,21 +36,21 @@ if ($Candidate -ne 'current') {
     throw "unsupported candidate '$Candidate'; this runner currently measures the checked-out source as 'current'"
 }
 
-$fingerprint = Get-RsshMachineFingerprint
+$fingerprint = Get-RTermMachineFingerprint
 $fingerprintMismatches = @(
-    Assert-RsshComparableMachine `
+    Assert-RTermComparableMachine `
         -Baseline $baselineDocument `
         -Actual $fingerprint `
         -AllowDifferentMachine:$AllowDifferentMachine
 )
 
-function Invoke-RsshRuntimeSample {
+function Invoke-RTermRuntimeSample {
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)][string]$Name)
 
     $protocol = $baselineDocument.protocol
     $lines = @(
-        & cargo run --locked --release -p rssh-app -- bench --json `
+        & cargo run --locked --release -p rterm-app -- bench --json `
             --workload $Name `
             --bytes $protocol.bytes `
             --chunk-size $protocol.chunk_size `
@@ -69,7 +69,7 @@ function Invoke-RsshRuntimeSample {
     return $jsonLine | ConvertFrom-Json
 }
 
-function Get-RsshMedian {
+function Get-RTermMedian {
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)][object[]]$Values)
 
@@ -84,7 +84,7 @@ Push-Location $repoRoot
 try {
     foreach ($name in $Workload) {
         for ($index = 0; $index -lt [int]$baselineDocument.protocol.warmups; $index++) {
-            $null = Invoke-RsshRuntimeSample -Name $name
+            $null = Invoke-RTermRuntimeSample -Name $name
         }
     }
 
@@ -98,7 +98,7 @@ try {
             [array]::Reverse($order)
         }
         foreach ($name in $order) {
-            $samples[$name].Add((Invoke-RsshRuntimeSample -Name $name))
+            $samples[$name].Add((Invoke-RTermRuntimeSample -Name $name))
         }
     }
 } finally {
@@ -110,16 +110,16 @@ $workloadResults = [ordered]@{}
 foreach ($name in $Workload) {
     $sampleSet = @($samples[$name])
     $median = [ordered]@{
-        throughput_bytes_per_sec = [long](Get-RsshMedian @($sampleSet.throughput_bytes_per_sec))
-        chunk_p95_us = [long](Get-RsshMedian @($sampleSet.chunk_p95_us))
-        render_frame_p95_us = [long](Get-RsshMedian @($sampleSet.render_frame_p95_us))
-        process_memory_bytes = [long](Get-RsshMedian @($sampleSet.process_memory_bytes))
-        process_virtual_memory_bytes = [long](Get-RsshMedian @($sampleSet.process_virtual_memory_bytes))
-        elapsed_ms = [long](Get-RsshMedian @($sampleSet.elapsed_ms))
-        inspected_query_bytes = [long](Get-RsshMedian @($sampleSet.inspected_query_bytes))
-        scrolled_survivor_cell_clones = [long](Get-RsshMedian @($sampleSet.scrolled_survivor_cell_clones))
-        history_row_relocations = [long](Get-RsshMedian @($sampleSet.history_row_relocations))
-        metadata_rebase_batches = [long](Get-RsshMedian @($sampleSet.metadata_rebase_batches))
+        throughput_bytes_per_sec = [long](Get-RTermMedian @($sampleSet.throughput_bytes_per_sec))
+        chunk_p95_us = [long](Get-RTermMedian @($sampleSet.chunk_p95_us))
+        render_frame_p95_us = [long](Get-RTermMedian @($sampleSet.render_frame_p95_us))
+        process_memory_bytes = [long](Get-RTermMedian @($sampleSet.process_memory_bytes))
+        process_virtual_memory_bytes = [long](Get-RTermMedian @($sampleSet.process_virtual_memory_bytes))
+        elapsed_ms = [long](Get-RTermMedian @($sampleSet.elapsed_ms))
+        inspected_query_bytes = [long](Get-RTermMedian @($sampleSet.inspected_query_bytes))
+        scrolled_survivor_cell_clones = [long](Get-RTermMedian @($sampleSet.scrolled_survivor_cell_clones))
+        history_row_relocations = [long](Get-RTermMedian @($sampleSet.history_row_relocations))
+        metadata_rebase_batches = [long](Get-RTermMedian @($sampleSet.metadata_rebase_batches))
     }
     $expected = $baselineDocument.runtime.workloads.PSObject.Properties[$name].Value
     foreach ($gate in @(
@@ -163,7 +163,7 @@ $result = [ordered]@{
     workloads = $workloadResults
     threshold_violations = @($violations)
 }
-Write-RsshScorecardResult -Result $result -Output $Output
+Write-RTermScorecardResult -Result $result -Output $Output
 if (-not $result.ok) {
     exit 1
 }

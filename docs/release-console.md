@@ -1,7 +1,7 @@
 # Native Release Packages
 
 This document defines the six target native terminal packages and their release
-workflow contract for R-SSH. It does not record six-platform certification.
+workflow contract for R-Term. It does not record six-platform certification.
 
 ## Verification status (2026-08-02)
 
@@ -38,19 +38,19 @@ performance qualification in
 When its protected fixed-performance prerequisite succeeds, the release
 workflow is configured to build and smoke these native artifacts:
 
-- `R-SSH-windows-x64.zip`
-- `R-SSH-windows-arm64.zip`
-- `R-SSH-linux-x64.tar.gz`
-- `R-SSH-linux-arm64.tar.gz`
-- `R-SSH-macos-x64.tar.gz`
-- `R-SSH-macos-arm64.tar.gz`
+- `R-Term-windows-x64.zip`
+- `R-Term-windows-arm64.zip`
+- `R-Term-linux-x64.tar.gz`
+- `R-Term-linux-arm64.tar.gz`
+- `R-Term-macos-x64.tar.gz`
+- `R-Term-macos-arm64.tar.gz`
 
 Every unpacked package contains:
 
 - the native executable and platform console launcher
 - `README.md`
 - `LICENSE`
-- `examples/rssh-profiles.toml`
+- `examples/rterm-profiles.toml`
 - `licenses/fonts/`, with the licenses and provenance manifest for the embedded
   deterministic Noto subsets
 - `manifest.json`, recording package/version, artifact format, Rust and runtime
@@ -58,10 +58,10 @@ Every unpacked package contains:
   payload file's relative path, size, and SHA-256
 - `SHA256SUMS`, covering every package file except itself
 
-Windows packages provide `rssh-app.exe` and `rssh-console.cmd`. Linux packages
-provide `rssh-app` and `rssh-console.sh`. macOS packages provide
-`R-SSH.app/Contents/MacOS/rssh-app`, a root CLI launcher, and
-`rssh-console.sh`; the bundle `Info.plist` names the same executable and version.
+Windows packages provide `rterm.exe` and `rterm-console.cmd`. Linux packages
+provide `rterm` and `rterm-console.sh`. macOS packages provide
+`R-Term.app/Contents/MacOS/rterm`, a root CLI launcher, and
+`rterm-console.sh`; the bundle `Info.plist` names the same executable and version.
 
 ## Release Triggers
 
@@ -97,13 +97,13 @@ and release-integrity jobs **require protected/self-hosted environment**:
 - `cargo fmt --all -- --check`
 - `cargo test --locked --workspace --all-targets`
 - `cargo clippy --locked --workspace --all-targets -- -D warnings`
-- `cargo build --locked --release -p rssh-app --all-targets`
+- `cargo build --locked --release -p rterm-app --all-targets`
 - unpacked `manifest.json`, required-file, executable-mode, and `SHA256SUMS`
   validation where the platform exposes executable modes
 - packaged `version --json`, `doctor --json`, `self-test --json`, and
   deterministic benchmark gates
 - a real packaged-binary OpenSSH loopback and ten-frame native GPU/PTY E2E,
-  selected through `RSSH_TEST_APP_EXECUTABLE`
+  selected through `RTERM_TEST_APP_EXECUTABLE`
 - packaged platform launcher preflight
 - protected signing, macOS notarization/stapling, SBOM generation, provenance
   attestation, and a final signed-package smoke
@@ -136,24 +136,24 @@ directory, generate `manifest.json` and `SHA256SUMS`, and write the complete
 archive beside that directory. A local Windows x64 example is:
 
 ```powershell
-cargo build --locked --release -p rssh-app --all-targets
+cargo build --locked --release -p rterm-app --all-targets
 ./scripts/ci/package-native.ps1 `
-  -Binary ./target/release/rssh-app.exe `
-  -PackageRoot ./dist/R-SSH-windows-x64-unsigned `
-  -ArtifactName R-SSH-windows-x64-unsigned.zip `
+  -Binary ./target/release/rterm.exe `
+  -PackageRoot ./dist/R-Term-windows-x64-unsigned `
+  -ArtifactName R-Term-windows-x64-unsigned.zip `
   -RuntimeTarget windows-x86_64 `
   -PtyBackend windows-conpty `
   -Version 0.1.0 `
   -Unsigned
 New-Item -ItemType Directory ./dist/local-smoke
 Expand-Archive `
-  -LiteralPath ./dist/R-SSH-windows-x64-unsigned.zip `
+  -LiteralPath ./dist/R-Term-windows-x64-unsigned.zip `
   -DestinationPath ./dist/local-smoke
 ./scripts/ci/package-smoke.ps1 `
-  -PackageRoot ./dist/local-smoke/R-SSH-windows-x64-unsigned `
+  -PackageRoot ./dist/local-smoke/R-Term-windows-x64-unsigned `
   -ExpectedTarget windows-x86_64 `
   -ExpectedPtyBackend windows-conpty `
-  -ExpectedArtifactName R-SSH-windows-x64-unsigned.zip `
+  -ExpectedArtifactName R-Term-windows-x64-unsigned.zip `
   -ExpectedUnsigned
 ```
 
@@ -162,7 +162,7 @@ The POSIX scripts expose the corresponding `--binary`, `--package-root`,
 `--unsigned`, and `--expected-*` flags. Smoke scripts never execute a workspace
 replacement binary or extract an archive: `PackageRoot`/`--package-root` must
 identify the actual unpacked artifact being certified. Cargo may compile the
-Rust integration-test harness, but `RSSH_TEST_APP_EXECUTABLE` forces every
+Rust integration-test harness, but `RTERM_TEST_APP_EXECUTABLE` forces every
 tested app launch to use the validated executable inside that unpacked artifact.
 
 ## Console Startup After Download
@@ -170,42 +170,42 @@ tested app launch to use the validated executable inside that unpacked artifact.
 After extracting the zip:
 
 ```powershell
-.\rssh-app.exe doctor
-.\rssh-app.exe version --json
-.\rssh-app.exe self-test --json
-.\rssh-app.exe bench --json --render-frames 30 --idle-ms 200
-.\rssh-app.exe bench --json --workload ansi-scroll-query --bytes 1048576 --chunk-size 8192 --render-frames 30 --idle-ms 1000 --min-throughput-bytes-per-sec 1048576 --max-chunk-p95-us 5000 --max-render-frame-p95-us 16000 --max-idle-cpu-percent 3 --max-process-memory-bytes 268435456
-.\rssh-app.exe console
-.\rssh-console.cmd
-.\rssh-app.exe local
-.\rssh-app.exe ssh ops@example.com
-.\rssh-app.exe ssh -p 2222 -i C:\Users\ops\.ssh\id_ed25519 -l ops example.com
-.\rssh-app.exe ssh ops@example.com uptime -p
-.\rssh-app.exe ssh --target prod --preflight
-.\rssh-app.exe sftp ops@example.com
-.\rssh-app.exe sftp -P 2222 -i C:\Users\ops\.ssh\id_ed25519 ops@example.com
-.\rssh-app.exe sftp -F C:\Users\ops\.ssh\prod_config -o ProxyJump=bastion prod
-.\rssh-app.exe sftp -J bastion -C -vv prod
-.\rssh-app.exe sftp -l 4096 prod
-.\rssh-app.exe sftp -b batch.txt -B 32768 -R 64 prod
-.\rssh-app.exe scp local.txt ops@example.com:/tmp/remote.txt
-.\rssh-app.exe scp app.log audit.log ops@example.com:/tmp/logs/
-.\rssh-app.exe scp -l 4096 local.txt prod:/tmp/remote.txt
-.\rssh-app.exe scp -p local.txt prod:/tmp/remote.txt
-.\rssh-app.exe scp -R -s local.txt prod:/tmp/remote.txt
-.\rssh-app.exe scp -P 2222 -i C:\Users\ops\.ssh\id_ed25519 -r logs ops@example.com:/tmp/logs
-.\rssh-app.exe scp -F C:\Users\ops\.ssh\prod_config -o ProxyJump=bastion local.txt prod:/tmp/remote.txt
-.\rssh-app.exe scp -J bastion -C -vv local.txt prod:/tmp/remote.txt
-.\rssh-app.exe scp -O -T -B local.txt prod:/tmp/remote.txt
-.\rssh-app.exe scp ops@example.com:/tmp/remote.txt local.txt
-.\rssh-app.exe scp ops@example.com:/var/log/app.log ops@example.com:/var/log/audit.log logs
-.\rssh-app.exe scp ops@example.com --upload local.txt /tmp/remote.txt
-.\rssh-app.exe ssh -F C:\Users\ops\.ssh\prod_config -o ProxyJump=bastion prod
-.\rssh-app.exe ssh -J bastion -C -vv prod
-.\rssh-app.exe ssh -T -W db.internal:5432 prod
-.\rssh-app.exe ssh -E ssh-debug.log -Q cipher prod
-.\rssh-app.exe ssh -L 127.0.0.1:15432:db.internal:5432 -D 127.0.0.1:1080 -N prod
-.\rssh-app.exe ssh --native --trust-on-first-use --host example.com --user ops --agent
+.\rterm.exe doctor
+.\rterm.exe version --json
+.\rterm.exe self-test --json
+.\rterm.exe bench --json --render-frames 30 --idle-ms 200
+.\rterm.exe bench --json --workload ansi-scroll-query --bytes 1048576 --chunk-size 8192 --render-frames 30 --idle-ms 1000 --min-throughput-bytes-per-sec 1048576 --max-chunk-p95-us 5000 --max-render-frame-p95-us 16000 --max-idle-cpu-percent 3 --max-process-memory-bytes 268435456
+.\rterm.exe console
+.\rterm-console.cmd
+.\rterm.exe local
+.\rterm.exe ssh ops@example.com
+.\rterm.exe ssh -p 2222 -i C:\Users\ops\.ssh\id_ed25519 -l ops example.com
+.\rterm.exe ssh ops@example.com uptime -p
+.\rterm.exe ssh --target prod --preflight
+.\rterm.exe sftp ops@example.com
+.\rterm.exe sftp -P 2222 -i C:\Users\ops\.ssh\id_ed25519 ops@example.com
+.\rterm.exe sftp -F C:\Users\ops\.ssh\prod_config -o ProxyJump=bastion prod
+.\rterm.exe sftp -J bastion -C -vv prod
+.\rterm.exe sftp -l 4096 prod
+.\rterm.exe sftp -b batch.txt -B 32768 -R 64 prod
+.\rterm.exe scp local.txt ops@example.com:/tmp/remote.txt
+.\rterm.exe scp app.log audit.log ops@example.com:/tmp/logs/
+.\rterm.exe scp -l 4096 local.txt prod:/tmp/remote.txt
+.\rterm.exe scp -p local.txt prod:/tmp/remote.txt
+.\rterm.exe scp -R -s local.txt prod:/tmp/remote.txt
+.\rterm.exe scp -P 2222 -i C:\Users\ops\.ssh\id_ed25519 -r logs ops@example.com:/tmp/logs
+.\rterm.exe scp -F C:\Users\ops\.ssh\prod_config -o ProxyJump=bastion local.txt prod:/tmp/remote.txt
+.\rterm.exe scp -J bastion -C -vv local.txt prod:/tmp/remote.txt
+.\rterm.exe scp -O -T -B local.txt prod:/tmp/remote.txt
+.\rterm.exe scp ops@example.com:/tmp/remote.txt local.txt
+.\rterm.exe scp ops@example.com:/var/log/app.log ops@example.com:/var/log/audit.log logs
+.\rterm.exe scp ops@example.com --upload local.txt /tmp/remote.txt
+.\rterm.exe ssh -F C:\Users\ops\.ssh\prod_config -o ProxyJump=bastion prod
+.\rterm.exe ssh -J bastion -C -vv prod
+.\rterm.exe ssh -T -W db.internal:5432 prod
+.\rterm.exe ssh -E ssh-debug.log -Q cipher prod
+.\rterm.exe ssh -L 127.0.0.1:15432:db.internal:5432 -D 127.0.0.1:1080 -N prod
+.\rterm.exe ssh --native --trust-on-first-use --host example.com --user ops --agent
 ```
 
 ## GPU backend memory matrix
@@ -222,12 +222,12 @@ Keep build outputs and evidence off a space-constrained workspace drive. For
 example, from the repository root on Windows:
 
 ```powershell
-$env:CARGO_TARGET_DIR = 'L:\rssh-targets\stage7-release-certification'
+$env:CARGO_TARGET_DIR = 'L:\rterm-targets\stage7-release-certification'
 ./scripts/ci/run-gpu-backend-memory-matrix.ps1 `
   -Profile release `
   -Warmups 5 `
   -Samples 30 `
-  -OutputDirectory 'L:\rssh-evidence\gpu-backend-memory-matrix'
+  -OutputDirectory 'L:\rterm-evidence\gpu-backend-memory-matrix'
 ```
 
 The command builds with Cargo's locked dependency graph unless `-SkipBuild` is

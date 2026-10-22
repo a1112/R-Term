@@ -33,7 +33,7 @@ function Get-PackageRelativePath([string] $Root, [string] $Path) {
 }
 $manifestPath = Join-Path $packageRootPath "manifest.json"
 $checksumsPath = Join-Path $packageRootPath "SHA256SUMS"
-foreach ($required in @("manifest.json", "SHA256SUMS", "README.md", "LICENSE", "examples/rssh-profiles.toml")) {
+foreach ($required in @("manifest.json", "SHA256SUMS", "README.md", "LICENSE", "examples/rterm-profiles.toml")) {
   if (-not (Test-Path -LiteralPath (Join-Path $packageRootPath $required) -PathType Leaf)) {
     throw "unpacked package is missing required file: $required"
   }
@@ -105,6 +105,8 @@ foreach ($file in Get-ChildItem -LiteralPath $packageRootPath -File -Recurse) {
   }
 }
 
+if (@($manifest.requirements.external_tools).Count -ne 0) { throw "R-Term local terminal must not require external transport tools" }
+
 $binary = (Resolve-Path -LiteralPath (Join-Path $packageRootPath $manifest.artifact.binary)).Path
 if (-not $binary.StartsWith($packageRootPath + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
   throw "manifest binary escapes package root"
@@ -118,8 +120,8 @@ $powerShellHost = if ($null -ne $pwshCommand) {
 }
 
 $originalLocation = Get-Location
-$oldExecutable = $env:RSSH_TEST_APP_EXECUTABLE
-$oldRequireOpenSsh = $env:RSSH_REQUIRE_OPENSSH
+$oldExecutable = $env:RTERM_TEST_APP_EXECUTABLE
+$oldRequireOpenSsh = $env:RTERM_REQUIRE_OPENSSH
 try {
   Set-Location $repositoryRoot
   $null = Invoke-BoundedProcess -Phase "shared process harness self-test" -FilePath $powerShellHost -ArgumentList @("-NoProfile", "-File", $nativeHarness, "-HarnessSelfTest") -TimeoutSeconds 90
@@ -129,18 +131,32 @@ try {
   if ($version.target -ne $ExpectedTarget) { throw "version target mismatch: '$($version.target)' != '$ExpectedTarget'" }
   if ($version.pty_backend -ne $ExpectedPtyBackend) { throw "version PTY backend mismatch" }
   if ($version.version -ne $manifest.package.version) { throw "version mismatch with package manifest" }
-  if ($version.native_ssh_backend -ne "russh") { throw "packaged native SSH backend is not russh" }
+  if ($version.name -ne "rterm") { throw "packaged command identity is not rterm" }
+  if ($version.native_ssh_backend -notin @("disabled", "russh")) { throw "unknown packaged native SSH backend" }
 
-  $launcher = Join-Path $packageRootPath "rssh-console.cmd"
+  $launcher = Join-Path $packageRootPath "rterm-console.cmd"
   if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) { throw "Windows console launcher is missing" }
   $null = Invoke-BoundedProcess -Phase "packaged launcher preflight" -FilePath $launcher -ArgumentList @("--preflight", "--", "cmd.exe", "/D", "/C", "echo", "package-launcher-smoke") -TimeoutSeconds 30
 
-  $env:RSSH_TEST_APP_EXECUTABLE = $binary
-  $env:RSSH_REQUIRE_OPENSSH = "1"
-  $null = Invoke-BoundedProcess -Phase "packaged OpenSSH loopback" -FilePath "cargo" -ArgumentList @("test", "--locked", "-p", "rssh-app", "--test", "openssh_loopback", "rssh_app_system_openssh_entrypoint_runs_a_real_loopback_exec", "--", "--exact", "--nocapture") -TimeoutSeconds 300
-  $null = Invoke-BoundedProcess -Phase "packaged native ten-frame E2E" -FilePath "cargo" -ArgumentList @("test", "--locked", "-p", "rssh-app", "--test", "native_window_e2e", "native_window_e2e_presents_ten_frames_from_a_real_pty", "--", "--exact", "--nocapture") -TimeoutSeconds 240
+  $env:RTERM_TEST_APP_EXECUTABLE = $binary
+  if ($version.native_ssh_backend -eq "russh") {
+    $env:RTERM_REQUIRE_OPENSSH = "1"
+    $null = Invoke-BoundedProcess -Phase "packaged OpenSSH loopback" -FilePath "cargo" -ArgumentList @("test", "--locked", "-p", "rterm-app", "--features", "ssh", "--test", "openssh_loopback", "rterm_app_system_openssh_entrypoint_runs_a_real_loopback_exec", "--", "--exact", "--nocapture") -TimeoutSeconds 300
+  } else {
+    foreach ($remoteCommand in @("ssh", "scp", "sftp")) {
+      $rejected = $false
+      try {
+        $null = Invoke-BoundedProcess -Phase "packaged disabled $remoteCommand" -FilePath $binary -ArgumentList @($remoteCommand, "user@must-not-resolve.invalid") -TimeoutSeconds 10
+      } catch {
+        if ($_.Exception.Message -notmatch "SSH support is disabled") { throw }
+        $rejected = $true
+      }
+      if (-not $rejected) { throw "SSH-free package accepted $remoteCommand" }
+    }
+  }
+  $null = Invoke-BoundedProcess -Phase "packaged native ten-frame E2E" -FilePath "cargo" -ArgumentList @("test", "--locked", "-p", "rterm-app", "--test", "native_window_e2e", "native_window_e2e_presents_ten_frames_from_a_real_pty", "--", "--exact", "--nocapture") -TimeoutSeconds 240
 } finally {
-  $env:RSSH_TEST_APP_EXECUTABLE = $oldExecutable
-  $env:RSSH_REQUIRE_OPENSSH = $oldRequireOpenSsh
+  $env:RTERM_TEST_APP_EXECUTABLE = $oldExecutable
+  $env:RTERM_REQUIRE_OPENSSH = $oldRequireOpenSsh
   Set-Location $originalLocation
 }

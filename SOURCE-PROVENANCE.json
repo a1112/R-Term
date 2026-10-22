@@ -1,0 +1,15 @@
+{
+  "product": "R-Term",
+  "role": "independent-graphical-terminal",
+  "extraction_source_commit": "f79dcfd22a9f655f21f20616c11380993b02304a",
+  "previous_rterm_commit": "52a4eab638ca061b1441c7589150d271af57410c",
+  "ssh_backend": {
+    "ownership": "R-Term",
+    "origin_repository": "https://github.com/a1112/R-SSH",
+    "origin_commit": "3fdda8299ff6e066b4272a7a064d135e3be38647",
+    "license": "MIT",
+    "build_source": "crates/rterm-ssh"
+  },
+  "r_ssh_build_or_runtime_dependency": false,
+  "protected_cross_platform_certification": false
+}

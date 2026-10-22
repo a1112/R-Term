@@ -11,18 +11,18 @@ param(
 $ErrorActionPreference = "Stop"
 
 function Invoke-NativeWindowProbe([string]$Executable) {
-    $previous = $env:RSSH_TEST_APP_EXECUTABLE
-    $env:RSSH_TEST_APP_EXECUTABLE = $Executable
+    $previous = $env:RTERM_TEST_APP_EXECUTABLE
+    $env:RTERM_TEST_APP_EXECUTABLE = $Executable
     try {
         $previousErrorPreference = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
-        $lines = & cargo test --locked -p rssh-app --test native_window_e2e `
+        $lines = & cargo test --locked -p rterm-app --test native_window_e2e `
             native_window_release_performance_probe -- --ignored --exact --nocapture 2>&1
         $ErrorActionPreference = $previousErrorPreference
         if ($LASTEXITCODE -ne 0) {
             throw "native-window probe failed for ${Executable}:`n$($lines -join [Environment]::NewLine)"
         }
-        $prefix = "RSSH_NATIVE_RELEASE_PROBE="
+        $prefix = "RTERM_NATIVE_RELEASE_PROBE="
         $record = $lines | Where-Object { $_.ToString().StartsWith($prefix) } | Select-Object -Last 1
         if ($null -eq $record) {
             throw "native-window probe emitted no metrics for $Executable"
@@ -31,7 +31,7 @@ function Invoke-NativeWindowProbe([string]$Executable) {
     }
     finally {
         $ErrorActionPreference = "Stop"
-        $env:RSSH_TEST_APP_EXECUTABLE = $previous
+        $env:RTERM_TEST_APP_EXECUTABLE = $previous
     }
 }
 

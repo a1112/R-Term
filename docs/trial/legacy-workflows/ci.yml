@@ -41,17 +41,17 @@ jobs:
           npm --prefix web run build
       - run: cargo fmt --all -- --check
       - name: Verify deterministic Stage 0 diagnostics contracts
-        run: cargo test --locked -p rssh-diagnostics --all-targets -j1
+        run: cargo test --locked -p rterm-diagnostics --all-targets -j1
       - name: Enforce shrinking Rust architecture budgets
         run: python scripts/ci/check-rust-architecture.py --policy scripts/ci/architecture-policy.json
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - name: Verify production build excludes functional observers
         shell: pwsh
         run: |
-          cargo build --locked --release -p rssh-app
-          python scripts/ci/check-functional-observer-isolation.py --binary target/release/rssh-app.exe
+          cargo build --locked --release -p rterm-app
+          python scripts/ci/check-functional-observer-isolation.py --binary target/release/rterm.exe
       - name: Run focused Web PTY tests
-        run: cargo test --locked -p rssh-web --lib
+        run: cargo test --locked -p rterm-web --lib
       - run: cargo test --locked --workspace --all-targets
 
   msrv:
@@ -154,7 +154,7 @@ jobs:
 
           function Invoke-QueryBench([int] $chunkSize) {
             $PSNativeCommandUseErrorActionPreference = $false
-            $json = cargo run --locked --release -p rssh-app -- bench --json --workload ansi-scroll-query --bytes 1048576 --chunk-size $chunkSize --render-frames 1 --idle-ms 1
+            $json = cargo run --locked --release -p rterm-app -- bench --json --workload ansi-scroll-query --bytes 1048576 --chunk-size $chunkSize --render-frames 1 --idle-ms 1
             if ($LASTEXITCODE -ne 0) {
               throw "benchmark process failed with exit code $LASTEXITCODE; output: $json"
             }
@@ -292,7 +292,7 @@ jobs:
         run: |
           set -euo pipefail
           policy_path=/usr/sbin/policy-rc.d
-          backup_path="$RUNNER_TEMP/rssh-policy-rc.d.backup"
+          backup_path="$RUNNER_TEMP/rterm-policy-rc.d.backup"
           policy_existed=false
           restore_policy_rc() {
             phase_status=$?
@@ -351,9 +351,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export XDG_RUNTIME_DIR="$RUNNER_TEMP/rssh-wayland"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/rterm-wayland"
           install -d -m 700 "$XDG_RUNTIME_DIR"
-          export WAYLAND_DISPLAY="wayland-rssh"
+          export WAYLAND_DISPLAY="wayland-rterm"
           weston --backend=headless-backend.so --socket="$WAYLAND_DISPLAY" --idle-time=0 >"$RUNNER_TEMP/weston.log" 2>&1 &
           weston_pid=$!
           cleanup() {
@@ -464,7 +464,7 @@ jobs:
           npm --prefix web ci
           npm --prefix web run build
       - name: Build transport runtime used by coverage contracts
-        run: cargo build --locked -p rssh-app
+        run: cargo build --locked -p rterm-app
       - name: Generate and enforce coverage
         run: |
           cargo install cargo-llvm-cov --version 0.8.7 --locked
@@ -510,7 +510,7 @@ jobs:
       - name: Build functional Web assets for browser E2E
         run: npm --prefix web run build:functional
       - name: Build loopback Web PTY bridge
-        run: cargo build --locked -p rssh-web
+        run: cargo build --locked -p rterm-web
       - name: Install Chromium
         run: npx --prefix web playwright install --with-deps chromium
       - name: Run browser E2E

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-wayland_clipboard="${RSSH_FUNCTIONAL_WAYLAND_CLIPBOARD:-0}"
+wayland_clipboard="${RTERM_FUNCTIONAL_WAYLAND_CLIPBOARD:-0}"
 if [[ "$wayland_clipboard" == 1 && "${1:-}" == --clear ]]; then
   sleep 0.25
   wl-copy --clear

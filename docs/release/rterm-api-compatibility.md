@@ -1,4 +1,10 @@
-# R-Term 0.1 release contract
+# Historical R-Term 0.1 extraction contract
+
+This document records the pre-extraction Stage 6/7 procedure and its original
+commit identities. R-Term is now independent; current build commands and
+boundaries are in [README](../../README.md) and
+[repository independence](../formal-split.md). New source paths use `rterm-*`.
+The standalone `contracts/rterm-consumer` probe remains supported.
 
 R-Term remains a logical package family inside the R-SSH repository during
 Stage 6. This contract validates a future repository boundary without moving

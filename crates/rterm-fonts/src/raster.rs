@@ -221,6 +221,13 @@ struct RasterKey {
     cosmic: CacheKey,
     dpi_bits: u32,
     zoom_bits: u32,
+    expected_visible: bool,
+}
+
+#[derive(Clone, Debug)]
+enum RasterCacheEntry {
+    Image(Arc<RasterizedGlyph>),
+    Empty,
 }
 
 /// Bounded, instrumented glyph raster cache.
@@ -229,7 +236,7 @@ struct RasterKey {
 /// retained pixel remains governed by this type's byte budget.
 pub struct RasterCache {
     scaler: SwashCache,
-    entries: BoundedCache<RasterKey, Arc<RasterizedGlyph>>,
+    entries: BoundedCache<RasterKey, RasterCacheEntry>,
     catalog_scope: Option<(u64, u64, [u8; 32])>,
     scale_scope: Option<(u32, u32)>,
 }
@@ -338,13 +345,17 @@ impl RasterCache {
             cosmic,
             dpi_bits,
             zoom_bits,
+            expected_visible: request.expected_visible,
         };
-        if let Some(image) = self.entries.get(&key) {
-            return Some(PositionedRaster {
-                image,
-                origin_x,
-                origin_y,
-            });
+        if let Some(entry) = self.entries.get(&key) {
+            return match entry {
+                RasterCacheEntry::Image(image) => Some(PositionedRaster {
+                    image,
+                    origin_x,
+                    origin_y,
+                }),
+                RasterCacheEntry::Empty => None,
+            };
         }
 
         if request.is_tofu {
@@ -352,7 +363,7 @@ impl RasterCache {
                 effective_size,
                 RasterFallback::MissingGlyph,
             )?);
-            self.retain(key, &raster);
+            self.retain(key, RasterCacheEntry::Image(Arc::clone(&raster)));
             return Some(PositionedRaster {
                 image: raster,
                 origin_x,
@@ -365,7 +376,10 @@ impl RasterCache {
             .get_image_uncached(catalog.font_system_mut(), cosmic);
         let raster = match image.map(decode_swash_image).transpose() {
             Ok(Some(Some(raster))) => Arc::new(raster),
-            Ok(Some(None) | None) | Err(()) if !request.expected_visible => return None,
+            Ok(Some(None) | None) | Err(()) if !request.expected_visible => {
+                self.retain(key, RasterCacheEntry::Empty);
+                return None;
+            }
             Ok(Some(None) | None) | Err(()) => {
                 self.entries.record_raster_failure();
                 Arc::new(synthetic_tofu(
@@ -374,7 +388,7 @@ impl RasterCache {
                 )?)
             }
         };
-        self.retain(key, &raster);
+        self.retain(key, RasterCacheEntry::Image(Arc::clone(&raster)));
         Some(PositionedRaster {
             image: raster,
             origin_x,
@@ -382,14 +396,22 @@ impl RasterCache {
         })
     }
 
-    fn retain(&mut self, key: RasterKey, raster: &Arc<RasterizedGlyph>) {
+    fn retain(&mut self, key: RasterKey, entry: RasterCacheEntry) {
+        let pixel_capacity = match &entry {
+            RasterCacheEntry::Image(raster) => raster.content.capacity(),
+            RasterCacheEntry::Empty => 0,
+        };
+        let value_metadata = match &entry {
+            RasterCacheEntry::Image(_) => mem::size_of::<Arc<RasterizedGlyph>>()
+                .saturating_add(mem::size_of::<RasterizedGlyph>()),
+            RasterCacheEntry::Empty => mem::size_of::<RasterCacheEntry>(),
+        };
         let entry_bytes = mem::size_of::<RasterKey>()
-            .saturating_add(mem::size_of::<Arc<RasterizedGlyph>>())
-            .saturating_add(mem::size_of::<RasterizedGlyph>())
+            .saturating_add(value_metadata)
             .saturating_add(mem::size_of::<(u64, RasterKey)>())
             .saturating_add(mem::size_of::<usize>() * 4)
-            .saturating_add(raster.content.capacity());
-        self.entries.insert(key, Arc::clone(raster), entry_bytes);
+            .saturating_add(pixel_capacity);
+        self.entries.insert(key, entry, entry_bytes);
     }
 }
 

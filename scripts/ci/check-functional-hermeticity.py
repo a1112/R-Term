@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
 SCAN_ROOTS = (
-    ROOT / "crates" / "rssh-functional-tests" / "src",
+    ROOT / "crates" / "rterm-functional-tests" / "src",
     ROOT / "functional-tests",
     ROOT / "scripts" / "functional",
     ROOT / "web" / "tests",
@@ -63,8 +63,8 @@ def main() -> int:
             if path.is_file() and path.suffix.lower() in TEXT_SUFFIXES:
                 files += 1
                 errors.extend(check_file(path))
-    runner = (ROOT / "crates/rssh-functional-tests/src/runner.rs").read_text(encoding="utf-8")
-    transport = (ROOT / "crates/rssh-functional-tests/src/transport_driver.rs").read_text(
+    runner = (ROOT / "crates/rterm-functional-tests/src/runner.rs").read_text(encoding="utf-8")
+    transport = (ROOT / "crates/rterm-functional-tests/src/transport_driver.rs").read_text(
         encoding="utf-8"
     )
     if "Command::new(app)" in runner or "Command::new(app)" in transport:

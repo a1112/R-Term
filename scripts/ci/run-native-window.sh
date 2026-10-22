@@ -56,11 +56,11 @@ if [[ "$profile" == "release" ]]; then
   profile_arguments+=(--release)
   profile_directory="release"
 fi
-binary="$target_directory/$profile_directory/rssh-app"
+binary="$target_directory/$profile_directory/rterm"
 
 cd "$repository_root"
 run_bounded "native E2E build ($profile)" 1200 \
-  cargo build --locked -p rssh-app --bin rssh-app --test openssh_loopback --test native_window_e2e "${profile_arguments[@]}"
+  cargo build --locked -p rterm-app --bin rterm --test openssh_loopback --test native_window_e2e "${profile_arguments[@]}"
 
 version_capture="$(mktemp)"
 run_bounded "version identity" 30 "$binary" version --json >"$version_capture"
@@ -84,14 +84,14 @@ PY
 
 run_bounded "OpenSSH client probe" 15 ssh -V
 run_bounded "hermetic native SSH tests ($profile)" 300 \
-  cargo test --locked -p rssh-ssh --all-targets "${profile_arguments[@]}" -- --nocapture
+  cargo test --locked -p rterm-ssh --all-targets "${profile_arguments[@]}" -- --nocapture
 run_bounded "system OpenSSH interoperability ($profile)" 300 \
-  env RSSH_REQUIRE_OPENSSH=1 \
-  cargo test --locked -p rssh-app --test openssh_loopback "${profile_arguments[@]}" \
+  env RTERM_REQUIRE_OPENSSH=1 \
+  cargo test --locked -p rterm-app --test openssh_loopback "${profile_arguments[@]}" \
   -- --nocapture
 
 run_bounded "native ten-frame E2E ($profile)" 180 \
-  cargo test --locked -p rssh-app --test native_window_e2e "${profile_arguments[@]}" \
+  cargo test --locked -p rterm-app --test native_window_e2e "${profile_arguments[@]}" \
   native_window_e2e_presents_ten_frames_from_a_real_pty -- --exact --nocapture
 
 for scenario in \
@@ -102,6 +102,6 @@ for scenario in \
   native_window_local_pane_v2_writes_visible_session_log
 do
   run_bounded "native E2E scenario $scenario ($profile)" 300 \
-    cargo test --locked -p rssh-app --test native_window_e2e "${profile_arguments[@]}" \
+    cargo test --locked -p rterm-app --test native_window_e2e "${profile_arguments[@]}" \
     "$scenario" -- --exact --ignored --nocapture
 done

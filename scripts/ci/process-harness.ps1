@@ -2,7 +2,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
-if (-not ("RsshCiJobObject" -as [type])) {
+if (-not ("RTermCiJobObject" -as [type])) {
   Add-Type -TypeDefinition @'
 using System;
 using System.ComponentModel;
@@ -12,7 +12,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 
-public sealed class RsshCiJobObject : IDisposable {
+public sealed class RTermCiJobObject : IDisposable {
     private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
     private IntPtr handle;
 
@@ -65,7 +65,7 @@ public sealed class RsshCiJobObject : IDisposable {
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool CloseHandle(IntPtr handle);
 
-    public RsshCiJobObject() {
+    public RTermCiJobObject() {
         handle = CreateJobObject(IntPtr.Zero, null);
         if (handle == IntPtr.Zero) {
             throw new Win32Exception(Marshal.GetLastWin32Error(), "CreateJobObject failed");
@@ -96,7 +96,7 @@ public sealed class RsshCiJobObject : IDisposable {
 
     public void AssignHandle(IntPtr processHandle) {
         if (handle == IntPtr.Zero) {
-            throw new ObjectDisposedException("RsshCiJobObject");
+            throw new ObjectDisposedException("RTermCiJobObject");
         }
         if (!AssignProcessToJobObject(handle, processHandle)) {
             throw new Win32Exception(
@@ -114,7 +114,7 @@ public sealed class RsshCiJobObject : IDisposable {
     }
 }
 
-public sealed class RsshCiOwnedProcess : IDisposable {
+public sealed class RTermCiOwnedProcess : IDisposable {
     private const uint CREATE_SUSPENDED = 0x00000004;
     private const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
     private const uint STARTF_USESTDHANDLES = 0x00000100;
@@ -216,7 +216,7 @@ public sealed class RsshCiOwnedProcess : IDisposable {
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool CloseHandle(IntPtr handle);
 
-    private RsshCiJobObject job;
+    private RTermCiJobObject job;
     private IntPtr nativeProcessHandle;
     public Process Process { get; private set; }
     public StreamReader StandardOutput { get; private set; }
@@ -226,8 +226,8 @@ public sealed class RsshCiOwnedProcess : IDisposable {
     // child cannot execute before their external measurement begins.
     public long ResumeTimestamp { get; private set; }
 
-    private RsshCiOwnedProcess(
-        RsshCiJobObject job,
+    private RTermCiOwnedProcess(
+        RTermCiJobObject job,
         IntPtr nativeProcessHandle,
         Process process,
         StreamReader standardOutput,
@@ -241,7 +241,7 @@ public sealed class RsshCiOwnedProcess : IDisposable {
         ResumeTimestamp = resumeTimestamp;
     }
 
-    public static RsshCiOwnedProcess Start(
+    public static RTermCiOwnedProcess Start(
         string filePath,
         string commandLine,
         string workingDirectory,
@@ -256,7 +256,7 @@ public sealed class RsshCiOwnedProcess : IDisposable {
         IntPtr stderrWrite = IntPtr.Zero;
         IntPtr standardInput = IntPtr.Zero;
         var processInformation = new ProcessInformation();
-        RsshCiJobObject job = null;
+        RTermCiJobObject job = null;
         Process process = null;
         StreamReader stdoutReader = null;
         StreamReader stderrReader = null;
@@ -282,7 +282,7 @@ public sealed class RsshCiOwnedProcess : IDisposable {
                 StandardOutput = stdoutWrite,
                 StandardError = stderrWrite,
             };
-            job = new RsshCiJobObject();
+            job = new RTermCiJobObject();
             if (!CreateProcessW(
                     filePath,
                     new StringBuilder(commandLine),
@@ -314,7 +314,7 @@ public sealed class RsshCiOwnedProcess : IDisposable {
             Close(ref processInformation.Thread);
             IntPtr ownedNativeProcess = processInformation.Process;
             processInformation.Process = IntPtr.Zero;
-            return new RsshCiOwnedProcess(
+            return new RTermCiOwnedProcess(
                 job,
                 ownedNativeProcess,
                 process,
@@ -578,7 +578,7 @@ function Invoke-BoundedProcess {
   $capturedDescendant = $null
   $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
   try {
-    $ownedProcess = [RsshCiOwnedProcess]::Start(
+    $ownedProcess = [RTermCiOwnedProcess]::Start(
       $resolvedFilePath,
       $commandLine,
       $repositoryRoot,
@@ -656,7 +656,7 @@ function Assert-BoundedProcessHarness {
   Assert-WindowsCommandLineQuoting
 
   $roundTripArguments = @("", "two words", 'quote"inside', 'C:\path with space\')
-  $echoScriptPath = Join-Path ([IO.Path]::GetTempPath()) "rssh-ci-argv-$PID-$([Guid]::NewGuid().ToString('N')).ps1"
+  $echoScriptPath = Join-Path ([IO.Path]::GetTempPath()) "rterm-ci-argv-$PID-$([Guid]::NewGuid().ToString('N')).ps1"
   [IO.File]::WriteAllText(
     $echoScriptPath,
     '[Console]::OutputEncoding=[Text.UTF8Encoding]::new(); [Console]::Write(($args | ConvertTo-Json -Compress))',
@@ -684,9 +684,9 @@ function Assert-BoundedProcessHarness {
     throw "quoted argv round-trip mismatch: observed '$($roundTrip.Stdout)', expected '$expectedArgumentsJson'"
   }
 
-  $assignmentSentinel = Join-Path ([IO.Path]::GetTempPath()) "rssh-ci-assign-$PID-$([Guid]::NewGuid().ToString('N')).txt"
-  $previousAssignmentSentinel = $env:RSSH_CI_ASSIGN_SENTINEL
-  $env:RSSH_CI_ASSIGN_SENTINEL = $assignmentSentinel
+  $assignmentSentinel = Join-Path ([IO.Path]::GetTempPath()) "rterm-ci-assign-$PID-$([Guid]::NewGuid().ToString('N')).txt"
+  $previousAssignmentSentinel = $env:RTERM_CI_ASSIGN_SENTINEL
+  $env:RTERM_CI_ASSIGN_SENTINEL = $assignmentSentinel
   try {
     $assignmentFailed = $false
     try {
@@ -697,7 +697,7 @@ function Assert-BoundedProcessHarness {
           "-NoProfile",
           "-NonInteractive",
           "-Command",
-          '[IO.File]::WriteAllText($env:RSSH_CI_ASSIGN_SENTINEL, "escaped")'
+          '[IO.File]::WriteAllText($env:RTERM_CI_ASSIGN_SENTINEL, "escaped")'
         )
         TimeoutSeconds = 10
         FailAssignmentForTest = $true
@@ -713,7 +713,7 @@ function Assert-BoundedProcessHarness {
       throw "suspended assignment failure self-test allowed the unassigned child to execute"
     }
   } finally {
-    $env:RSSH_CI_ASSIGN_SENTINEL = $previousAssignmentSentinel
+    $env:RTERM_CI_ASSIGN_SENTINEL = $previousAssignmentSentinel
     if (Test-Path -LiteralPath $assignmentSentinel) {
       Remove-Item -LiteralPath $assignmentSentinel -Force
     }
@@ -722,7 +722,7 @@ function Assert-BoundedProcessHarness {
   $identityMismatchRejected = $false
   $unexpectedIdentity = $null
   try {
-    $unexpectedIdentity = [RsshCiOwnedProcess]::CaptureProcessIdentity($PID, 0)
+    $unexpectedIdentity = [RTermCiOwnedProcess]::CaptureProcessIdentity($PID, 0)
   } catch {
     $identityMismatchRejected = $_.Exception.Message -match "process identity mismatch"
   } finally {
@@ -742,7 +742,7 @@ function Assert-BoundedProcessHarness {
   ) -PassThru
   $runningIdentity = $null
   try {
-    $runningIdentity = [RsshCiOwnedProcess]::CaptureProcessIdentity(
+    $runningIdentity = [RTermCiOwnedProcess]::CaptureProcessIdentity(
       $runningProcess.Id,
       $runningProcess.StartTime.ToUniversalTime().Ticks
     )
@@ -772,17 +772,17 @@ function Assert-BoundedProcessHarness {
   }
 
   $identity = [Guid]::NewGuid().ToString("N")
-  $sentinel = Join-Path ([IO.Path]::GetTempPath()) "rssh-ci-job-$PID-$identity.json"
-  $readyEventName = "Local\rssh-ci-job-ready-$PID-$identity"
+  $sentinel = Join-Path ([IO.Path]::GetTempPath()) "rterm-ci-job-$PID-$identity.json"
+  $readyEventName = "Local\rterm-ci-job-ready-$PID-$identity"
   $readyEvent = [Threading.EventWaitHandle]::new(
     $false,
     [Threading.EventResetMode]::ManualReset,
     $readyEventName
   )
-  $previousSentinel = $env:RSSH_CI_JOB_SENTINEL
-  $previousReadyEvent = $env:RSSH_CI_JOB_READY_EVENT
-  $env:RSSH_CI_JOB_SENTINEL = $sentinel
-  $env:RSSH_CI_JOB_READY_EVENT = $readyEventName
+  $previousSentinel = $env:RTERM_CI_JOB_SENTINEL
+  $previousReadyEvent = $env:RTERM_CI_JOB_READY_EVENT
+  $env:RTERM_CI_JOB_SENTINEL = $sentinel
+  $env:RTERM_CI_JOB_READY_EVENT = $readyEventName
   $timeoutScript = @'
 $grandchild = Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-NonInteractive', '-Command', '$wait=[Threading.ManualResetEvent]::new($false);$wait.WaitOne()') -PassThru
 $grandchildIdentity = [ordered]@{
@@ -790,7 +790,7 @@ $grandchildIdentity = [ordered]@{
   start_time_utc_ticks = $grandchild.StartTime.ToUniversalTime().Ticks
 }
 [IO.File]::WriteAllText(
-  $env:RSSH_CI_JOB_SENTINEL,
+  $env:RTERM_CI_JOB_SENTINEL,
   ($grandchildIdentity | ConvertTo-Json -Compress)
 )
 # Publishing readiness allows the parent to terminate this process immediately.
@@ -799,7 +799,7 @@ $grandchildIdentity = [ordered]@{
 [Console]::Error.Write('timeout-stderr-marker')
 [Console]::Out.Flush()
 [Console]::Error.Flush()
-$ready = [Threading.EventWaitHandle]::OpenExisting($env:RSSH_CI_JOB_READY_EVENT)
+$ready = [Threading.EventWaitHandle]::OpenExisting($env:RTERM_CI_JOB_READY_EVENT)
 try {
   $null = $ready.Set()
 } finally {
@@ -826,7 +826,7 @@ $null = $wait.WaitOne()
           throw "job object timeout self-test did not observe its grandchild before cleanup deadline"
         }
         $grandchildIdentity = Get-Content -LiteralPath $sentinel -Raw | ConvertFrom-Json
-        return [RsshCiOwnedProcess]::CaptureProcessIdentity(
+        return [RTermCiOwnedProcess]::CaptureProcessIdentity(
           [int] $grandchildIdentity.pid,
           [long] $grandchildIdentity.start_time_utc_ticks
         )
@@ -855,8 +855,8 @@ $null = $wait.WaitOne()
       throw "job object timeout self-test did not record its grandchild PID"
     }
   } finally {
-    $env:RSSH_CI_JOB_SENTINEL = $previousSentinel
-    $env:RSSH_CI_JOB_READY_EVENT = $previousReadyEvent
+    $env:RTERM_CI_JOB_SENTINEL = $previousSentinel
+    $env:RTERM_CI_JOB_READY_EVENT = $previousReadyEvent
     $readyEvent.Dispose()
     if (Test-Path -LiteralPath $sentinel) {
       Remove-Item -LiteralPath $sentinel -Force

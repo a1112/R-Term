@@ -18,6 +18,8 @@ export type ServerMessage =
       sessionId: string;
       cols: number;
       rows: number;
+      shell?: string;
+      cwd?: string;
     }
   | { type: 'exit'; code: number; signal: string | null }
   | { type: 'error'; code: string; message: string; fatal: boolean };
@@ -33,18 +35,26 @@ export function parseServerMessage(data: string): ServerMessage | null {
       return null;
     }
     if (message.type === 'opened') {
-      return isNumber(message.protocol) &&
+      if (!(isNumber(message.protocol) &&
         typeof message.sessionId === 'string' &&
         isNumber(message.cols) &&
-        isNumber(message.rows)
-        ? {
-            type: 'opened',
-            protocol: message.protocol,
-            sessionId: message.sessionId,
-            cols: message.cols,
-            rows: message.rows,
-          }
-        : null;
+        isNumber(message.rows))) {
+        return null;
+      }
+      const opened: ServerMessage & { type: 'opened' } = {
+        type: 'opened',
+        protocol: message.protocol,
+        sessionId: message.sessionId,
+        cols: message.cols,
+        rows: message.rows,
+      };
+      if (isNonEmptyString(message.shell)) {
+        opened.shell = message.shell;
+      }
+      if (isNonEmptyString(message.cwd)) {
+        opened.cwd = message.cwd;
+      }
+      return opened;
     }
     if (message.type === 'exit') {
       return isNumber(message.code) &&
@@ -88,4 +98,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
 }

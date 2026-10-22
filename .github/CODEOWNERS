@@ -1,5 +1,5 @@
 * @a1112
 /.github/ @a1112
-/crates/rssh-ssh/ @a1112
-/crates/rssh-web/ @a1112
+/crates/rterm-ssh/ @a1112
+/crates/rterm-web/ @a1112
 /vendor/ @a1112

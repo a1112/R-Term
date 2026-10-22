@@ -4,11 +4,11 @@ use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 use std::ops::Range;
 
-use rssh_fonts::{
+use rterm_fonts::{
     FontCatalog, FontConfig, RasterCache, RasterCacheConfig, RasterContent, RasterRequest,
     ShapedRow, TerminalCluster, TerminalShaper,
 };
-use rssh_terminal::VerticalAlign;
+use rterm_terminal::VerticalAlign;
 
 use super::{
     CursorRenderStyle, DamageRegion, ImageDrawLayer, PixelRenderer, Rect, RenderCell,
@@ -384,7 +384,7 @@ fn render_top_layers(
                 ),
             },
         );
-        let redraw_shaped_foreground = cursor.shape == rssh_terminal::CursorShape::Block
+        let redraw_shaped_foreground = cursor.shape == rterm_terminal::CursorShape::Block
             && (!cursor.blinking || renderer.blink_visible)
             && cursor_cell.is_none_or(|cell| !cell.conceal);
         if redraw_shaped_foreground
@@ -701,7 +701,7 @@ fn draw_shaped_row(
 )]
 fn draw_raster(
     surface: &mut Surface<'_>,
-    raster: &rssh_fonts::RasterizedGlyph,
+    raster: &rterm_fonts::RasterizedGlyph,
     origin_x: i64,
     origin_y: i64,
     clip: Rect,
@@ -865,7 +865,7 @@ pub fn row_shape_plan(snapshot: &TerminalRenderSnapshot, row: u16, columns: u16)
             cluster.weight = Some(700);
         }
         if style.italic {
-            cluster.style = Some(rssh_fonts::FontStyle::Italic);
+            cluster.style = Some(rterm_fonts::FontStyle::Italic);
         }
         previous_style = Some(style.clone());
         previous_cursor = cursor_here;

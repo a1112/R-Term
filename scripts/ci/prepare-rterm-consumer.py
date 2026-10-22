@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare a verified disposable R-SSH consumer; not a compatibility certificate.
+"""Prepare a verified disposable R-Term consumer; not a compatibility certificate.
 
 Only committed input is exported. The source worktree (including local edits)
 is never rewritten. Output must be a new directory outside that worktree; all
@@ -25,7 +25,7 @@ from rterm_consumer_profile import COMMIT, prepare_app_manifest, select_profile
 SCRIPTS = Path(__file__).resolve().parent
 REHEARSAL = runpy.run_path(str(SCRIPTS / "rehearse-rterm-consumer.py"))
 BOUNDARY = runpy.run_path(str(SCRIPTS / "check-rterm-release-contract.py"))
-APP_MANIFEST = "crates/rssh-app/Cargo.toml"
+APP_MANIFEST = "crates/rterm-app/Cargo.toml"
 FONT_MANIFEST = "crates/rterm-fonts/Cargo.toml"
 
 

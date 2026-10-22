@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "package": {
-    "name": "R-SSH",
+    "name": "R-Term",
     "version": "__VERSION__",
     "source_commit": "__SOURCE_COMMIT__"
   },
@@ -18,7 +18,16 @@
     "unsigned": true
   },
   "requirements": {
-    "external_tools": ["ssh", "sftp", "scp"]
+    "external_tools": [],
+    "optional_external_tools": {
+      "system-openssh": [
+        "ssh"
+      ],
+      "transfer-tools": [
+        "sftp",
+        "scp"
+      ]
+    }
   },
   "required_files": [],
   "files": []

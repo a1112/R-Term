@@ -12,11 +12,12 @@ CHECKER = REPOSITORY_ROOT / "scripts" / "ci" / "check-rterm-release-contract.py"
 CONTRACT = REPOSITORY_ROOT / "scripts" / "ci" / "rterm-release-contract.json"
 HISTORY_MAP = REPOSITORY_ROOT / "docs" / "release" / "rterm-history-paths.txt"
 CONSUMER = REPOSITORY_ROOT / "contracts" / "rterm-consumer"
+LEGACY_CI_WORKFLOW = REPOSITORY_ROOT / "docs" / "trial" / "legacy-workflows" / "ci.yml"
 
 EXPECTED_PACKAGES = {
     "rterm-types": "crates/rterm-types",
-    "rterm-terminal": "crates/rssh-terminal",
-    "rterm-runtime": "crates/rssh-runtime",
+    "rterm-terminal": "crates/rterm-terminal",
+    "rterm-runtime": "crates/rterm-runtime",
     "rterm-fonts": "crates/rterm-fonts",
     "rterm-render-core": "crates/rterm-render-core",
     "rterm-render-cpu": "crates/rterm-render-cpu",
@@ -124,14 +125,14 @@ class RTermReleaseContractTests(unittest.TestCase):
                 "check",
                 "--locked",
                 "-p",
-                "rssh-app",
+                "rterm-app",
                 "--no-default-features",
                 "--features",
                 "production-gui",
             ],
             commands,
         )
-        for package in ("rssh-ssh", "rssh-pty", "rssh-native", "rssh-functional-tests"):
+        for package in ("rterm-ssh", "rterm-pty", "rterm-native", "rterm-functional-tests"):
             self.assertIn(
                 ["cargo", "test", "--locked", "-p", package, "--all-targets"],
                 commands,
@@ -142,7 +143,7 @@ class RTermReleaseContractTests(unittest.TestCase):
                 "build",
                 "--locked",
                 "-p",
-                "rssh-app",
+                "rterm-app",
                 "--no-default-features",
                 "--features",
                 "production-gui,transfer-tools",
@@ -161,7 +162,7 @@ class RTermReleaseContractTests(unittest.TestCase):
             (
                 "terminal",
                 "crates/rssh-terminal",
-                "crates/rssh-terminal",
+                "crates/rterm-terminal",
             ),
             rows,
         )
@@ -169,7 +170,7 @@ class RTermReleaseContractTests(unittest.TestCase):
             (
                 "runtime",
                 "crates/rssh-app/src/terminal_runtime.rs",
-                "crates/rssh-runtime/src/terminal.rs",
+                "crates/rterm-runtime/src/terminal.rs",
             ),
             rows,
         )
@@ -226,9 +227,7 @@ class RTermReleaseContractTests(unittest.TestCase):
             self.assertIn(public_surface, source)
 
     def test_hosted_ci_enforces_candidate_and_rollback_without_absolute_gates(self):
-        workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
-        )
+        workflow = LEGACY_CI_WORKFLOW.read_text(encoding="utf-8")
         start = workflow.index("  rterm-consumer-contract:")
         remainder = workflow[start + 2 :]
         next_job = re.search(r"^  [a-z0-9-]+:\s*$", remainder, re.MULTILINE)

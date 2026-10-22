@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use rssh_terminal::Terminal;
 use rterm_render_core::{SnapshotCacheConfig, TerminalRenderSnapshot, TerminalSnapshotCache};
+use rterm_terminal::Terminal;
 use rterm_types::TerminalSize;
 
 #[test]
@@ -56,9 +56,9 @@ fn renderer_core_manifest_stays_platform_and_decoder_free() {
         "winit",
         "raw-window-handle",
         "image =",
-        "rssh-app",
-        "rssh-ssh",
-        "rssh-pty",
+        "rterm-app",
+        "rterm-ssh",
+        "rterm-pty",
     ] {
         assert!(
             !manifest.contains(forbidden),

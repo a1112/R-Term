@@ -12,6 +12,9 @@ import runpy
 import test_prepare_rterm_consumer as fixtures
 
 
+LEGACY_CI_WORKFLOW = fixtures.ROOT / "docs/trial/legacy-workflows/ci.yml"
+
+
 class VerifiedRehearsalTests(unittest.TestCase):
     write = fixtures.PrepareConsumerTests.write
     commit = fixtures.PrepareConsumerTests.commit
@@ -25,7 +28,7 @@ class VerifiedRehearsalTests(unittest.TestCase):
             "consumer_commands": [[sys.executable, "verify.py"]],
         })
         self.write("contracts/probe/probe.py", "print('standalone probe')\n")
-        self.write("verify.py", "from pathlib import Path\nassert Path('crates/rssh-app/src/main.rs').read_text() == 'fn main() {}\\n'\n")
+        self.write("verify.py", "from pathlib import Path\nassert Path('crates/rterm-app/src/main.rs').read_text() == 'fn main() {}\\n'\n")
         self.write("scripts/ci/rterm-release-contract.json", json.dumps(self.contract))
         self.candidate = self.commit("verified rehearsal contract")
 
@@ -63,7 +66,7 @@ class VerifiedRehearsalTests(unittest.TestCase):
         self.assertEqual(fixtures.git(self.repo, "status", "--porcelain"), "")
 
     def test_consumer_mutation_cannot_report_success(self):
-        self.write("verify.py", "from pathlib import Path\nPath('crates/rssh-app/src/main.rs').write_text('tampered')\n")
+        self.write("verify.py", "from pathlib import Path\nPath('crates/rterm-app/src/main.rs').write_text('tampered')\n")
         self.candidate = self.commit("mutating consumer command")
         result = self.rehearse()
         self.assertNotEqual(result.returncode, 0)
@@ -120,11 +123,11 @@ class VerifiedRehearsalTests(unittest.TestCase):
 
     def configure_artifact(self, body=None):
         self.contract["consumer_artifacts"] = [{
-            "after_command": 0, "path": "debug/rssh-app{exe_suffix}",
+            "after_command": 0, "path": "debug/rterm-app{exe_suffix}",
         }]
         self.write("verify.py", body if body is not None else (
             "import os\nfrom pathlib import Path\n"
-            "p = Path(os.environ['CARGO_TARGET_DIR']) / 'debug' / ('rssh-app.exe' if os.name == 'nt' else 'rssh-app')\n"
+            "p = Path(os.environ['CARGO_TARGET_DIR']) / 'debug' / ('rterm-app.exe' if os.name == 'nt' else 'rterm-app')\n"
             "p.parent.mkdir(parents=True, exist_ok=True)\n"
             "p.write_bytes(os.environ['RTERM_REHEARSAL_MODE'].encode())\n"
         ))
@@ -135,9 +138,9 @@ class VerifiedRehearsalTests(unittest.TestCase):
         self.configure_artifact()
         self.contract["consumer_package"] = "native-unsigned-v1"
         for relative in ("scripts/ci/package-native.ps1", "scripts/ci/package-native.sh",
-                         "packaging/rssh-console.cmd", "packaging/rssh-console.sh", "packaging/Info.plist"):
+                         "packaging/rterm-console.cmd", "packaging/rterm-console.sh", "packaging/Info.plist"):
             self.write(relative, (fixtures.ROOT / relative).read_text(encoding="utf-8"))
-        for relative in ("README.md", "LICENSE", "examples/rssh-profiles.toml",
+        for relative in ("README.md", "LICENSE", "NOTICE", "examples/rterm-profiles.toml",
                          "tests/fixtures/fonts/MANIFEST.tsv", "tests/fixtures/fonts/LICENSES/test.txt"):
             self.write(relative, "fixture packaging resource\n")
         self.write("scripts/ci/rterm-release-contract.json", json.dumps(self.contract))
@@ -146,18 +149,18 @@ class VerifiedRehearsalTests(unittest.TestCase):
     def configure_package_tests(self):
         self.configure_package()
         self.contract["consumer_package_tests"] = "native-gui-ssh-gpu-v1"
-        self.contract["consumer_commands"] = [["cargo", "build", "--locked", "-p", "rssh-app", "--no-default-features", "--features", "production-gui,transfer-tools"]]
-        manifest = "crates/rssh-app/Cargo.toml"
+        self.contract["consumer_commands"] = [["cargo", "build", "--locked", "-p", "rterm-app", "--no-default-features", "--features", "production-gui,transfer-tools"]]
+        manifest = "crates/rterm-app/Cargo.toml"
         self.write(manifest, (self.repo / manifest).read_text().replace("[features]", "[features]\ntransfer-tools = []"))
         body = (
-            "let path = std::env::var(\"RSSH_TEST_APP_EXECUTABLE\").unwrap();\n"
+            "let path = std::env::var(\"RTERM_TEST_APP_EXECUTABLE\").unwrap();\n"
             "assert!(path.contains(\"payload\"));\n"
             "assert!(!std::fs::read(path).unwrap().is_empty());\n"
-            "assert_eq!(std::env::var(\"RSSH_REQUIRE_OPENSSH\").unwrap(), \"1\");\n"
+            "assert_eq!(std::env::var(\"RTERM_REQUIRE_OPENSSH\").unwrap(), \"1\");\n"
         )
-        self.write("crates/rssh-app/tests/openssh_loopback.rs", (
-            "#[test]\nfn rssh_app_native_ssh_disconnects_and_reconnects_with_closed_lifecycle() {" + body + "}\n"))
-        self.write("crates/rssh-app/tests/native_window_e2e.rs", (
+        self.write("crates/rterm-app/tests/openssh_loopback.rs", (
+            "#[test]\nfn rterm_app_native_ssh_disconnects_and_reconnects_with_closed_lifecycle() {" + body + "}\n"))
+        self.write("crates/rterm-app/tests/native_window_e2e.rs", (
             "#[test]\nfn native_window_e2e_presents_ten_frames_from_a_real_pty() {" + body + "}\n"
             "#[test]\n#[ignore]\nfn native_window_e2e_preserves_gpu_text_at_scale_100() {" + body + "}\n"))
         self.write("scripts/ci/rterm-release-contract.json", json.dumps(self.contract))
@@ -179,7 +182,7 @@ class VerifiedRehearsalTests(unittest.TestCase):
 
     def test_zero_selected_package_tests_cannot_pass(self):
         self.configure_package_tests()
-        self.write("crates/rssh-app/tests/openssh_loopback.rs", "#[test]\nfn unrelated_test() {}\n")
+        self.write("crates/rterm-app/tests/openssh_loopback.rs", "#[test]\nfn unrelated_test() {}\n")
         self.candidate = self.commit("missing required package scenario")
         result = self.rehearse()
         self.assertNotEqual(result.returncode, 0)
@@ -196,15 +199,15 @@ class VerifiedRehearsalTests(unittest.TestCase):
             '[features]\ntest-support = []\n'))
         self.write("crates/feature-fixture/src/lib.rs", (
             'pub fn identity() -> bool { cfg!(feature = "test-support") }\n'))
-        path = "crates/rssh-app/Cargo.toml"
+        path = "crates/rterm-app/Cargo.toml"
         self.write(path, (self.repo / path).read_text() + (
             '\n[dependencies.feature-fixture]\npath = "../feature-fixture"\n'
             '[dev-dependencies.feature-fixture]\npath = "../feature-fixture"\n'
             'features = ["test-support"]\n'))
-        self.write("crates/rssh-app/src/main.rs", (
+        self.write("crates/rterm-app/src/main.rs", (
             'extern crate feature_fixture;\n'
             'fn main() { println!("{}", feature_fixture::identity()); }\n'))
-        path = "crates/rssh-app/tests/openssh_loopback.rs"
+        path = "crates/rterm-app/tests/openssh_loopback.rs"
         self.write(path, (self.repo / path).read_text().replace("#[test]", (
             'fn assert_identity(binary: &str, expected: &str) {\n'
             'let output = std::process::Command::new(binary).output().unwrap();\n'
@@ -213,7 +216,7 @@ class VerifiedRehearsalTests(unittest.TestCase):
             '}\n#[test]')).replace('assert!(path.contains("payload"));', (
             'assert!(path.contains("payload"));\n'
             'assert_identity(&path, "false");\n'
-            'assert_identity(env!("CARGO_BIN_EXE_rssh-app"), "true");\n')))
+            'assert_identity(env!("CARGO_BIN_EXE_rterm-app"), "true");\n')))
         self.candidate = self.commit("dev feature changes implicit test binary")
         result = self.rehearse()
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -241,7 +244,7 @@ class VerifiedRehearsalTests(unittest.TestCase):
 
     def test_ignored_required_package_test_cannot_pass(self):
         self.configure_package_tests()
-        path = "crates/rssh-app/tests/openssh_loopback.rs"
+        path = "crates/rterm-app/tests/openssh_loopback.rs"
         self.write(path, (self.repo / path).read_text().replace("#[test]", "#[test]\n#[ignore]"))
         self.candidate = self.commit("ignored required package scenario")
         result = self.rehearse()
@@ -254,7 +257,7 @@ class VerifiedRehearsalTests(unittest.TestCase):
     def test_product_contract_requires_package_scenarios_and_display_runner(self):
         contract = json.loads((fixtures.ROOT / "scripts/ci/rterm-release-contract.json").read_text())
         self.assertEqual(contract.get("consumer_package_tests"), "native-gui-ssh-gpu-v1")
-        workflow = (fixtures.ROOT / ".github/workflows/ci.yml").read_text()
+        workflow = LEGACY_CI_WORKFLOW.read_text()
         self.assertIn("  rterm-consumer-contract:", workflow)
         job = workflow.split("  rterm-consumer-contract:", 1)[1].split("  deterministic-performance:", 1)[0]
         self.assertIn("xvfb-run -a", job)
@@ -263,9 +266,9 @@ class VerifiedRehearsalTests(unittest.TestCase):
     def test_archive_executable_permission_loss_is_rejected(self):
         payload = self.root / "payload"
         payload.mkdir()
-        binary = payload / "rssh-app"
+        binary = payload / "rterm-app"
         binary.write_bytes(b'program')
-        manifest = {"artifact": {"binary": "rssh-app"}, "package": {"source_commit": self.candidate}, "signing": {"unsigned": True}}
+        manifest = {"artifact": {"binary": "rterm-app"}, "package": {"source_commit": self.candidate}, "signing": {"unsigned": True}}
         (payload / "manifest.json").write_text(json.dumps(manifest))
         archive = self.root / "no-execute.tar.gz"
         with tarfile.open(archive, "w:gz") as bundle:
@@ -383,7 +386,7 @@ class VerifiedRehearsalTests(unittest.TestCase):
         self.write("verify.py", (self.repo / "verify.py").read_text().replace(
             "/ 'debug' /", "/ 'other-triple' / 'debug' /"))
         self.candidate = self.commit("redirected build output")
-        stale = self.root / "cargo-target/debug" / ("rssh-app.exe" if os.name == "nt" else "rssh-app")
+        stale = self.root / "cargo-target/debug" / ("rterm-app.exe" if os.name == "nt" else "rterm-app")
         stale.parent.mkdir(parents=True)
         stale.write_bytes(b'old build')
         result = self.rehearse()
@@ -401,11 +404,11 @@ class VerifiedRehearsalTests(unittest.TestCase):
             "link = Path.cwd().parents[2] / 'candidate-prior-artifacts'\n"
             f"outside = Path({str(outside)!r})\n"
             "if os.name == 'nt':\n"
-            "    subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', 'New-Item -ItemType Junction -Path $env:RSSH_TEST_LINK -Target $env:RSSH_TEST_TARGET | Out-Null'], env={**os.environ, 'RSSH_TEST_LINK': str(link), 'RSSH_TEST_TARGET': str(outside)}, check=True)\n"
+            "    subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', 'New-Item -ItemType Junction -Path $env:RTERM_TEST_LINK -Target $env:RTERM_TEST_TARGET | Out-Null'], env={**os.environ, 'RTERM_TEST_LINK': str(link), 'RTERM_TEST_TARGET': str(outside)}, check=True)\n"
             "else: link.symlink_to(outside, target_is_directory=True)\n"
         ))
         self.candidate = self.commit("linked recovery directory")
-        stale = self.root / "cargo-target/debug" / ("rssh-app.exe" if os.name == "nt" else "rssh-app")
+        stale = self.root / "cargo-target/debug" / ("rterm-app.exe" if os.name == "nt" else "rterm-app")
         stale.parent.mkdir(parents=True)
         stale.write_bytes(b'old build')
         result = self.rehearse()
@@ -431,12 +434,12 @@ class VerifiedRehearsalTests(unittest.TestCase):
     def test_product_contract_requires_built_executable_identity(self):
         contract = json.loads((fixtures.ROOT / "scripts/ci/rterm-release-contract.json").read_text())
         self.assertEqual(contract.get("consumer_artifacts"), [{
-            "after_command": 4, "path": "debug/rssh-app{exe_suffix}",
+            "after_command": 4, "path": "debug/rterm{exe_suffix}",
         }])
 
     def test_real_cargo_build_regenerates_declared_output_with_cached_dependencies(self):
         self.configure_artifact()
-        self.contract["consumer_commands"] = [["cargo", "build", "--locked", "-p", "rssh-app"]]
+        self.contract["consumer_commands"] = [["cargo", "build", "--locked", "-p", "rterm-app"]]
         self.write("scripts/ci/rterm-release-contract.json", json.dumps(self.contract))
         self.candidate = self.commit("actual cargo artifact")
         result = self.rehearse()
@@ -447,7 +450,7 @@ class VerifiedRehearsalTests(unittest.TestCase):
         self.assertGreater(rollback["artifacts"][0]["size_bytes"], 0)
 
     def test_preparation_failure_retains_error_and_never_runs_consumer(self):
-        self.write("crates/rssh-app/Cargo.toml", fixtures.APP.decode().replace('version = "0.1.0"', 'version = "99.0.0"'))
+        self.write("crates/rterm-app/Cargo.toml", fixtures.APP.decode().replace('version = "0.1.0"', 'version = "99.0.0"'))
         self.candidate = self.commit("unresolvable dependency")
         result = self.rehearse()
         self.assertNotEqual(result.returncode, 0)

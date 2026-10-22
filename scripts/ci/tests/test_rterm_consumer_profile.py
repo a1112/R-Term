@@ -13,21 +13,21 @@ MODERN_FONTS = OLD_FONTS + (
     b'\n[features]\ndefault = []\nshared-source-ownership = []\ndiagnostic-tools = []\n'
 )
 APP = b'''[package]
-name = "rssh-app"
+name = "rterm-app"
 version = "0.1.0"
 
 [features]
 default = ["developer-full"]
 developer-full = ["production-gui", "diagnostic-tools"]
 production-gui = ["native-gui", "ssh", "production-fonts"]
-production-fonts = ["rssh-fonts/shared-source-ownership"]
-diagnostic-tools = ["rssh-fonts/diagnostic-tools"]
+production-fonts = ["rterm-fonts/shared-source-ownership"]
+diagnostic-tools = ["rterm-fonts/diagnostic-tools"]
 rterm-legacy-0-1 = []
 native-gui = []
 ssh = []
 
 [dependencies]
-rssh-fonts = { package = "rterm-fonts", path = "../rterm-fonts", version = "0.1.0" }
+rterm-fonts = { package = "rterm-fonts", path = "../rterm-fonts", version = "0.1.0" }
 
 [package.metadata.fixture]
 keep = "unchanged"
@@ -84,7 +84,7 @@ class ConsumerProfileTests(unittest.TestCase):
             self.assertEqual(self.module.prepare_app_manifest(original, "modern"), original)
 
     def test_repository_declares_an_inert_selector_for_verified_preparation(self):
-        original = (ROOT / "crates/rssh-app/Cargo.toml").read_bytes()
+        original = (ROOT / "crates/rterm-app/Cargo.toml").read_bytes()
         features = tomllib.loads(original.decode())["features"]
         self.assertEqual(features.get("rterm-legacy-0-1"), [])
         self.assertFalse(any("rterm-legacy-0-1" in values for values in features.values()))
@@ -101,7 +101,7 @@ class ConsumerProfileTests(unittest.TestCase):
         prepared = self.module.prepare_app_manifest(APP, "legacy-0.1")
 
         self.assertEqual(tomllib.loads(prepared.decode()), expected)
-        self.assertEqual(before["features"]["production-fonts"], ["rssh-fonts/shared-source-ownership"])
+        self.assertEqual(before["features"]["production-fonts"], ["rterm-fonts/shared-source-ownership"])
         self.assertIn(b'keep = "unchanged"', prepared)
 
     def test_legacy_preserves_crlf(self):
@@ -130,22 +130,22 @@ class ConsumerProfileTests(unittest.TestCase):
             self.module.prepare_app_manifest(prepared, "legacy-0.1")
 
     def test_unexpected_forwarding_is_not_silently_erased(self):
-        manifest = APP.replace(b'["rssh-fonts/diagnostic-tools"]', b'["rssh-fonts/diagnostic-tools", "ssh"]')
+        manifest = APP.replace(b'["rterm-fonts/diagnostic-tools"]', b'["rterm-fonts/diagnostic-tools", "ssh"]')
         with self.assertRaisesRegex(ValueError, "diagnostic-tools"):
             self.module.prepare_app_manifest(manifest, "legacy-0.1")
 
     def test_ambiguous_layout_is_rejected_without_guessing(self):
-        manifest = APP.replace(b'production-fonts = ["rssh-fonts/shared-source-ownership"]', b'production-fonts = [\n"rssh-fonts/shared-source-ownership"\n]')
+        manifest = APP.replace(b'production-fonts = ["rterm-fonts/shared-source-ownership"]', b'production-fonts = [\n"rterm-fonts/shared-source-ownership"\n]')
         with self.assertRaisesRegex(ValueError, "single-line"):
             self.module.prepare_app_manifest(manifest, "legacy-0.1")
 
     def test_non_feature_manifest_sections_cannot_be_transformed(self):
-        manifest = APP + b'diagnostic-tools = ["rssh-fonts/diagnostic-tools"]\n'
+        manifest = APP + b'diagnostic-tools = ["rterm-fonts/diagnostic-tools"]\n'
         with self.assertRaises(ValueError):
             self.module.prepare_app_manifest(manifest, "legacy-0.1")
 
     def test_app_identity_and_production_font_edge_are_required(self):
-        for manifest in (APP.replace(b'name = "rssh-app"', b'name = "other"'), APP.replace(b', "production-fonts"', b"")):
+        for manifest in (APP.replace(b'name = "rterm-app"', b'name = "other"'), APP.replace(b', "production-fonts"', b"")):
             with self.subTest(manifest=manifest), self.assertRaises(ValueError):
                 self.module.prepare_app_manifest(manifest, "legacy-0.1")
 

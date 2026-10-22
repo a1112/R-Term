@@ -9,8 +9,8 @@ rust-version = "1.89"
 
 [dependencies]
 rterm-types = { path = "../../crates/rterm-types", version = "0.1.0" }
-rterm-terminal = { path = "../../crates/rssh-terminal", version = "0.1.0" }
-rterm-runtime = { path = "../../crates/rssh-runtime", version = "0.1.0" }
+rterm-terminal = { path = "../../crates/rterm-terminal", version = "0.1.0" }
+rterm-runtime = { path = "../../crates/rterm-runtime", version = "0.1.0" }
 rterm-fonts = { path = "../../crates/rterm-fonts", version = "0.1.0" }
 rterm-render-core = { path = "../../crates/rterm-render-core", version = "0.1.0" }
 rterm-render-cpu = { path = "../../crates/rterm-render-cpu", version = "0.1.0" }

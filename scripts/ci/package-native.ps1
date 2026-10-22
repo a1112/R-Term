@@ -18,8 +18,8 @@ $PSNativeCommandUseErrorActionPreference = $true
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $binaryPath = (Resolve-Path -LiteralPath $Binary).Path
 $runtimeContracts = @{
-  "windows-x86_64" = @{ RustTarget = "x86_64-pc-windows-msvc"; Binary = "rssh-app.exe" }
-  "windows-aarch64" = @{ RustTarget = "aarch64-pc-windows-msvc"; Binary = "rssh-app.exe" }
+  "windows-x86_64" = @{ RustTarget = "x86_64-pc-windows-msvc"; Binary = "rterm.exe" }
+  "windows-aarch64" = @{ RustTarget = "aarch64-pc-windows-msvc"; Binary = "rterm.exe" }
 }
 if (-not $runtimeContracts.ContainsKey($RuntimeTarget)) {
   throw "package-native.ps1 only assembles Windows targets, not '$RuntimeTarget'"
@@ -56,12 +56,13 @@ function Get-PackageRelativePath([string] $Root, [string] $Path) {
   return $normalizedPath.Substring($prefix.Length).Replace('\', '/')
 }
 
-Copy-Item -LiteralPath $binaryPath -Destination (Join-Path $packageRootPath "rssh-app.exe")
-Copy-Item -LiteralPath (Join-Path $repositoryRoot "packaging/rssh-console.cmd") -Destination $packageRootPath
+Copy-Item -LiteralPath $binaryPath -Destination (Join-Path $packageRootPath "rterm.exe")
+Copy-Item -LiteralPath (Join-Path $repositoryRoot "packaging/rterm-console.cmd") -Destination $packageRootPath
 Copy-Item -LiteralPath (Join-Path $repositoryRoot "README.md") -Destination $packageRootPath
 Copy-Item -LiteralPath (Join-Path $repositoryRoot "LICENSE") -Destination $packageRootPath
+Copy-Item -LiteralPath (Join-Path $repositoryRoot "NOTICE") -Destination $packageRootPath
 New-Item -ItemType Directory -Path (Join-Path $packageRootPath "examples") | Out-Null
-Copy-Item -LiteralPath (Join-Path $repositoryRoot "examples/rssh-profiles.toml") -Destination (Join-Path $packageRootPath "examples")
+Copy-Item -LiteralPath (Join-Path $repositoryRoot "examples/rterm-profiles.toml") -Destination (Join-Path $packageRootPath "examples")
 New-Item -ItemType Directory -Path (Join-Path $packageRootPath "licenses/fonts/LICENSES") -Force | Out-Null
 Copy-Item -Path (Join-Path $repositoryRoot "tests/fixtures/fonts/LICENSES/*") -Destination (Join-Path $packageRootPath "licenses/fonts/LICENSES")
 Copy-Item -LiteralPath (Join-Path $repositoryRoot "tests/fixtures/fonts/MANIFEST.tsv") -Destination (Join-Path $packageRootPath "licenses/fonts/MANIFEST.tsv")
@@ -76,30 +77,33 @@ $fileEntries = foreach ($file in $payloadFiles) {
   }
 }
 $requiredFiles = @(
-  "rssh-app.exe",
-  "rssh-console.cmd",
+  "rterm.exe",
+  "rterm-console.cmd",
   "README.md",
   "LICENSE",
-  "examples/rssh-profiles.toml",
+  "examples/rterm-profiles.toml",
   "licenses/fonts/MANIFEST.tsv"
 )
 $sourceCommit = if ([string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) { "local" } else { $env:GITHUB_SHA }
 $manifest = [ordered]@{
   schema_version = 1
-  package = [ordered]@{ name = "R-SSH"; version = $Version; source_commit = $sourceCommit }
+  package = [ordered]@{ name = "R-Term"; version = $Version; source_commit = $sourceCommit }
   artifact = [ordered]@{
     name = $ArtifactName
     format = "zip"
     rust_target = $runtimeContracts[$RuntimeTarget].RustTarget
     runtime_target = $RuntimeTarget
     pty_backend = $PtyBackend
-    binary = "rssh-app.exe"
+    binary = "rterm.exe"
   }
   signing = [ordered]@{
     status = $(if ($Unsigned) { "unsigned" } else { "pending-protected-signing" })
     unsigned = [bool]$Unsigned
   }
-  requirements = [ordered]@{ external_tools = @("ssh", "sftp", "scp") }
+  requirements = [ordered]@{
+    external_tools = @()
+    optional_external_tools = [ordered]@{ "system-openssh" = @("ssh"); "transfer-tools" = @("sftp", "scp") }
+  }
   required_files = $requiredFiles
   files = @($fileEntries)
 }

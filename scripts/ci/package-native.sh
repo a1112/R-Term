@@ -62,27 +62,28 @@ fi
 mkdir -p "$package_root/examples" "$package_root/licenses/fonts/LICENSES"
 
 repository_root=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
-binary_relative=rssh-app
+binary_relative=rterm
 if [[ "$platform" == macos ]]; then
-  mkdir -p "$package_root/R-SSH.app/Contents/MacOS"
-  install -m 0755 "$binary" "$package_root/R-SSH.app/Contents/MacOS/rssh-app"
+  mkdir -p "$package_root/R-Term.app/Contents/MacOS"
+  install -m 0755 "$binary" "$package_root/R-Term.app/Contents/MacOS/rterm"
   sed -e "s/__VERSION__/$version/g" -e "s/__ARCHITECTURE__/$bundle_arch/g" \
-    "$repository_root/packaging/Info.plist" > "$package_root/R-SSH.app/Contents/Info.plist"
-  binary_relative=R-SSH.app/Contents/MacOS/rssh-app
-  cat > "$package_root/rssh-app" <<'EOF'
+    "$repository_root/packaging/Info.plist" > "$package_root/R-Term.app/Contents/Info.plist"
+  binary_relative=R-Term.app/Contents/MacOS/rterm
+  cat > "$package_root/rterm" <<'EOF'
 #!/usr/bin/env sh
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-exec "$root/R-SSH.app/Contents/MacOS/rssh-app" "$@"
+exec "$root/R-Term.app/Contents/MacOS/rterm" "$@"
 EOF
-  chmod 0755 "$package_root/rssh-app"
+  chmod 0755 "$package_root/rterm"
 else
-  install -m 0755 "$binary" "$package_root/rssh-app"
+  install -m 0755 "$binary" "$package_root/rterm"
 fi
-install -m 0755 "$repository_root/packaging/rssh-console.sh" "$package_root/rssh-console.sh"
+install -m 0755 "$repository_root/packaging/rterm-console.sh" "$package_root/rterm-console.sh"
 install -m 0644 "$repository_root/README.md" "$package_root/README.md"
 install -m 0644 "$repository_root/LICENSE" "$package_root/LICENSE"
-install -m 0644 "$repository_root/examples/rssh-profiles.toml" "$package_root/examples/rssh-profiles.toml"
+install -m 0644 "$repository_root/NOTICE" "$package_root/NOTICE"
+install -m 0644 "$repository_root/examples/rterm-profiles.toml" "$package_root/examples/rterm-profiles.toml"
 install -m 0644 "$repository_root/tests/fixtures/fonts/"LICENSES/* "$package_root/licenses/fonts/LICENSES/"
 install -m 0644 "$repository_root/tests/fixtures/fonts/MANIFEST.tsv" "$package_root/licenses/fonts/MANIFEST.tsv"
 
@@ -101,20 +102,20 @@ for path in sorted(p for p in root.rglob('*') if p.is_file()):
         'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
     })
 required_files = [
-    sys.argv[7], 'rssh-console.sh', 'README.md', 'LICENSE',
-    'examples/rssh-profiles.toml', 'licenses/fonts/MANIFEST.tsv',
+    sys.argv[7], 'rterm-console.sh', 'README.md', 'LICENSE', 'NOTICE',
+    'examples/rterm-profiles.toml', 'licenses/fonts/MANIFEST.tsv',
 ]
 if sys.argv[3].startswith('macos-'):
-    required_files.extend(['rssh-app', 'R-SSH.app/Contents/Info.plist'])
+    required_files.extend(['rterm', 'R-Term.app/Contents/Info.plist'])
 manifest = {
     'schema_version': 1,
-    'package': {'name': 'R-SSH', 'version': sys.argv[6], 'source_commit': sys.argv[9]},
+    'package': {'name': 'R-Term', 'version': sys.argv[6], 'source_commit': sys.argv[9]},
     'artifact': {
         'name': sys.argv[2], 'format': 'tar.gz', 'rust_target': sys.argv[4],
         'runtime_target': sys.argv[3], 'pty_backend': sys.argv[5], 'binary': sys.argv[7],
     },
     'signing': {'status': sys.argv[8], 'unsigned': sys.argv[8] == 'unsigned'},
-    'requirements': {'external_tools': ['ssh', 'sftp', 'scp']},
+    'requirements': {'external_tools': [], 'optional_external_tools': {'system-openssh': ['ssh'], 'transfer-tools': ['sftp', 'scp']}},
     'required_files': required_files,
     'files': files,
 }

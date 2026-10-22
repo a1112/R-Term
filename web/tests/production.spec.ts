@@ -20,18 +20,18 @@ async function installLoopbackOnlyNetworkPolicy(
 }
 
 test.beforeAll(async () => {
-  const binary = process.env.RSSH_PRODUCTION_WEB_BINARY ?? '../target/release/rssh-web';
+  const binary = process.env.RTERM_PRODUCTION_WEB_BINARY ?? '../target/release/rterm-web';
   server = spawn(binary, ['--listen', '127.0.0.1:0', '--web-root', 'dist']);
   server.stderr.on('data', (chunk: Buffer) => {
     serverStderr += chunk.toString('utf8');
   });
   bootstrapUrl = await new Promise<string>((resolve, reject) => {
     const timeout = setTimeout(
-      () => reject(new Error(`production rssh-web did not start: ${serverStderr}`)),
+      () => reject(new Error(`production rterm-web did not start: ${serverStderr}`)),
       30_000,
     );
     createInterface({ input: server.stdout }).on('line', (line) => {
-      const match = line.match(/^R-SSH Web terminal: (http:\/\/\S+)$/);
+      const match = line.match(/^R-Term Web terminal: (http:\/\/\S+)$/);
       if (match?.[1]) {
         clearTimeout(timeout);
         resolve(match[1]);
@@ -39,7 +39,7 @@ test.beforeAll(async () => {
     });
     server.once('exit', (code) => {
       clearTimeout(timeout);
-      reject(new Error(`production rssh-web exited before startup with code ${String(code)}`));
+      reject(new Error(`production rterm-web exited before startup with code ${String(code)}`));
     });
   });
 });
@@ -52,7 +52,7 @@ test.afterAll(async () => {
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
       server.kill('SIGKILL');
-      reject(new Error(`production rssh-web leaked after shutdown: ${serverStderr}`));
+      reject(new Error(`production rterm-web leaked after shutdown: ${serverStderr}`));
     }, 10_000);
     server.once('exit', () => {
       clearTimeout(timeout);
@@ -69,13 +69,9 @@ test('production Web package starts a real PTY, preserves exit status, and resta
   expect(response?.url()).not.toContain('token=');
   await expect(page.locator('#connection-status')).toHaveText('Connected');
 
-  const terminal = page.locator('#terminal');
+  const terminal = page.locator('.workspace-view:not([hidden]) .terminal-container');
   await expect(terminal).toBeVisible();
-  const bounds = await terminal.boundingBox();
-  if (!bounds) {
-    throw new Error('production terminal has no browser layout box');
-  }
-  await page.mouse.click(bounds.x + 40, bounds.y + 40);
+  await terminal.click({ position: { x: 40, y: 40 } });
   await page.keyboard.type('exit 7');
   await page.keyboard.press('Enter');
   await expect(page.locator('#connection-status')).toHaveText('Exited (7)');

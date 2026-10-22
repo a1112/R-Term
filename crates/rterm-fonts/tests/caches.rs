@@ -459,7 +459,7 @@ fn raster_positions_are_rejected_before_subpixel_quantization_can_overflow() {
 }
 
 #[test]
-fn visible_tofu_gets_a_bounded_fallback_but_blank_glyphs_do_not() {
+fn blank_glyphs_are_negative_cached_without_hiding_visible_fallbacks() {
     let mut catalog = catalog(&[LATIN]);
     let mut shaper = TerminalShaper::new(FontConfig::new("Noto Sans"));
     let tofu = shaper.shape_row(&mut catalog, "Ω").expect("tofu row");
@@ -474,13 +474,87 @@ fn visible_tofu_gets_a_bounded_fallback_but_blank_glyphs_do_not() {
     assert!(matches!(fallback.content, RasterContent::Mask(_)));
     assert!(cache.metrics().current_bytes <= cache.metrics().budget_bytes);
 
-    if let Some(blank_glyph) = blank.glyphs.first() {
-        assert!(
-            cache
-                .rasterize(&mut catalog, raster_request(&blank, blank_glyph))
-                .is_none()
-        );
-    }
+    let blank_glyph = blank.glyphs.first().expect("blank row glyph");
+    let blank_request = raster_request(&blank, blank_glyph);
+    assert!(cache.rasterize(&mut catalog, blank_request).is_none());
+    let after_blank_miss = cache.metrics();
+    assert_eq!(after_blank_miss.current_entries, 2);
+    assert!(after_blank_miss.current_bytes > 0);
+
+    assert!(cache.rasterize(&mut catalog, blank_request).is_none());
+    let after_blank_hit = cache.metrics();
+    assert_eq!(after_blank_hit.hits, after_blank_miss.hits + 1);
+    assert_eq!(after_blank_hit.misses, after_blank_miss.misses);
+
+    let mut visible = blank.clone();
+    visible.text = "A".to_owned();
+    let visible_request = raster_request(&visible, &visible.glyphs[0]);
+    let visible_fallback = cache
+        .rasterize(&mut catalog, visible_request)
+        .expect("visible request must retain a tofu fallback");
+    assert_eq!(
+        visible_fallback.fallback,
+        Some(RasterFallback::RasterFailure)
+    );
+    assert_eq!(cache.metrics().raster_failures, 1);
+}
+
+#[test]
+fn negative_raster_entries_follow_scale_catalog_and_budget_scopes() {
+    let mut catalog = catalog(&[LATIN]);
+    let mut shaper = TerminalShaper::new(FontConfig::new("Noto Sans"));
+    let blank = shaper.shape_row(&mut catalog, " ").expect("blank row");
+    let blank_glyph = blank.glyphs.first().expect("blank row glyph");
+    let request = raster_request(&blank, blank_glyph);
+    let mut cache = RasterCache::new(RasterCacheConfig::new(64 * 1024));
+
+    assert!(cache.rasterize(&mut catalog, request).is_none());
+    assert!(cache.rasterize(&mut catalog, request).is_none());
+    let first = cache.metrics();
+    assert_eq!(first.current_entries, 1);
+    assert!(
+        first.current_bytes > 0,
+        "negative result must charge metadata"
+    );
+
+    let mut flagged = blank_glyph.clone();
+    flagged.raster_flags |= RasterFlags::DISABLE_HINTING;
+    let flagged_request = raster_request(&blank, &flagged);
+    cache.set_budget(first.current_bytes);
+    assert!(cache.rasterize(&mut catalog, flagged_request).is_none());
+    let after_eviction = cache.metrics();
+    assert!(after_eviction.evictions > 0);
+    assert!(after_eviction.current_bytes <= after_eviction.budget_bytes);
+    assert!(after_eviction.current_entries <= 1);
+
+    let invalidations_before_catalog = cache.metrics().invalidations;
+    catalog
+        .load_source(source(CJK))
+        .expect("catalog generation update");
+    let refreshed = shaper
+        .shape_row(&mut catalog, " ")
+        .expect("blank row after catalog update");
+    assert!(
+        cache
+            .rasterize(
+                &mut catalog,
+                raster_request(&refreshed, &refreshed.glyphs[0])
+            )
+            .is_none()
+    );
+    assert!(cache.metrics().invalidations > invalidations_before_catalog);
+
+    let invalidations_before_scale = cache.metrics().invalidations;
+    cache.set_scale(2.0, 1.0);
+    assert!(cache.metrics().invalidations > invalidations_before_scale);
+    assert!(
+        cache
+            .rasterize(
+                &mut catalog,
+                raster_request(&refreshed, &refreshed.glyphs[0])
+            )
+            .is_none()
+    );
 }
 
 #[test]

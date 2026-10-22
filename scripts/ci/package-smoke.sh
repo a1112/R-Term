@@ -40,7 +40,7 @@ cleanup_package_smoke() {
 }
 trap cleanup_package_smoke EXIT
 
-for required in manifest.json SHA256SUMS README.md LICENSE examples/rssh-profiles.toml; do
+for required in manifest.json SHA256SUMS README.md LICENSE examples/rterm-profiles.toml; do
   if [[ ! -f "$package_root/$required" ]]; then printf 'unpacked package is missing %s\n' "$required" >&2; exit 1; fi
 done
 
@@ -54,6 +54,7 @@ assert manifest['artifact']['name'] == artifact
 assert manifest['artifact']['runtime_target'] == target
 assert manifest['artifact']['pty_backend'] == pty
 assert manifest['signing']['unsigned'] is unsigned
+assert manifest['requirements']['external_tools'] == []
 for relative in manifest['required_files']:
     candidate = (root / relative).resolve()
     assert candidate.is_relative_to(root) and candidate.is_file(), relative
@@ -99,22 +100,23 @@ manifest = json.load(open(sys.argv[2], encoding='utf-8'))
 assert report['target'] == sys.argv[3]
 assert report['pty_backend'] == sys.argv[4]
 assert report['version'] == manifest['package']['version']
-assert report['native_ssh_backend'] == 'russh'
+assert report['name'] == 'rterm'
+assert report['native_ssh_backend'] in ('disabled', 'russh')
 PY
 )
 run_bounded "validate packaged version JSON" 30 python3 -c "$version_validation" "$temporary/version.json" "$package_root/manifest.json" "$expected_target" "$expected_pty_backend"
 if [[ "$expected_target" == macos-* ]]; then
-  macos_cli="$package_root/rssh-app"
+  macos_cli="$package_root/rterm"
   if [[ ! -x "$macos_cli" ]]; then printf 'packaged macOS CLI launcher is missing or not executable\n' >&2; exit 1; fi
   run_bounded "packaged macOS CLI launcher" 30 "$macos_cli" version --json > "$temporary/macos-cli-version.json"
   plist_validation=$(cat <<'PY'
 import json, pathlib, plistlib, sys
 root = pathlib.Path(sys.argv[1])
 manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
-with (root / 'R-SSH.app/Contents/Info.plist').open('rb') as source:
+with (root / 'R-Term.app/Contents/Info.plist').open('rb') as source:
     plist = plistlib.load(source)
 expected_arch = {'macos-x86_64': 'x86_64', 'macos-aarch64': 'arm64'}[sys.argv[2]]
-assert plist['CFBundleExecutable'] == 'rssh-app'
+assert plist['CFBundleExecutable'] == 'rterm'
 assert plist['CFBundleShortVersionString'] == manifest['package']['version']
 assert plist['CFBundleVersion'] == manifest['package']['version']
 assert plist['LSArchitecturePriority'] == [expected_arch]
@@ -127,12 +129,23 @@ PY
 )
   run_bounded "validate packaged macOS bundle identity" 30 python3 -c "$plist_validation" "$package_root" "$expected_target" "$temporary/macos-cli-version.json"
 fi
-launcher="$package_root/rssh-console.sh"
+launcher="$package_root/rterm-console.sh"
 if [[ ! -x "$launcher" ]]; then printf 'packaged console launcher is missing or not executable\n' >&2; exit 1; fi
 run_bounded "packaged launcher preflight" 30 "$launcher" --preflight -- sh -c 'printf package-launcher-smoke'
 
-export RSSH_TEST_APP_EXECUTABLE="$binary"
-export RSSH_REQUIRE_OPENSSH=1
+export RTERM_TEST_APP_EXECUTABLE="$binary"
 cd "$repository_root"
-run_bounded "packaged OpenSSH loopback" 300 cargo test --locked -p rssh-app --test openssh_loopback rssh_app_system_openssh_entrypoint_runs_a_real_loopback_exec -- --exact --nocapture
-run_bounded "packaged native ten-frame E2E" 240 cargo test --locked -p rssh-app --test native_window_e2e native_window_e2e_presents_ten_frames_from_a_real_pty -- --exact --nocapture
+native_backend=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["native_ssh_backend"])' "$temporary/version.json")
+if [[ "$native_backend" == russh ]]; then
+  export RTERM_REQUIRE_OPENSSH=1
+  run_bounded "packaged OpenSSH loopback" 300 cargo test --locked -p rterm-app --features ssh --test openssh_loopback rterm_app_system_openssh_entrypoint_runs_a_real_loopback_exec -- --exact --nocapture
+else
+  run_bounded "packaged SSH-free profile" 30 python3 - "$binary" <<'PY_LOCAL'
+import subprocess, sys
+for command in ('ssh', 'scp', 'sftp'):
+    result = subprocess.run([sys.argv[1], command, 'user@must-not-resolve.invalid'], capture_output=True, text=True, timeout=5)
+    assert result.returncode != 0 and 'SSH support is disabled' in result.stderr, result
+    assert not result.stdout
+PY_LOCAL
+fi
+run_bounded "packaged native ten-frame E2E" 240 cargo test --locked -p rterm-app --test native_window_e2e native_window_e2e_presents_ten_frames_from_a_real_pty -- --exact --nocapture

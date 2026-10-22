@@ -1,7 +1,7 @@
 # component|historical path|current owned path
-terminal|crates/rssh-terminal|crates/rssh-terminal
-runtime|crates/rssh-app/src/terminal_runtime.rs|crates/rssh-runtime/src/terminal.rs
-runtime-queries|crates/rssh-app/src/terminal_queries.rs|crates/rssh-runtime/src/queries.rs
+terminal|crates/rssh-terminal|crates/rterm-terminal
+runtime|crates/rssh-app/src/terminal_runtime.rs|crates/rterm-runtime/src/terminal.rs
+runtime-queries|crates/rssh-app/src/terminal_queries.rs|crates/rterm-runtime/src/queries.rs
 fonts|crates/rssh-fonts|crates/rterm-fonts
 render-core|crates/rssh-renderer/src/lib.rs|crates/rterm-render-core/src/lib.rs
 render-cpu|crates/rssh-renderer/src/text.rs|crates/rterm-render-cpu/src/text.rs

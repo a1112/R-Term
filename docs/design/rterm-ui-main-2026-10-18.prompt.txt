@@ -1,0 +1,27 @@
+Use case: ui-mockup
+Asset type: high-fidelity desktop application interface redesign for the R-Term project.
+Primary request: Design a refined, practical standalone terminal app named exactly "R-Term". Produce a finished flat screenshot of its main working interface, in a landscape 16:10 composition at very high resolution. The design must look buildable and polished, not like a sci-fi concept or a generic admin dashboard.
+Product context: R-Term is an independent cross-platform terminal. Local shell sessions are the primary use. Existing native capabilities include multiple tabs, split panes, workspaces, saved profiles, search, configurable fonts/colors and CPU/GPU rendering. SSH is an optional secondary capability. Do not make this look like an SSH server manager.
+Composition: One large application window, filling the image, front-facing, no perspective, no device bezel, no desktop wallpaper, no browser chrome, no surrounding poster. Restrained 10px outer corner radius.
+Design language: quiet native desktop utility, warm graphite surfaces, crisp hairline dividers, comfortable spacing, subtle depth only in the chrome. Main background #141619, chrome #1B1E23, secondary sidebar #181B20, primary text #E6E8ED, muted text #8B929F, accent #6DCBC2. Well-aligned typography with a clean sans serif for Chinese interface labels and an excellent modern monospace for terminal content. No large gradients, glass, heavy shadows or neon. High information clarity without excessive UI density. Small outline icons with a consistent stroke weight.
+Layout:
+1. A compact 44px title bar. Native macOS traffic-light buttons on the far left, subtle small terminal glyph, exact title "R-Term". In the center a restrained workspace switcher reading "开发工作区". At the right small search, split-view and appearance/settings outline buttons.
+2. A narrow 205px collapsible left sidebar separated by a thin divider, not a file tree. At the top a small uppercase-style section label "会话", a small plus button. Selected row with a terminal icon, "R-Term", subordinate text "本地 · zsh", subtle teal left selection line and tint. Second row "开发服务" with small subordinate text "本地 · zsh". Below a section "配置" and rows "默认终端" and "项目环境". Plenty of empty breathing room below; small settings gear with text "设置" at bottom. No remote host lists, no dashboards.
+3. Remaining width is mostly terminal canvas. A 40px tabs strip, with active tab "项目 · zsh", inactive tab "开发服务 · zsh", tiny close icons, plus button. Active tab defined by a fine teal underline.
+4. Main working area divided into three actual terminal panes: a large left pane occupying about 66% of terminal width, and the right third split evenly horizontally. Each pane has an extremely compact, unobtrusive 26px header with terminal name and working directory; active left pane has a tiny teal dot. Thin split dividers, no chunky cards.
+5. Large left terminal shows realistic short Rust development shell content. Path "~/Developer/R-Term" and branch "main" in a subdued prompt. Monospace text exactly and coherently:
+"❯ cargo check"
+"    Checking rterm-types v0.1.0"
+"    Checking rterm-terminal v0.1.0"
+"    Checking rterm-runtime v0.1.0"
+"    Checking rterm-app v0.1.0"
+"    Finished dev profile in 1.24s"
+(blank breathing space)
+"❯ echo 你好，R-Term"
+"你好，R-Term"
+(blank breathing space)
+new prompt with a small teal block cursor. Make syntax highlighting restrained: teal path, desaturated green successful output, muted lavender branch. Terminal content is normal aligned rows, never text inside rounded chat cards. Lots of blank canvas below the few lines, like a real terminal.
+6. Top right pane header "Git · zsh"; a short "git status --short" command with 3 sample changed paths: "M  web/src/styles.css", "M  web/index.html", "?? docs/design/". Small amber changes, otherwise subtle monochrome.
+7. Bottom right pane header "开发服务 · zsh"; short realistic lines "npm run dev", "VITE  ready in 182 ms", "Local: http://localhost:5173/", then quiet idle space.
+8. A very slim bottom status bar, left "本地终端" with a green dot, then "zsh"; right compact readouts "120 × 32", "UTF-8", "GPU". This is a terminal status bar, not large metrics.
+Typography and text constraints: Render the exact brand R-Term correctly, use legible simplified Chinese labels above, coherent readable short command output. Consistent 8px alignment system, restrained font size, subtly rounded controls, visible but quiet state feedback. Avoid placeholder lorem ipsum, marketing headlines, giant logos, illustrations, file explorers, AI chat, monitoring charts, connection-manager panels, watermarks, annotations outside the app. Output only the finished interface design image.

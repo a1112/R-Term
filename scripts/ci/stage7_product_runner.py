@@ -49,7 +49,7 @@ def comparison(candidate, baseline, limit):
 
 
 def validate_residence(data, scenario, binary, protocol):
-    require(data['schema'] == 'rssh.diagnostics/v2', 'wrong schema')
+    require(data['schema'] == 'rterm.diagnostics/v2', 'wrong schema')
     require(data['failures'] == [], 'launcher reported failures')
     run = data['run']
     require(run['platform'] == 'macos', 'wrong platform')
@@ -119,7 +119,7 @@ def package_identity(payload, commit):
     for part in (binary, *binary.parents):
         require(not part.is_symlink(), 'symlink in package path')
     require(binary.is_file() and os.access(binary, os.X_OK), 'missing executable')
-    require('R-SSH.app/Contents/MacOS/' in relative.as_posix(), 'expected macOS app bundle')
+    require('R-Term.app/Contents/MacOS/' in relative.as_posix(), 'expected macOS app bundle')
     entries = {entry['path']: entry for entry in manifest['files']}
     require(relative.as_posix() in entries, 'binary absent from manifest')
     require(entries[relative.as_posix()]['sha256'] == digest(binary), 'manifest binary hash mismatch')
@@ -141,7 +141,7 @@ def main():
     output = args.output_dir.absolute()
     require(not output.exists(), 'refusing to overwrite prior evidence')
     output.mkdir(parents=True)
-    report = {'schema': 'rssh.stage7/macos-local-sampling/v1', 'status': 'running',
+    report = {'schema': 'rterm.stage7/macos-local-sampling/v1', 'status': 'running',
               'scope': 'local performance sampling; not full product or cross-platform certification',
               'runs': [], 'platform': platform.platform(), 'architecture': platform.machine()}
     try:
@@ -169,17 +169,17 @@ def main():
                     name = f'{scenario}-{index:02d}-{role}'
                     if scenario == 'startup':
                         argv = [str(binary), 'ssh', '--gui', '--renderer', 'auto', '--host', '127.0.0.1',
-                                '--port', '9', '--user', 'rssh-diagnostics', '--password', '--benchmark-startup']
+                                '--port', '9', '--user', 'rterm-diagnostics', '--password', '--benchmark-startup']
                     else:
                         argv = [str(args.launcher.absolute()), '--app', str(binary), '--scenario', scenario,
                                 '--product-gui', '--renderer', 'auto', '--json',
                                 '--stabilization-ms', str(protocol['stabilization_ms']),
                                 '--sample-interval-ms', str(protocol['sample_interval_ms']),
                                 '--sample-count', str(protocol['samples_per_process'])]
-                    env = {**os.environ, 'RSSH_BENCHMARK_WINDOW_SCALE_FACTOR': '1'}
-                    require(not any(k in env for k in ('RSSH_STAGE7_PRODUCT_GUI_PROBE', 'RSSH_TEST_APP_EXECUTABLE', 'WGPU_BACKEND')), 'inherited diagnostic override')
+                    env = {**os.environ, 'RTERM_BENCHMARK_WINDOW_SCALE_FACTOR': '1'}
+                    require(not any(k in env for k in ('RTERM_STAGE7_PRODUCT_GUI_PROBE', 'RTERM_TEST_APP_EXECUTABLE', 'WGPU_BACKEND')), 'inherited diagnostic override')
                     if scenario != 'startup':
-                        env['RSSH_DIAGNOSTIC_EVIDENCE_DIR'] = str(output / name / 'raw')
+                        env['RTERM_DIAGNOSTIC_EVIDENCE_DIR'] = str(output / name / 'raw')
                     stdout, stderr = run_record(argv, output / name, rounds['timeout_seconds'], env)
                     if scenario == 'startup':
                         matches = re.findall(r'^first_present process_to_first_present_ms=(\d+) final_renderer=cpu$', stderr, re.M)

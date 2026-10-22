@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "R-SSH",
+  "productName": "R-Term",
   "version": "0.1.0",
-  "identifier": "com.rssh.terminal",
+  "identifier": "com.rterm.terminal",
   "build": {
     "beforeDevCommand": "npm --prefix ../web run build && npm --prefix ../web run dev",
     "beforeBuildCommand": "npm --prefix ../web run build",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "R-SSH",
+        "title": "R-Term",
         "width": 1200,
         "height": 760,
         "minWidth": 640,

@@ -1,12 +1,12 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use rssh_fonts::{FontCatalog, FontConfig, FontSource, RasterCacheConfig};
-use rssh_terminal::{Color, CursorShape, Terminal};
+use rterm_fonts::{FontCatalog, FontConfig, FontSource, RasterCacheConfig};
 use rterm_render_cpu::{
     CpuTextRenderer, DamageRegion, PixelRenderer, RenderCell, RenderGeometry, RenderStyle,
     TerminalRenderSnapshot, TextBackend,
 };
+use rterm_terminal::{Color, CursorShape, Terminal};
 use rterm_types::TerminalSize;
 
 const LATIN: &str = "NotoSans-Latin.fixture.ttf";

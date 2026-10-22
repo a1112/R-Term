@@ -1,0 +1,16 @@
+[package]
+name = "rterm-native"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+rterm-config = { path = "../rterm-config", version = "0.1.0" }
+rterm-domain = { path = "../rterm-domain", version = "0.1.0" }
+rterm-types = { path = "../rterm-types", version = "0.1.0" }
+rterm-runtime = { path = "../rterm-runtime", version = "0.1.0" }
+
+[lints]
+workspace = true

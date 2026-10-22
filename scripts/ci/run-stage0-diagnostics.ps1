@@ -17,8 +17,8 @@ $stage0_ssh1_target_bytes = 62914560 # 60 MiB, report-only.
 $scenarios = @("empty-window", "ssh1")
 $profileDirectory = if ($Profile -eq "release") { "release" } else { "debug" }
 $executableSuffix = if ($IsWindows) { ".exe" } else { "" }
-$app = Join-Path "target/$profileDirectory" "rssh-app$executableSuffix"
-$launcher = Join-Path "target/$profileDirectory" "rssh-bench-launcher$executableSuffix"
+$app = Join-Path "target/$profileDirectory" "rterm$executableSuffix"
+$launcher = Join-Path "target/$profileDirectory" "rterm-bench-launcher$executableSuffix"
 $rawDirectory = Join-Path $OutputDirectory "raw"
 $aggregatePath = Join-Path $OutputDirectory "aggregate.json"
 
@@ -27,19 +27,19 @@ if (-not $SkipBuild) {
     if ($Profile -eq "release") {
         $profileArguments += "--release"
     }
-    cargo build --locked -p rssh-app @profileArguments
-    cargo build --locked -p rssh-diagnostics --bin rssh-bench-launcher @profileArguments
+    cargo build --locked -p rterm-app --features developer-full @profileArguments
+    cargo build --locked -p rterm-diagnostics --bin rterm-bench-launcher @profileArguments
 }
 if (-not (Test-Path -LiteralPath $app -PathType Leaf)) {
-    throw "rssh-app executable is missing: $app"
+    throw "rterm-app executable is missing: $app"
 }
 if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
-    throw "rssh-bench-launcher executable is missing: $launcher"
+    throw "rterm-bench-launcher executable is missing: $launcher"
 }
 
 New-Item -ItemType Directory -Force -Path $rawDirectory | Out-Null
-$previousScale = $env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR
-$env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR = "1"
+$previousScale = $env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR
+$env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR = "1"
 
 function Invoke-Stage0Run([string] $Scenario) {
     $launcherArguments = @(
@@ -57,7 +57,7 @@ function Invoke-Stage0Run([string] $Scenario) {
         throw "Stage 0 launcher failed for $Scenario with exit code $LASTEXITCODE; result: $json"
     }
     $record = $json | ConvertFrom-Json
-    if ($record.schema -ne "rssh.diagnostics/v2") {
+    if ($record.schema -ne "rterm.diagnostics/v2") {
         throw "Stage 0 launcher returned an unexpected schema for ${Scenario}: $($record.schema)"
     }
     if ($record.memory.samples.Count -ne 10) {
@@ -117,7 +117,7 @@ try {
     }
 
     $aggregate = [ordered]@{
-        schema = "rssh.diagnostics/aggregate-v1"
+        schema = "rterm.diagnostics/aggregate-v1"
         profile = $Profile
         warmups = $Warmups
         measured_runs = $Samples
@@ -132,8 +132,8 @@ try {
 }
 finally {
     if ($null -eq $previousScale) {
-        Remove-Item Env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR -ErrorAction SilentlyContinue
+        Remove-Item Env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR -ErrorAction SilentlyContinue
     } else {
-        $env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR = $previousScale
+        $env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR = $previousScale
     }
 }

@@ -7,4 +7,4 @@ fixture = "terminal_probe"
 estimated_cost_ms = 3200
 required_evidence = ["event_log", "stdout", "stderr", "final_snapshot", "process_tree"]
 actions = [{ type = "pty_input", bytes_hex = "522d53534820e7bb88e7abaf0d" }, { type = "finish" }]
-checkpoints = [{ type = "terminal_contains", text = "R-SSH 终端" }, { type = "exit_status", code = 0 }, { type = "resources_zero" }]
+checkpoints = [{ type = "terminal_contains", text = "R-Term 终端" }, { type = "exit_status", code = 0 }, { type = "resources_zero" }]

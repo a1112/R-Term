@@ -6,7 +6,6 @@ use std::{
     sync::Arc,
 };
 
-use rssh_terminal::{CursorShape, UnderlineStyle};
 use rterm_render_cpu::{
     DecodedImage, PixelRenderer, RenderBackgroundGradient, RenderBackgroundImage,
     RenderBackgroundImageAttachment, RenderBackgroundLayer, RenderBoldBrightensAnsiColors,
@@ -18,6 +17,7 @@ use rterm_render_cpu::{
     scrollbar_thumb_rect, strikethrough_position_px, text_foreground_alpha, underline_position_px,
     underline_thickness_px,
 };
+use rterm_terminal::{CursorShape, UnderlineStyle};
 
 use crate::gpu;
 

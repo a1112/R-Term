@@ -1,4 +1,4 @@
-# Contributing to R-SSH
+# Contributing to R-Term
 
 Use Rust 1.89.0 and Node 24. Keep changes focused and add regression tests at
 the boundary being changed.

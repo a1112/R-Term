@@ -11,7 +11,7 @@ param(
 
   [string] $ActionArgumentsJson = "[]",
 
-  [string] $AssemblyPath = $env:RSSH_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY,
+  [string] $AssemblyPath = $env:RTERM_FUNCTIONAL_WINDOWS_SENDINPUT_ASSEMBLY,
 
   [switch] $CompileOnly
 )
@@ -25,7 +25,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-public static class RsshFunctionalInput {
+public static class RTermFunctionalInput {
     public delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
     [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X; public int Y; }
     [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
@@ -176,13 +176,13 @@ $window = if ($WindowHandle -ne 0) {
 } elseif ($WindowTitle) {
   $deadline = [DateTime]::UtcNow.AddSeconds(10)
   do {
-    $candidate = [RsshFunctionalInput]::FindWindowByTitle($WindowTitle)
+    $candidate = [RTermFunctionalInput]::FindWindowByTitle($WindowTitle)
     if ($candidate -ne [IntPtr]::Zero) { break }
     Start-Sleep -Milliseconds 10
   } while ([DateTime]::UtcNow -lt $deadline)
   $candidate
 } else {
-  [RsshFunctionalInput]::FindWindow($ProcessId)
+  [RTermFunctionalInput]::FindWindow($ProcessId)
 }
 if ($window -eq [IntPtr]::Zero) {
   $titles = Get-Process | Where-Object { $_.MainWindowTitle } | ForEach-Object { "$($_.Id):$($_.ProcessName):$($_.MainWindowTitle)" }
@@ -190,32 +190,32 @@ if ($window -eq [IntPtr]::Zero) {
 }
 
 function Focus-Window {
-  if ([RsshFunctionalInput]::IsIconic($window)) {
-    [void][RsshFunctionalInput]::ShowWindow($window, 9)
+  if ([RTermFunctionalInput]::IsIconic($window)) {
+    [void][RTermFunctionalInput]::ShowWindow($window, 9)
   }
-  [void][RsshFunctionalInput]::BringWindowToTop($window)
+  [void][RTermFunctionalInput]::BringWindowToTop($window)
   $deadline = [DateTime]::UtcNow.AddSeconds(2)
   do {
-    [void][RsshFunctionalInput]::SetForegroundWindow($window)
-    if ([RsshFunctionalInput]::GetForegroundWindow() -eq $window) { return }
+    [void][RTermFunctionalInput]::SetForegroundWindow($window)
+    if ([RTermFunctionalInput]::GetForegroundWindow() -eq $window) { return }
     Start-Sleep -Milliseconds 10
   } while ([DateTime]::UtcNow -lt $deadline)
   throw "GetForegroundWindow() -ne `$window after SetForegroundWindow for process=$ProcessId title=$WindowTitle"
 }
 
 if ($Action -eq "window" -and $ActionArguments[0] -eq "restore") {
-  [void][RsshFunctionalInput]::ShowWindow($window, 9)
+  [void][RTermFunctionalInput]::ShowWindow($window, 9)
 }
 Focus-Window
 
 function Set-ClientCursor([int] $X, [int] $Y) {
-  $point = [RsshFunctionalInput+POINT]::new()
+  $point = [RTermFunctionalInput+POINT]::new()
   $point.X = $X
   $point.Y = $Y
-  if (-not [RsshFunctionalInput]::ClientToScreen($window, [ref]$point)) {
+  if (-not [RTermFunctionalInput]::ClientToScreen($window, [ref]$point)) {
     throw "ClientToScreen failed"
   }
-  [RsshFunctionalInput]::MovePointer($point.X, $point.Y)
+  [RTermFunctionalInput]::MovePointer($point.X, $point.Y)
 }
 
 function Convert-WheelData([int] $Delta) {
@@ -223,8 +223,8 @@ function Convert-WheelData([int] $Delta) {
 }
 
 function Send-VirtualKey([uint16] $Key) {
-  [RsshFunctionalInput]::VirtualKey($Key, $true)
-  [RsshFunctionalInput]::VirtualKey($Key, $false)
+  [RTermFunctionalInput]::VirtualKey($Key, $true)
+  [RTermFunctionalInput]::VirtualKey($Key, $false)
 }
 
 function Set-ClipboardWithRetry([string] $Value) {
@@ -242,7 +242,7 @@ function Set-ClipboardWithRetry([string] $Value) {
 
 switch ($Action) {
   "focus" {}
-  "type" { [RsshFunctionalInput]::UnicodeText(($ActionArguments -join " ")) }
+  "type" { [RTermFunctionalInput]::UnicodeText(($ActionArguments -join " ")) }
   "key" {
     $keys = @{ enter = 0x0D; tab = 0x09; escape = 0x1B; backspace = 0x08; up = 0x26; down = 0x28; left = 0x25; right = 0x27 }
     $name = $ActionArguments[0].ToLowerInvariant()
@@ -254,49 +254,49 @@ switch ($Action) {
     $buttons = @{ left = @(0x0002, 0x0004); right = @(0x0008, 0x0010); middle = @(0x0020, 0x0040) }
     $flags = $buttons[$ActionArguments[2]]
     if ($null -eq $flags) { throw "unsupported mouse button" }
-    [RsshFunctionalInput]::Mouse($flags[0], 0); [RsshFunctionalInput]::Mouse($flags[1], 0)
+    [RTermFunctionalInput]::Mouse($flags[0], 0); [RTermFunctionalInput]::Mouse($flags[1], 0)
   }
   "drag" {
     $buttons = @{ left = @(0x0002, 0x0004); right = @(0x0008, 0x0010); middle = @(0x0020, 0x0040) }
     $flags = $buttons[$ActionArguments[4]]
     Set-ClientCursor ([int]$ActionArguments[0]) ([int]$ActionArguments[1])
-    [RsshFunctionalInput]::Mouse($flags[0], 0)
+    [RTermFunctionalInput]::Mouse($flags[0], 0)
     Set-ClientCursor ([int]$ActionArguments[2]) ([int]$ActionArguments[3])
-    [RsshFunctionalInput]::Mouse($flags[1], 0)
+    [RTermFunctionalInput]::Mouse($flags[1], 0)
   }
   "wheel" {
-    [RsshFunctionalInput]::Mouse(0x0800, (Convert-WheelData ([int]$ActionArguments[1] * 120)))
-    [RsshFunctionalInput]::Mouse(0x01000, (Convert-WheelData ([int]$ActionArguments[0] * 120)))
+    [RTermFunctionalInput]::Mouse(0x0800, (Convert-WheelData ([int]$ActionArguments[1] * 120)))
+    [RTermFunctionalInput]::Mouse(0x01000, (Convert-WheelData ([int]$ActionArguments[0] * 120)))
   }
   "paste" {
     Set-ClipboardWithRetry ($ActionArguments -join " ")
-    [RsshFunctionalInput]::VirtualKey(0x10, $true)
-    [RsshFunctionalInput]::VirtualKey(0x11, $true)
+    [RTermFunctionalInput]::VirtualKey(0x10, $true)
+    [RTermFunctionalInput]::VirtualKey(0x11, $true)
     Send-VirtualKey 0x56
-    [RsshFunctionalInput]::VirtualKey(0x11, $false)
-    [RsshFunctionalInput]::VirtualKey(0x10, $false)
+    [RTermFunctionalInput]::VirtualKey(0x11, $false)
+    [RTermFunctionalInput]::VirtualKey(0x10, $false)
   }
   "resize" {
-    $rect = [RsshFunctionalInput+RECT]::new()
-    if (-not [RsshFunctionalInput]::GetWindowRect($window, [ref]$rect)) { throw "GetWindowRect failed" }
-    if (-not [RsshFunctionalInput]::MoveWindow($window, $rect.Left, $rect.Top, [int]$ActionArguments[0], [int]$ActionArguments[1], $true)) { throw "MoveWindow failed" }
+    $rect = [RTermFunctionalInput+RECT]::new()
+    if (-not [RTermFunctionalInput]::GetWindowRect($window, [ref]$rect)) { throw "GetWindowRect failed" }
+    if (-not [RTermFunctionalInput]::MoveWindow($window, $rect.Left, $rect.Top, [int]$ActionArguments[0], [int]$ActionArguments[1], $true)) { throw "MoveWindow failed" }
   }
   "window" {
     switch ($ActionArguments[0]) {
-      "minimize" { [void][RsshFunctionalInput]::ShowWindow($window, 6) }
-      "maximize" { [void][RsshFunctionalInput]::ShowWindow($window, 3) }
-      "restore" { [void][RsshFunctionalInput]::ShowWindow($window, 9) }
+      "minimize" { [void][RTermFunctionalInput]::ShowWindow($window, 6) }
+      "maximize" { [void][RTermFunctionalInput]::ShowWindow($window, 3) }
+      "restore" { [void][RTermFunctionalInput]::ShowWindow($window, 9) }
       "close" {
-        [RsshFunctionalInput]::VirtualKey(0x12, $true)
+        [RTermFunctionalInput]::VirtualKey(0x12, $true)
         try {
           Send-VirtualKey 0x73
         } finally {
-          [RsshFunctionalInput]::VirtualKey(0x12, $false)
+          [RTermFunctionalInput]::VirtualKey(0x12, $false)
         }
       }
       "close-client-button" {
-        $rect = [RsshFunctionalInput+RECT]::new()
-        if (-not [RsshFunctionalInput]::GetClientRect($window, [ref]$rect)) {
+        $rect = [RTermFunctionalInput+RECT]::new()
+        if (-not [RTermFunctionalInput]::GetClientRect($window, [ref]$rect)) {
           throw "GetClientRect failed"
         }
         # ClientToScreen applies the caller's DPI virtualization, so these stay
@@ -309,14 +309,14 @@ switch ($Action) {
           throw "window client area is too small for its visible close button"
         }
         for ($attempt = 1; $attempt -le 12; $attempt++) {
-          if (-not [RsshFunctionalInput]::IsWindowVisible($window)) { return }
+          if (-not [RTermFunctionalInput]::IsWindowVisible($window)) { return }
           Set-ClientCursor ($rect.Right - $closeCenterFromRight) $closeCenterY
-          [RsshFunctionalInput]::Mouse(0x0002, 0)
+          [RTermFunctionalInput]::Mouse(0x0002, 0)
           Start-Sleep -Milliseconds 25
-          [RsshFunctionalInput]::Mouse(0x0004, 0)
+          [RTermFunctionalInput]::Mouse(0x0004, 0)
           for ($poll = 1; $poll -le 20; $poll++) {
             Start-Sleep -Milliseconds 25
-            if (-not [RsshFunctionalInput]::IsWindowVisible($window)) { return }
+            if (-not [RTermFunctionalInput]::IsWindowVisible($window)) { return }
           }
         }
       }

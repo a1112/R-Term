@@ -1,10 +1,10 @@
-//! GPU terminal glyph preparation backed by the authoritative `rssh-fonts`
+//! GPU terminal glyph preparation backed by the authoritative `rterm-fonts`
 //! shaping and raster caches.
 
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fmt,
-    hash::Hash,
+    hash::{DefaultHasher, Hash, Hasher},
     sync::Arc,
 };
 
@@ -12,7 +12,7 @@ use glyphon::{
     Buffer, Cache, Color, ContentType, CustomGlyph, Metrics, RasterizedCustomGlyph, Resolution,
     SwashCache, TextArea, TextAtlas, TextBounds, TextRenderer, Viewport,
 };
-use rssh_fonts::{
+use rterm_fonts::{
     CatalogMemoryMetrics, FontCatalog, FontConfig, FontId, RasterCache, RasterCacheConfig,
     RasterContent, RasterFlags, RasterRequest, ShapedRow, TerminalShaper,
 };
@@ -94,13 +94,19 @@ pub struct GpuTextPrepareReport {
     /// One catalog generation owns every shaped row in this report.
     pub catalog_generation: u64,
     pub prepared_rows: Vec<u16>,
+    /// Glyph work performed during this preparation call.
     pub shaped_glyphs: usize,
+    /// Glyphs retained in the currently drawable row cache, including reused rows.
+    pub retained_glyphs: usize,
     /// Source codepoints whose shaped cluster is not covered by the configured
     /// font catalog and therefore rendered as a tofu glyph.
     pub missing_glyphs: Vec<char>,
     pub mask_glyphs: usize,
     pub color_glyphs: usize,
     pub custom_block_glyphs: usize,
+    pub retained_mask_glyphs: usize,
+    pub retained_color_glyphs: usize,
+    pub retained_custom_block_glyphs: usize,
     pub cursor_foreground_glyphs: usize,
     pub subpixel_masks_converted: usize,
     pub second_shape_calls: usize,
@@ -110,10 +116,19 @@ pub struct GpuTextPrepareReport {
     pub damage_bounds: Vec<PixelRect>,
 }
 
+impl GpuTextPrepareReport {
+    fn apply_retained_glyph_counts(&mut self, counts: (usize, usize, usize, usize)) {
+        self.retained_glyphs = counts.0;
+        self.retained_mask_glyphs = counts.1;
+        self.retained_color_glyphs = counts.2;
+        self.retained_custom_block_glyphs = counts.3;
+    }
+}
+
 /// Result of preparing a frame against an app-owned catalog generation.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum GpuTextCatalogStatus {
-    Prepared(GpuTextPrepareReport),
+    Prepared(Box<GpuTextPrepareReport>),
     CatalogExpanded {
         previous_generation: u64,
         catalog_generation: u64,
@@ -135,7 +150,7 @@ impl GpuTextCatalogStatus {
     #[must_use]
     pub fn into_prepared(self) -> Option<GpuTextPrepareReport> {
         match self {
-            Self::Prepared(report) => Some(report),
+            Self::Prepared(report) => Some(*report),
             Self::CatalogExpanded { .. } => None,
         }
     }
@@ -190,6 +205,31 @@ struct PreparedGpuRow {
     areas: Vec<PreparedGlyphArea>,
     cursor_areas: Vec<PreparedGlyphArea>,
     blocks: Vec<super::GpuQuad>,
+    shaped_glyphs: usize,
+    mask_glyphs: usize,
+    color_glyphs: usize,
+    custom_block_glyphs: usize,
+}
+
+impl PreparedGpuRow {
+    fn with_report_counts(report: &GpuTextPrepareReport) -> (Self, [usize; 4]) {
+        (
+            Self::default(),
+            [
+                report.shaped_glyphs,
+                report.mask_glyphs,
+                report.color_glyphs,
+                report.custom_block_glyphs,
+            ],
+        )
+    }
+
+    fn apply_report_counts(&mut self, report: &GpuTextPrepareReport, before: [usize; 4]) {
+        self.shaped_glyphs = report.shaped_glyphs.saturating_sub(before[0]);
+        self.mask_glyphs = report.mask_glyphs.saturating_sub(before[1]);
+        self.color_glyphs = report.color_glyphs.saturating_sub(before[2]);
+        self.custom_block_glyphs = report.custom_block_glyphs.saturating_sub(before[3]);
+    }
 }
 
 struct GlyphonState {
@@ -205,6 +245,13 @@ struct GlyphonState {
 pub(crate) struct GpuTextOwnerMaterialization {
     pub(crate) base_renderer_count: u64,
     pub(crate) cursor_renderer_count: u64,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum TextPaintChange {
+    None,
+    BlinkRows { regular: bool, rapid: bool },
+    AllRows,
 }
 
 impl GlyphonState {
@@ -275,6 +322,7 @@ pub(crate) struct GpuText {
     row_cache: BTreeMap<u16, PreparedGpuRow>,
     geometry: Option<RenderGeometry>,
     cursor_scope: Option<(u16, u16, [u8; 4])>,
+    render_style_digest: u64,
     paint: Option<TextPaintConfig>,
     retryable_failure: Option<RetryableFailure>,
     force_full_rebuild_next: bool,
@@ -347,6 +395,7 @@ impl GpuText {
             row_cache: BTreeMap::new(),
             geometry: None,
             cursor_scope: None,
+            render_style_digest: 0,
             paint: None,
             retryable_failure: None,
             force_full_rebuild_next: false,
@@ -393,6 +442,7 @@ impl GpuText {
         self.block_quads.clear();
         self.geometry = None;
         self.cursor_scope = None;
+        self.render_style_digest = 0;
         self.paint = None;
         self.retryable_failure = None;
         self.report = GpuTextPrepareReport::default();
@@ -424,6 +474,7 @@ impl GpuText {
         self.block_quads.clear();
         self.geometry = None;
         self.cursor_scope = None;
+        self.render_style_digest = 0;
         self.paint = None;
         self.retryable_failure = None;
         self.report = GpuTextPrepareReport::default();
@@ -530,20 +581,26 @@ impl GpuText {
             return Err(GpuLayerError::message("GPU text geometry must be nonzero"));
         }
         self.ensure_scope(dpi_scale, zoom)?;
+        let paint_change = self
+            .paint
+            .as_ref()
+            .map_or(TextPaintChange::AllRows, |previous| {
+                text_paint_change(previous, paint, snapshot)
+            });
         if self.force_full_rebuild_next {
             self.row_cache.clear();
             self.force_full_rebuild_next = false;
         }
-        if self.paint.as_ref() != Some(paint) {
+        if paint_change == TextPaintChange::AllRows {
             self.row_cache.clear();
-            self.paint = Some(paint.clone());
         }
+        self.paint = Some(paint.clone());
         self.metrics.repack_attempts = 0;
         self.retryable_failure = None;
         self.glyphon.atlas.trim();
         self.metrics.trim_calls = self.metrics.trim_calls.saturating_add(1);
 
-        match self.prepare_once(snapshot, geometry, damage, paint) {
+        match self.prepare_once(snapshot, geometry, damage, paint, paint_change) {
             Ok(report) => Ok(report),
             Err(error) if self.retryable_failure.is_some() => {
                 self.metrics.repack_attempts = 1;
@@ -551,7 +608,7 @@ impl GpuText {
                 self.metrics.repack_attempts = 1;
                 self.paint = Some(paint.clone());
                 self.retryable_failure = None;
-                match self.prepare_once(snapshot, geometry, &[], paint) {
+                match self.prepare_once(snapshot, geometry, &[], paint, TextPaintChange::AllRows) {
                     Ok(report) => Ok(report),
                     Err(retry_error) => {
                         self.fail_closed_after_prepare_error()?;
@@ -598,7 +655,7 @@ impl GpuText {
                 catalog_generation: after,
             });
         }
-        Ok(GpuTextCatalogStatus::Prepared(report))
+        Ok(GpuTextCatalogStatus::Prepared(Box::new(report)))
     }
 
     pub(crate) fn discard_prepared_frame(&mut self) -> Result<(), GpuLayerError> {
@@ -611,12 +668,25 @@ impl GpuText {
         Ok(())
     }
 
+    fn should_reuse_cached_rows(
+        &self,
+        damage: &[DamageRegion],
+        content_digest: TerminalContentDigest,
+        render_style_digest: u64,
+    ) -> bool {
+        damage.is_empty()
+            && !self.row_cache.is_empty()
+            && self.report.content_digest == content_digest
+            && self.render_style_digest == render_style_digest
+    }
+
     fn prepare_once(
         &mut self,
         snapshot: &TerminalRenderSnapshot,
         geometry: RenderGeometry,
         damage: &[DamageRegion],
         paint: &TextPaintConfig,
+        paint_change: TextPaintChange,
     ) -> Result<GpuTextPrepareReport, GpuLayerError> {
         let columns_u32 = geometry.content_width / geometry.cell_width;
         let rows_u32 = geometry.content_height / geometry.cell_height;
@@ -626,6 +696,12 @@ impl GpuText {
             self.row_cache.clear();
             self.geometry = Some(geometry);
         }
+        let content_digest = terminal_snapshot_content_digest(snapshot);
+        let render_style_digest = if damage.is_empty() {
+            terminal_snapshot_render_style_digest(snapshot)
+        } else {
+            self.render_style_digest
+        };
         let visible_rows = snapshot
             .iter_cells()
             .map(|cell| cell.row)
@@ -639,17 +715,26 @@ impl GpuText {
                 .map(|region| region.y)
                 .collect::<BTreeSet<_>>()
         };
-        let mut row_numbers = if damage.is_empty() || self.row_cache.is_empty() {
-            if damage.is_empty() {
+        let reuse_cached_rows =
+            self.should_reuse_cached_rows(damage, content_digest, render_style_digest);
+        let mut row_numbers = if damage.is_empty() {
+            if reuse_cached_rows {
+                BTreeSet::new()
+            } else {
                 self.row_cache.clear();
+                visible_rows.clone()
             }
+        } else if self.row_cache.is_empty() {
             visible_rows.clone()
         } else {
             damaged_rows.clone()
         };
+        if let TextPaintChange::BlinkRows { regular, rapid } = paint_change {
+            row_numbers.extend(blink_rows_requiring_rebuild(snapshot, regular, rapid));
+        }
         let cursor_scope = snapshot
             .cursor()
-            .filter(|cursor| cursor.shape == rssh_terminal::CursorShape::Block)
+            .filter(|cursor| cursor.shape == rterm_terminal::CursorShape::Block)
             .and_then(|cursor| {
                 self.config
                     .cursor_foreground
@@ -670,11 +755,15 @@ impl GpuText {
         }
         self.row_cache
             .retain(|row, _| *row < rows && visible_rows.contains(row));
-
         let mut report = GpuTextPrepareReport {
             catalog_generation: self.catalog.generation(),
             prepared_rows: row_numbers.iter().copied().collect(),
-            content_digest: terminal_snapshot_content_digest(snapshot),
+            content_digest,
+            missing_glyphs: if reuse_cached_rows {
+                self.report.missing_glyphs.clone()
+            } else {
+                Vec::new()
+            },
             damage_bounds: damaged_rows
                 .iter()
                 .map(|row| {
@@ -690,10 +779,10 @@ impl GpuText {
                 .collect(),
             ..GpuTextPrepareReport::default()
         };
-
         self.prepare_rows(snapshot, geometry, columns, row_numbers, paint, &mut report)?;
-
+        report.apply_retained_glyph_counts(self.retained_glyph_counts());
         self.prepare_atlas(geometry)?;
+        self.render_style_digest = render_style_digest;
         self.report = report.clone();
         Ok(report)
     }
@@ -718,6 +807,7 @@ impl GpuText {
                 self.row_cache.insert(row, PreparedGpuRow::default());
                 continue;
             }
+            let (mut prepared_row, counters_before) = PreparedGpuRow::with_report_counts(report);
             let shaped = self
                 .shaper
                 .shape_clusters(&mut self.catalog, &plan.clusters)
@@ -736,11 +826,10 @@ impl GpuText {
                 + f32::from(row) * geometry.cell_height as f32
                 + shaped.metrics.baseline / shaped.metrics.line_height
                     * geometry.cell_height as f32;
-            let mut prepared_row = PreparedGpuRow::default();
             let cursor_redraw = snapshot
                 .cursor()
                 .filter(|cursor| {
-                    cursor.row == row && cursor.shape == rssh_terminal::CursorShape::Block
+                    cursor.row == row && cursor.shape == rterm_terminal::CursorShape::Block
                 })
                 .and_then(|cursor| {
                     let foreground = self.config.cursor_foreground?;
@@ -997,10 +1086,22 @@ impl GpuText {
                     glyph: custom_glyph,
                 });
             }
+            prepared_row.apply_report_counts(report, counters_before);
             self.row_cache.insert(row, prepared_row);
         }
-
         Ok(())
+    }
+
+    fn retained_glyph_counts(&self) -> (usize, usize, usize, usize) {
+        self.row_cache
+            .values()
+            .fold((0, 0, 0, 0), |mut counts, row| {
+                counts.0 = counts.0.saturating_add(row.shaped_glyphs);
+                counts.1 = counts.1.saturating_add(row.mask_glyphs);
+                counts.2 = counts.2.saturating_add(row.color_glyphs);
+                counts.3 = counts.3.saturating_add(row.custom_block_glyphs);
+                counts
+            })
     }
 
     #[expect(
@@ -1160,6 +1261,65 @@ fn initial_atlas_dimension(device: &wgpu::Device) -> u32 {
 fn initial_atlas_bytes(device: &wgpu::Device) -> usize {
     let dimension = initial_atlas_dimension(device) as usize;
     dimension.saturating_mul(dimension).saturating_mul(5)
+}
+
+fn terminal_snapshot_render_style_digest(snapshot: &TerminalRenderSnapshot) -> u64 {
+    let mut digest = DefaultHasher::new();
+    for cell in snapshot.iter_cells() {
+        cell.style().hash(&mut digest);
+        cell.hyperlink().hash(&mut digest);
+    }
+    digest.finish()
+}
+
+fn text_paint_change(
+    previous: &TextPaintConfig,
+    current: &TextPaintConfig,
+    snapshot: &TerminalRenderSnapshot,
+) -> TextPaintChange {
+    if previous.default_foreground != current.default_foreground
+        || previous.default_background != current.default_background
+        || previous.bold_brightens_ansi_colors != current.bold_brightens_ansi_colors
+        || previous.ansi_palette != current.ansi_palette
+        || previous.indexed_palette != current.indexed_palette
+    {
+        return TextPaintChange::AllRows;
+    }
+    let regular_blink_changed =
+        previous.text_blink_opacity_alpha != current.text_blink_opacity_alpha;
+    let rapid_blink_changed =
+        previous.rapid_text_blink_opacity_alpha != current.rapid_text_blink_opacity_alpha;
+    if !regular_blink_changed && !rapid_blink_changed {
+        return TextPaintChange::None;
+    }
+    if snapshot.iter_cells().any(|cell| {
+        cell.style().blink
+            && ((regular_blink_changed && !cell.style().rapid_blink)
+                || (rapid_blink_changed && cell.style().rapid_blink))
+    }) {
+        TextPaintChange::BlinkRows {
+            regular: regular_blink_changed,
+            rapid: rapid_blink_changed,
+        }
+    } else {
+        TextPaintChange::None
+    }
+}
+
+fn blink_rows_requiring_rebuild(
+    snapshot: &TerminalRenderSnapshot,
+    regular: bool,
+    rapid: bool,
+) -> BTreeSet<u16> {
+    snapshot
+        .iter_cells()
+        .filter_map(|cell| {
+            let style = cell.style();
+            let regular_row = regular && style.blink && !style.rapid_blink;
+            let rapid_row = rapid && style.blink && style.rapid_blink;
+            (regular_row || rapid_row).then_some(cell.row)
+        })
+        .collect()
 }
 
 fn modulate_alpha(left: u8, right: u8) -> u8 {
@@ -1330,8 +1490,8 @@ mod tests {
         path::{Path, PathBuf},
     };
 
-    use rssh_fonts::{FontCatalog, FontConfig, FontSource, RasterCacheConfig};
-    use rssh_terminal::Terminal;
+    use rterm_fonts::{FontCatalog, FontConfig, FontSource, RasterCacheConfig};
+    use rterm_terminal::Terminal;
     use rterm_types::TerminalSize;
 
     use crate::gpu::{GpuContext, GpuContextOptions, GpuLayerRenderer};

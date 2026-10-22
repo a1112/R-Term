@@ -24,7 +24,7 @@ $targetDirectory = if ([string]::IsNullOrWhiteSpace($env:CARGO_TARGET_DIR)) {
 } else {
   $env:CARGO_TARGET_DIR
 }
-$executable = Join-Path $targetDirectory "$profileDirectory/rssh-app.exe"
+$executable = Join-Path $targetDirectory "$profileDirectory/rterm.exe"
 
 Assert-BoundedProcessHarness
 
@@ -37,7 +37,7 @@ if ([string]::IsNullOrWhiteSpace($ExpectedTarget) -or [string]::IsNullOrWhiteSpa
 
 Push-Location $repositoryRoot
 try {
-  $buildArguments = @("build", "--locked", "-p", "rssh-app", "--bin", "rssh-app", "--test", "openssh_loopback", "--test", "native_window_e2e") + $profileArguments
+  $buildArguments = @("build", "--locked", "-p", "rterm-app", "--bin", "rterm", "--test", "openssh_loopback", "--test", "native_window_e2e") + $profileArguments
   $null = Invoke-BoundedProcess -Phase "native E2E build ($Profile)" -FilePath "cargo" -ArgumentList $buildArguments -TimeoutSeconds 1200
 
   $versionResult = Invoke-BoundedProcess -Phase "version identity" -FilePath $executable -ArgumentList @("version", "--json") -TimeoutSeconds 30
@@ -52,18 +52,18 @@ try {
   $null = Invoke-BoundedProcess -Phase "OpenSSH client probe" -FilePath "ssh" -ArgumentList @("-V") -TimeoutSeconds 15
 
   $nativeSshArguments = @(
-    "test", "--locked", "-p", "rssh-ssh", "--all-targets"
+    "test", "--locked", "-p", "rterm-ssh", "--all-targets"
   ) + $profileArguments + @("--", "--nocapture")
   $null = Invoke-BoundedProcess -Phase "hermetic native SSH tests ($Profile)" -FilePath "cargo" -ArgumentList $nativeSshArguments -TimeoutSeconds 300
 
-  $env:RSSH_REQUIRE_OPENSSH = "1"
+  $env:RTERM_REQUIRE_OPENSSH = "1"
   $openSshArguments = @(
-    "test", "--locked", "-p", "rssh-app", "--test", "openssh_loopback"
+    "test", "--locked", "-p", "rterm-app", "--test", "openssh_loopback"
   ) + $profileArguments + @("--", "--nocapture")
   $null = Invoke-BoundedProcess -Phase "system OpenSSH interoperability ($Profile)" -FilePath "cargo" -ArgumentList $openSshArguments -TimeoutSeconds 300
 
   $testArguments = @(
-    "test", "--locked", "-p", "rssh-app", "--test", "native_window_e2e"
+    "test", "--locked", "-p", "rterm-app", "--test", "native_window_e2e"
   ) + $profileArguments + @(
     "native_window_e2e_presents_ten_frames_from_a_real_pty",
     "--", "--exact", "--nocapture"
@@ -83,13 +83,13 @@ try {
       [StringComparison]::Ordinal
     )
     $scenarioArguments = @(
-      "test", "--locked", "-p", "rssh-app", "--test", "native_window_e2e"
+      "test", "--locked", "-p", "rterm-app", "--test", "native_window_e2e"
     ) + $profileArguments + @(
       $scenario,
       "--", "--exact", "--ignored", "--nocapture"
     )
     $previousScaleAdapterOverride = [Environment]::GetEnvironmentVariable(
-      "RSSH_TEST_NATIVE_SCALE_PRIMARY",
+      "RTERM_TEST_NATIVE_SCALE_PRIMARY",
       "Process"
     )
     try {
@@ -98,23 +98,23 @@ try {
           # Fresh hosted Windows runners are more reliable when the scaled
           # probe starts on the primary adapter. Keep the software fallback
           # as a bounded alternate path for runners whose GPU stack wedges.
-          $env:RSSH_TEST_NATIVE_SCALE_PRIMARY = "1"
+          $env:RTERM_TEST_NATIVE_SCALE_PRIMARY = "1"
         } elseif ($isScaledScenario -and $attempt -eq 2) {
           if ($null -eq $previousScaleAdapterOverride) {
-            Remove-Item Env:RSSH_TEST_NATIVE_SCALE_PRIMARY -ErrorAction SilentlyContinue
+            Remove-Item Env:RTERM_TEST_NATIVE_SCALE_PRIMARY -ErrorAction SilentlyContinue
           } else {
-            $env:RSSH_TEST_NATIVE_SCALE_PRIMARY = $previousScaleAdapterOverride
+            $env:RTERM_TEST_NATIVE_SCALE_PRIMARY = $previousScaleAdapterOverride
           }
         } elseif ($attempt -eq 1) {
           if ($null -eq $previousScaleAdapterOverride) {
-            Remove-Item Env:RSSH_TEST_NATIVE_SCALE_PRIMARY -ErrorAction SilentlyContinue
+            Remove-Item Env:RTERM_TEST_NATIVE_SCALE_PRIMARY -ErrorAction SilentlyContinue
           } else {
-            $env:RSSH_TEST_NATIVE_SCALE_PRIMARY = $previousScaleAdapterOverride
+            $env:RTERM_TEST_NATIVE_SCALE_PRIMARY = $previousScaleAdapterOverride
           }
         } else {
           # A non-scaled scenario still retries once through the alternate
           # adapter path instead of repeating the same bounded timeout.
-          $env:RSSH_TEST_NATIVE_SCALE_PRIMARY = "1"
+          $env:RTERM_TEST_NATIVE_SCALE_PRIMARY = "1"
         }
         try {
           $null = Invoke-BoundedProcess -Phase "native E2E scenario $scenario ($Profile), attempt $attempt" -FilePath "cargo" -ArgumentList $scenarioArguments -TimeoutSeconds 300
@@ -128,9 +128,9 @@ try {
       }
     } finally {
       if ($null -eq $previousScaleAdapterOverride) {
-        Remove-Item Env:RSSH_TEST_NATIVE_SCALE_PRIMARY -ErrorAction SilentlyContinue
+        Remove-Item Env:RTERM_TEST_NATIVE_SCALE_PRIMARY -ErrorAction SilentlyContinue
       } else {
-        $env:RSSH_TEST_NATIVE_SCALE_PRIMARY = $previousScaleAdapterOverride
+        $env:RTERM_TEST_NATIVE_SCALE_PRIMARY = $previousScaleAdapterOverride
       }
     }
   }

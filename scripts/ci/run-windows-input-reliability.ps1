@@ -58,7 +58,7 @@ $null = New-Item -ItemType Directory -Force -Path $outputRoot
 $results = [Collections.Generic.List[object]]::new()
 $artifacts = @{}
 $products = @{}
-$previousRequiredSsh = $env:RSSH_REQUIRE_OPENSSH
+$previousRequiredSsh = $env:RTERM_REQUIRE_OPENSSH
 $report = [ordered]@{
   schema = 1; status = "running"; started_utc = [DateTimeOffset]::UtcNow.ToString("o")
   source_commit = $null; source_diff_sha256 = $null; source_status = $null
@@ -82,10 +82,10 @@ try {
   Assert-BoundedProcessHarness
   $toolchain = Invoke-BoundedProcess -Phase "Rust toolchain" -FilePath rustc -ArgumentList @("-Vv") -TimeoutSeconds 30
   $report.toolchain = $toolchain.Stdout.Trim()
-  $env:RSSH_REQUIRE_OPENSSH = "1"
+  $env:RTERM_REQUIRE_OPENSSH = "1"
   $null = Invoke-BoundedProcess -Phase "required OpenSSH" -FilePath ssh -ArgumentList @("-V") -TimeoutSeconds 15
   $build = Invoke-BoundedProcess -Phase "acceptance build" -FilePath cargo -ArgumentList @(
-    "test", "--locked", "-p", "rssh-app", "--bin", "rssh-app", "--test", "local_pty",
+    "test", "--locked", "-p", "rterm-app", "--features", "developer-full", "--bin", "rterm", "--test", "local_pty",
     "--test", "openssh_loopback", "--no-run", "--message-format=json"
   ) -TimeoutSeconds 1200
   [IO.File]::WriteAllText((Join-Path $outputRoot "build.stdout.jsonl"), $build.Stdout)
@@ -105,7 +105,7 @@ try {
   foreach ($case in $matrix.cases) {
     if (-not $artifacts.ContainsKey($case.target)) { throw "Missing test artifact: $($case.target)" }
   }
-  if (-not $products.ContainsKey("rssh-app")) { throw "Missing application artifact" }
+  if (-not $products.ContainsKey("rterm")) { throw "Missing application artifact" }
   for ($round = 1; $round -le $Rounds; $round++) {
     foreach ($case in $matrix.cases) {
       $index = $results.Count + 1
@@ -129,7 +129,7 @@ try {
   $report.error = $_.ToString()
   throw
 } finally {
-  $env:RSSH_REQUIRE_OPENSSH = $previousRequiredSsh
+  $env:RTERM_REQUIRE_OPENSSH = $previousRequiredSsh
   $report["finished_utc"] = [DateTimeOffset]::UtcNow.ToString("o")
   $temporary = Join-Path $outputRoot "report.json.tmp"
   $report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $temporary -Encoding utf8

@@ -1,10 +1,10 @@
 {
   "version": 1,
   "roots": [
-    "crates/rssh-app/src",
-    "crates/rssh-native/src",
-    "crates/rssh-runtime/src",
-    "crates/rssh-config/src",
+    "crates/rterm-app/src",
+    "crates/rterm-native/src",
+    "crates/rterm-runtime/src",
+    "crates/rterm-config/src",
     "crates/rterm-render-core/src",
     "crates/rterm-render-cpu/src",
     "crates/rterm-render-wgpu/src"
@@ -27,86 +27,86 @@
   },
   "migration": {
     "initial_ceilings": {
-      "crates/rssh-app/src/config_lifecycle.rs": {
+      "crates/rterm-app/src/config_lifecycle.rs": {
         "unbounded_channels": 2,
         "forbidden_dependencies": 2
       },
-      "crates/rssh-app/src/local.rs": {
+      "crates/rterm-app/src/local.rs": {
         "file_lines": 10971,
         "unbounded_channels": 6
       },
-      "crates/rssh-app/src/main.rs": {
+      "crates/rterm-app/src/main.rs": {
         "rustfmt_skip": 1
       },
-      "crates/rssh-app/src/window_parts/part07.rs": {
+      "crates/rterm-app/src/window_parts/part07.rs": {
         "struct_fields": 68,
         "unbounded_channels": 1
       },
-      "crates/rssh-app/src/window_parts/part08.rs": {
+      "crates/rterm-app/src/window_parts/part08.rs": {
         "file_lines": 8081,
         "impl_lines": 2108
       },
-      "crates/rssh-app/src/window_parts/part10.rs": {
+      "crates/rterm-app/src/window_parts/part10.rs": {
         "impl_lines": 2237
       },
-      "crates/rssh-app/src/window_ssh_gui.rs": {
+      "crates/rterm-app/src/window_ssh_gui.rs": {
         "function_lines": 321,
         "unbounded_channels": 1
       },
-      "crates/rssh-app/src/self_test.rs": {
+      "crates/rterm-app/src/self_test.rs": {
         "unbounded_channels": 1
       },
-      "crates/rssh-app/src/terminal_queries.rs": {
+      "crates/rterm-app/src/terminal_queries.rs": {
         "function_lines": 667
       }
     },
     "budgets": {
-      "crates/rssh-app/src/config_lifecycle.rs": {
+      "crates/rterm-app/src/config_lifecycle.rs": {
         "unbounded_channels": 2,
         "forbidden_dependencies": 0
       },
-      "crates/rssh-app/src/local.rs": {
+      "crates/rterm-app/src/local.rs": {
         "file_lines": 10971,
         "unbounded_channels": 6
       },
-      "crates/rssh-app/src/main.rs": {
+      "crates/rterm-app/src/main.rs": {
         "rustfmt_skip": 1
       },
-      "crates/rssh-app/src/window_parts/part07.rs": {
+      "crates/rterm-app/src/window_parts/part07.rs": {
         "struct_fields": 68,
         "unbounded_channels": 1
       },
-      "crates/rssh-app/src/window_parts/part08.rs": {
+      "crates/rterm-app/src/window_parts/part08.rs": {
         "file_lines": 8081,
         "impl_lines": 2108
       },
-      "crates/rssh-app/src/window_parts/part10.rs": {
+      "crates/rterm-app/src/window_parts/part10.rs": {
         "impl_lines": 2237
       },
-      "crates/rssh-app/src/window_ssh_gui.rs": {
+      "crates/rterm-app/src/window_ssh_gui.rs": {
         "function_lines": 321,
         "unbounded_channels": 1
       },
-      "crates/rssh-app/src/self_test.rs": {
+      "crates/rterm-app/src/self_test.rs": {
         "unbounded_channels": 1
       },
-      "crates/rssh-app/src/terminal_queries.rs": {
+      "crates/rterm-app/src/terminal_queries.rs": {
         "function_lines": 667
       }
     }
   },
   "forbidden_dependencies": [
     {
-      "scope": "crates/rssh-app/src/config_lifecycle.rs",
+      "scope": "crates/rterm-app/src/config_lifecycle.rs",
       "patterns": ["crate::window"]
     },
     {
-      "scope": "crates/rssh-config/src/**",
-      "patterns": ["crate::window", "notify", "rssh_native", "winit"]
+      "scope": "crates/rterm-config/src/**",
+      "patterns": ["crate::window", "notify", "rterm_native", "winit"]
     },
     {
-      "scope": "crates/rssh-native/src/**",
-      "patterns": ["crate::window", "crossterm", "notify", "rssh_app", "wgpu", "winit"]
+      "scope": "crates/rterm-native/src/**",
+      "patterns": ["crate::window", "crossterm", "notify", "rterm_app", "wgpu", "winit"]
     }
   ]
 }

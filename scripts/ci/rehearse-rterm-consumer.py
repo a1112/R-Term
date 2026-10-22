@@ -21,18 +21,18 @@ from typing import Any, Iterable
 
 SHA1 = re.compile(r"^[0-9a-f]{40}$")
 FORBIDDEN_PRODUCT_ROOTS = (
-    "crates/rssh-app",
-    "crates/rssh-config",
-    "crates/rssh-core",
-    "crates/rssh-diagnostics",
-    "crates/rssh-domain",
-    "crates/rssh-functional-tests",
-    "crates/rssh-native",
-    "crates/rssh-pty",
-    "crates/rssh-renderer",
-    "crates/rssh-ssh",
-    "crates/rssh-test-support",
-    "crates/rssh-web",
+    "crates/rterm-app",
+    "crates/rterm-config",
+    "crates/rterm-core",
+    "crates/rterm-diagnostics",
+    "crates/rterm-domain",
+    "crates/rterm-functional-tests",
+    "crates/rterm-native",
+    "crates/rterm-pty",
+    "crates/rterm-renderer",
+    "crates/rterm-ssh",
+    "crates/rterm-test-support",
+    "crates/rterm-web",
     "tauri",
 )
 
@@ -73,7 +73,7 @@ def validate_overlay_path(value: str) -> str:
         normalized == root or normalized.startswith(f"{root}/")
         for root in FORBIDDEN_PRODUCT_ROOTS
     ):
-        raise RehearsalError(f"refusing overlay path owned by R-SSH product code: {value}")
+        raise RehearsalError(f"refusing overlay path owned by R-Term product code: {value}")
     return normalized
 
 
@@ -530,7 +530,7 @@ def main() -> int:
             # macOS exposes its system temporary directory through /var ->
             # /private/var. Canonicalize this newly created, owned directory;
             # downstream checks must still reject links in supplied paths.
-            work = Path(tempfile.mkdtemp(prefix="rssh-verified-rehearsal-")).resolve()
+            work = Path(tempfile.mkdtemp(prefix="rterm-verified-rehearsal-")).resolve()
 
         candidate, candidate_probe = run_mode(
             mode="candidate",

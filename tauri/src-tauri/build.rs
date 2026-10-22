@@ -17,5 +17,5 @@ fn main() {
     let attributes = tauri_build::Attributes::new()
         .capabilities_path_pattern(capabilities)
         .app_manifest(tauri_build::AppManifest::new().permissions_path_pattern(permissions));
-    tauri_build::try_build(attributes).expect("failed to build the R-SSH Tauri application");
+    tauri_build::try_build(attributes).expect("failed to build the R-Term Tauri application");
 }

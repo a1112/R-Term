@@ -15,8 +15,8 @@ from typing import Any
 SHA1 = re.compile(r"^[0-9a-f]{40}$")
 EXPECTED_PACKAGES = {
     "rterm-types": "crates/rterm-types",
-    "rterm-terminal": "crates/rssh-terminal",
-    "rterm-runtime": "crates/rssh-runtime",
+    "rterm-terminal": "crates/rterm-terminal",
+    "rterm-runtime": "crates/rterm-runtime",
     "rterm-fonts": "crates/rterm-fonts",
     "rterm-render-core": "crates/rterm-render-core",
     "rterm-render-cpu": "crates/rterm-render-cpu",

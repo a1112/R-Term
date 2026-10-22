@@ -108,15 +108,15 @@ dump_live_owned_processes() {
 input() {
   case "$input_backend" in
     x11)
-      RSSH_FUNCTIONAL_X11_WINDOW_TITLE=R-SSH \
+      RTERM_FUNCTIONAL_X11_WINDOW_TITLE=R-Term \
         bash scripts/functional/x11-xtest-input.sh "$root_pid" "$@"
       ;;
     macos)
-      [[ "${RSSH_FUNCTIONAL_MACOS_ACCESSIBILITY:-}" == authorized ]] || {
+      [[ "${RTERM_FUNCTIONAL_MACOS_ACCESSIBILITY:-}" == authorized ]] || {
         echo "macOS Accessibility authorization is required" >&2
         return 3
       }
-      /usr/bin/xcrun swift "${RSSH_FUNCTIONAL_MACOS_CGEVENT_HELPER:?missing CGEvent helper}" --pid "$root_pid" "$@"
+      /usr/bin/xcrun swift "${RTERM_FUNCTIONAL_MACOS_CGEVENT_HELPER:?missing CGEvent helper}" --pid "$root_pid" "$@"
       ;;
     *) echo "unsupported input backend: $input_backend" >&2; return 2 ;;
   esac

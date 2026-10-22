@@ -1,0 +1,23 @@
+[package]
+name = "rterm-ssh"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[features]
+runtime-adapter = []
+
+[dependencies]
+russh = { version = "0.61.2", default-features = false, features = ["flate2", "ring"] }
+rterm-runtime = { path = "../rterm-runtime", version = "0.1.0" }
+rterm-types = { path = "../rterm-types", version = "0.1.0" }
+tokio = { version = "1", features = ["io-util", "net", "rt-multi-thread", "time"] }
+
+[dev-dependencies]
+rterm-domain = { path = "../rterm-domain", version = "0.1.0" }
+rterm-test-support = { path = "../rterm-test-support", version = "0.1.0" }
+
+[lints]
+workspace = true

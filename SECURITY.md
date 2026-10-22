@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-R-SSH is pre-1.0 software. Security fixes are applied to the latest commit on
+R-Term is pre-1.0 software. Security fixes are applied to the latest commit on
 `main`; older snapshots and development branches are not supported.
 
 ## Reporting a vulnerability

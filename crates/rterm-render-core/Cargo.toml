@@ -9,8 +9,8 @@ version.workspace = true
 [dependencies]
 font8x8 = "0.3"
 rterm-types = { path = "../rterm-types", version = "0.1.0" }
-rssh-fonts = { package = "rterm-fonts", path = "../rterm-fonts", version = "0.1.0" }
-rssh-terminal = { package = "rterm-terminal", path = "../rssh-terminal", version = "0.1.0" }
+rterm-fonts = { package = "rterm-fonts", path = "../rterm-fonts", version = "0.1.0" }
+rterm-terminal = { package = "rterm-terminal", path = "../rterm-terminal", version = "0.1.0" }
 sha2 = "0.11"
 
 [lints]

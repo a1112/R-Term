@@ -1,5 +1,5 @@
 {
-  "name": "rssh-web-client",
+  "name": "rterm-web-client",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:production": "playwright test --config=playwright.production.config.ts",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -1,4 +1,4 @@
-"""Pure declaration checks and narrowly scoped R-SSH build-profile generation.
+"""Pure declaration checks and narrowly scoped R-Term build-profile generation.
 
 This module does not verify Git provenance, write files, or certify compatibility.
 The preparation caller must first verify immutable source/consumer trees. A
@@ -17,8 +17,8 @@ from typing import Any
 COMMIT = re.compile(r"[0-9a-f]{40}")
 LEGACY_SELECTOR = "rterm-legacy-0-1"
 FORWARDING = {
-    "production-fonts": ["rssh-fonts/shared-source-ownership"],
-    "diagnostic-tools": ["rssh-fonts/diagnostic-tools"],
+    "production-fonts": ["rterm-fonts/shared-source-ownership"],
+    "diagnostic-tools": ["rterm-fonts/diagnostic-tools"],
 }
 
 
@@ -61,7 +61,7 @@ Unsupported layouts fail rather than being rewritten by a general TOML writer.
 """
     if profile not in ("modern", "legacy-0.1"):
         raise ValueError(f"unknown consumer profile: {profile}")
-    document = manifest_document(original, "rssh-app")
+    document = manifest_document(original, "rterm-app")
     features = document.get("features", {})
     if any(LEGACY_SELECTOR in values for values in features.values()):
         raise ValueError("legacy selector is already enabled; require pristine consumer manifest")

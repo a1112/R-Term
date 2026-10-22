@@ -2,14 +2,14 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $PSNativeCommandUseErrorActionPreference = $true
 
-function Get-RsshRepositoryRoot {
+function Get-RTermRepositoryRoot {
     [CmdletBinding()]
     param()
 
     return [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
 }
 
-function Read-RsshPerformanceBaseline {
+function Read-RTermPerformanceBaseline {
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)][string]$Path)
 
@@ -47,7 +47,7 @@ function Read-RsshPerformanceBaseline {
     return $baseline
 }
 
-function Test-RsshPerformanceSchema {
+function Test-RTermPerformanceSchema {
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)][string]$Path)
 
@@ -56,12 +56,12 @@ function Test-RsshPerformanceSchema {
         throw "performance scorecard schema does not exist: $resolved"
     }
     $schema = Get-Content -LiteralPath $resolved -Raw | ConvertFrom-Json
-    if ($schema.'$id' -ne 'https://r-ssh.dev/schemas/performance-scorecard-v1.json') {
+    if ($schema.'$id' -ne 'https://github.com/a1112/R-Term/blob/main/scripts/perf/scorecard.schema.json') {
         throw "unexpected performance scorecard schema ID: $($schema.'$id')"
     }
 }
 
-function Get-RsshMachineFingerprint {
+function Get-RTermMachineFingerprint {
     [CmdletBinding()]
     param()
 
@@ -89,7 +89,7 @@ function Get-RsshMachineFingerprint {
     }
 }
 
-function Assert-RsshComparableMachine {
+function Assert-RTermComparableMachine {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]$Baseline,
@@ -123,7 +123,7 @@ function Assert-RsshComparableMachine {
     return @($mismatches)
 }
 
-function Write-RsshScorecardResult {
+function Write-RTermScorecardResult {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]$Result,

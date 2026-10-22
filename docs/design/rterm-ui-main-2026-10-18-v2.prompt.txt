@@ -1,0 +1,16 @@
+Use case: ui-mockup
+Asset type: revised high-fidelity desktop terminal interface screenshot.
+Edit the provided image. Preserve its refined graphite dark palette, teal accent, readable Chinese interface typography, modern monospace terminal text, subtle native window rounding, thin pane dividers and calm professional appearance.
+
+Requested changes:
+- Session switching belongs exclusively to tabs at the very top of the window.
+- Remove the software name and logo entirely. No "R-Term" title or product branding anywhere in the interface.
+- Remove the complete left sidebar, including the session list, profile/config list and bottom-left settings entry. The terminal workspace now extends across the full window width.
+- Merge the former separate title bar and tabs row into ONE compact top chrome row around 50px tall. From left to right: macOS traffic-light controls, active session tab labeled exactly "项目 · zsh", second session tab "开发服务 · zsh", small plus button. Tabs have a tiny terminal icon and close control. The active tab has a subtle teal underline. At the far right, small outline search, split-view and settings buttons. No centered product title, no large blank branded title area, no extra session navigation.
+- Below the top row, keep a practical three-pane terminal split across the full width: large left pane about 64%, right column about 36% split into two equal-height terminal panes. This is a working terminal layout, not cards or an admin dashboard.
+- Keep the compact pane headers: left "项目 · zsh" and directory "~/Developer/project"; upper right "Git · zsh" and "~/Developer/project"; lower right "开发服务 · zsh" and "~/Developer/project". A subtle teal active dot on the left. Do not reintroduce branding in directories or command output.
+- Retain realistic short terminal output with generous blank canvas. Left: prompt "~/Developer/project" with branch "main", command "cargo check", a few coherent build lines for "terminal-core", "terminal-runtime", "terminal-app", then "Finished dev profile in 1.24s"; below command "echo 你好，终端" followed by "你好，终端", then a fresh prompt and teal block cursor. Upper right: "git status --short" and 3 changed file paths. Lower right: "npm run dev", "VITE ready in 182 ms", "Local: http://localhost:5173/".
+- Preserve slim bottom status bar with "本地终端", "zsh", "120 × 32", "UTF-8", "GPU". No branding there.
+
+Composition: landscape around 16:10, single flat front-facing application window filling the image, no perspective, no desktop wallpaper, no device frame or surrounding annotations. Very crisp UI, coherent alignment, restrained colors and comfortable spacing.
+Avoid: any software name, product logo, sidebar, left session navigation, file explorer, duplicate tabs rows, oversized header, charts, marketing text, watermarks. Output only the finished revised interface image.

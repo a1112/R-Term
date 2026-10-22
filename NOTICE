@@ -1,5 +1,9 @@
-R-SSH
-Copyright (c) R-SSH contributors
+R-Term
+Copyright (c) R-Term contributors
+
+Includes source inherited from R-SSH, copyright (c) 2026 a1112 and R-SSH
+contributors, under the MIT license. The native SSH source provenance is
+retained in crates/rterm-ssh/NOTICE and SOURCE-PROVENANCE.json.
 
 This distribution includes locally patched source copies of these projects:
 

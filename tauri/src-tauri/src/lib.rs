@@ -11,11 +11,11 @@ use std::{
 };
 
 #[cfg(feature = "functional-test-observer")]
-use rssh_functional_tests::{
+use rterm_functional_tests::{
     ObserverServer, ObserverSnapshotV1, ObserverState, ObserverToken, RuntimeObservationV1,
     TerminalObservationV1, WindowObservationV1,
 };
-use rssh_web::{WebServer, WebServerConfig};
+use rterm_web::{WebServer, WebServerConfig};
 #[cfg(not(debug_assertions))]
 use tauri::path::BaseDirectory;
 use tauri::{Manager, RunEvent, Url};
@@ -86,7 +86,7 @@ fn functional_observer_publish(
                 active_tab_id: Some(1),
                 active_pane_id: Some(1),
                 overlay: None,
-                panes: vec![rssh_functional_tests::PaneObservationV1 {
+                panes: vec![rterm_functional_tests::PaneObservationV1 {
                     tab_id: 1,
                     pane_id: 1,
                     active: true,
@@ -125,7 +125,7 @@ pub fn run() {
             let server = tauri::async_runtime::block_on(WebServer::bind(WebServerConfig {
                 listen: "127.0.0.1:0".parse().expect("loopback endpoint is valid"),
                 web_root,
-                max_sessions: rssh_web::server::DEFAULT_MAX_SESSIONS,
+                max_sessions: rterm_web::server::DEFAULT_MAX_SESSIONS,
                 allowed_origin: None,
             }))?;
             let bootstrap_url = server.bootstrap_url();
@@ -138,7 +138,7 @@ pub fn run() {
                     })
                     .await
                 {
-                    eprintln!("R-SSH Web backend stopped: {error}");
+                    eprintln!("R-Term Web backend stopped: {error}");
                 }
             });
             app.manage(BackendState {
@@ -156,7 +156,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error while building R-SSH Tauri application")
+        .expect("error while building R-Term Tauri application")
         .run(|app_handle, event| {
             let (main_window_close_requested, defer_main_window_close) =
                 if let RunEvent::WindowEvent {
@@ -241,7 +241,7 @@ fn exit_after_final_observation_delivery(
 ) {
     let fallback_handle = app_handle.clone();
     let spawn_result = thread::Builder::new()
-        .name("rssh-tauri-observer-exit".to_owned())
+        .name("rterm-tauri-observer-exit".to_owned())
         .spawn(move || {
             let _ = observer.wait_until_delivered(revision, Duration::from_secs(2));
             thread::sleep(Duration::from_secs(1));
@@ -255,8 +255,8 @@ fn exit_after_final_observation_delivery(
 #[cfg(feature = "functional-test-observer")]
 fn functional_observer_from_environment()
 -> Result<Option<FunctionalObserverState>, Box<dyn std::error::Error>> {
-    let endpoint = env::var_os("RSSH_FUNCTIONAL_OBSERVER_ENDPOINT");
-    let token = env::var("RSSH_FUNCTIONAL_OBSERVER_TOKEN").ok();
+    let endpoint = env::var_os("RTERM_FUNCTIONAL_OBSERVER_ENDPOINT");
+    let token = env::var("RTERM_FUNCTIONAL_OBSERVER_TOKEN").ok();
     let (endpoint, token) = match (endpoint, token) {
         (None, None) => return Ok(None),
         (Some(endpoint), Some(token)) => (endpoint, token),
@@ -300,7 +300,7 @@ fn functional_observer_from_environment()
     })?;
     let mut server = ObserverServer::bind(Path::new(&endpoint), token, observer.clone())?;
     thread::Builder::new()
-        .name("rssh-tauri-functional-observer".to_owned())
+        .name("rterm-tauri-functional-observer".to_owned())
         .spawn(move || {
             if let Err(error) = server.serve_one() {
                 eprintln!("Tauri functional observer error: {error}");

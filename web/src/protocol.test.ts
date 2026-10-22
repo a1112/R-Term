@@ -24,6 +24,27 @@ describe('web terminal protocol boundary', () => {
     expect(parseServerMessage('{not-json')).toBeNull();
   });
 
+  test('preserves optional real shell and cwd metadata when supplied', () => {
+    expect(
+      parseServerMessage(
+        '{"type":"opened","protocol":1,"sessionId":"session","cols":80,"rows":24,"shell":"/bin/zsh","cwd":"/Users/example/project"}',
+      ),
+    ).toEqual({
+      type: 'opened',
+      protocol: 1,
+      sessionId: 'session',
+      cols: 80,
+      rows: 24,
+      shell: '/bin/zsh',
+      cwd: '/Users/example/project',
+    });
+    expect(
+      parseServerMessage(
+        '{"type":"opened","protocol":1,"sessionId":"session","cols":80,"rows":24,"shell":"","cwd":null}',
+      ),
+    ).toEqual({ type: 'opened', protocol: 1, sessionId: 'session', cols: 80, rows: 24 });
+  });
+
   test('preserves UTF-8 text and byte-oriented terminal input', () => {
     expect(Array.from(encodeTerminalInput('SSH 终端'))).toEqual(
       Array.from(new TextEncoder().encode('SSH 终端')),

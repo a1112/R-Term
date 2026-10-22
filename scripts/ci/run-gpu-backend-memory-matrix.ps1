@@ -51,8 +51,8 @@ if ($hasAppOverride) {
     $app = (Resolve-Path -LiteralPath $AppPath).Path
     $launcher = (Resolve-Path -LiteralPath $LauncherPath).Path
 } else {
-    $app = Join-Path (Join-Path $targetRoot $profileDirectory) "rssh-app$executableSuffix"
-    $launcher = Join-Path (Join-Path $targetRoot $profileDirectory) "rssh-bench-launcher$executableSuffix"
+    $app = Join-Path (Join-Path $targetRoot $profileDirectory) "rterm$executableSuffix"
+    $launcher = Join-Path (Join-Path $targetRoot $profileDirectory) "rterm-bench-launcher$executableSuffix"
 }
 $rawDirectory = Join-Path $OutputDirectory "raw"
 $aggregatePath = Join-Path $OutputDirectory "aggregate.json"
@@ -75,13 +75,13 @@ if (-not $SkipBuild) {
     }
     Push-Location $repoRoot
     try {
-        cargo build --locked -p rssh-app @profileArguments
+        cargo build --locked -p rterm-app @profileArguments
         if ($LASTEXITCODE -ne 0) {
-            throw "cargo build failed for rssh-app with exit code $LASTEXITCODE"
+            throw "cargo build failed for rterm-app with exit code $LASTEXITCODE"
         }
-        cargo build --locked -p rssh-diagnostics --bin rssh-bench-launcher @profileArguments
+        cargo build --locked -p rterm-diagnostics --bin rterm-bench-launcher @profileArguments
         if ($LASTEXITCODE -ne 0) {
-            throw "cargo build failed for rssh-bench-launcher with exit code $LASTEXITCODE"
+            throw "cargo build failed for rterm-bench-launcher with exit code $LASTEXITCODE"
         }
     }
     finally {
@@ -89,15 +89,15 @@ if (-not $SkipBuild) {
     }
 }
 if (-not (Test-Path -LiteralPath $app -PathType Leaf)) {
-    throw "rssh-app executable is missing from the selected Cargo target/profile"
+    throw "rterm-app executable is missing from the selected Cargo target/profile"
 }
 if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
-    throw "rssh-bench-launcher executable is missing from the selected Cargo target/profile"
+    throw "rterm-bench-launcher executable is missing from the selected Cargo target/profile"
 }
 
 New-Item -ItemType Directory -Force -Path $rawDirectory | Out-Null
-$previousScale = $env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR
-$env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR = "1"
+$previousScale = $env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR
+$env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR = "1"
 
 function Get-NearestRankPercentile([UInt64[]] $Values, [double] $Percentile) {
     if ($Values.Count -eq 0) {
@@ -190,7 +190,7 @@ function Get-SafeFailureMessage([System.Management.Automation.ErrorRecord] $Fail
 }
 
 function Assert-ProbeRecord([string] $Probe, [object] $Record, [int] $ExitCode) {
-    if ($Record.schema -isnot [string] -or $Record.schema -cne "rssh.diagnostics/v2") {
+    if ($Record.schema -isnot [string] -or $Record.schema -cne "rterm.diagnostics/v2") {
         throw "unexpected diagnostics schema '$($Record.schema)'"
     }
     if (
@@ -488,7 +488,7 @@ try {
     }
 
     $aggregate = [ordered]@{
-        schema = "rssh.diagnostics/gpu-backend-memory-matrix-v1"
+        schema = "rterm.diagnostics/gpu-backend-memory-matrix-v1"
         profile = $Profile
         binary_source = $binarySource
         certification_eligible = $certificationEligible
@@ -521,8 +521,8 @@ try {
 }
 finally {
     if ($null -eq $previousScale) {
-        Remove-Item Env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR -ErrorAction SilentlyContinue
+        Remove-Item Env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR -ErrorAction SilentlyContinue
     } else {
-        $env:RSSH_BENCHMARK_WINDOW_SCALE_FACTOR = $previousScale
+        $env:RTERM_BENCHMARK_WINDOW_SCALE_FACTOR = $previousScale
     }
 }

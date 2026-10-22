@@ -16,7 +16,7 @@ $suiteId = "stage7-attribution-deterministic-v1"
     "test",
     "--locked",
     "-p",
-    "rssh-app",
+    "rterm-app",
     "--test",
     "gpu_backend_memory_matrix_behavior",
     "stage7_attribution",
@@ -33,7 +33,7 @@ $plannedCommands = [System.Collections.Generic.List[object]]::new()
 $plannedCommands.Add($cargoCommand)
 $plannedCommands.Add($pythonCommand)
 $plan = [ordered]@{
-    schema = "rssh.stage7/attribution-deterministic-tests-plan/v1"
+    schema = "rterm.stage7/attribution-deterministic-tests-plan/v1"
     suite_id = $suiteId
     commands = @($plannedCommands)
     process_timeout_seconds = $ProcessTimeoutSeconds
@@ -88,8 +88,8 @@ if ($LASTEXITCODE -ne 0 -or $dirty.Count -ne 0) {
     throw "attribution deterministic proof requires a clean source tree including untracked files"
 }
 
-$app = Join-Path (Join-Path $targetRoot "release") "rssh-app.exe"
-$launcher = Join-Path (Join-Path $targetRoot "release") "rssh-bench-launcher.exe"
+$app = Join-Path (Join-Path $targetRoot "release") "rterm.exe"
+$launcher = Join-Path (Join-Path $targetRoot "release") "rterm-bench-launcher.exe"
 foreach ($binary in @($app, $launcher)) {
     if (-not (Test-Path -LiteralPath $binary -PathType Leaf)) {
         throw "required release binary is missing: $binary"
@@ -103,7 +103,7 @@ if (-not (Test-Path -LiteralPath $RunnerFingerprintPath -PathType Leaf)) {
     throw "runner fingerprint proof is missing"
 }
 $runnerProof = Get-Content -LiteralPath $RunnerFingerprintPath -Raw | ConvertFrom-Json
-if ($runnerProof.schema -cne "rssh.stage7.result/v1" -or $runnerProof.proof -cne "runner-fingerprint" -or $runnerProof.ok -ne $true) {
+if ($runnerProof.schema -cne "rterm.stage7.result/v1" -or $runnerProof.proof -cne "runner-fingerprint" -or $runnerProof.ok -ne $true) {
     throw "runner fingerprint proof is invalid"
 }
 if ($runnerProof.identity.source_sha -cne $sourceSha) {
@@ -149,7 +149,7 @@ function Get-CanonicalSha256([object] $Value) {
 function Write-AtomicJson([string] $Path, [object] $Value) {
     $directory = Split-Path -Parent $Path
     New-Item -ItemType Directory -Force -Path $directory | Out-Null
-    $temporary = Join-Path ([IO.Path]::GetTempPath()) ("rssh-stage7-attribution-tests-{0}-{1}.tmp" -f $PID, [Guid]::NewGuid().ToString("N"))
+    $temporary = Join-Path ([IO.Path]::GetTempPath()) ("rterm-stage7-attribution-tests-{0}-{1}.tmp" -f $PID, [Guid]::NewGuid().ToString("N"))
     try {
         $json = $Value | ConvertTo-Json -Depth 100
         [IO.File]::WriteAllText($temporary, $json, [Text.UTF8Encoding]::new($false))
@@ -162,8 +162,8 @@ function Write-AtomicJson([string] $Path, [object] $Value) {
 }
 
 $binaryHashes = [ordered]@{
-    "rssh-app.exe" = Get-FileSha256 $app
-    "rssh-bench-launcher.exe" = Get-FileSha256 $launcher
+    "rterm.exe" = Get-FileSha256 $app
+    "rterm-bench-launcher.exe" = Get-FileSha256 $launcher
 }
 $runnerProofHash = Get-FileSha256 $RunnerFingerprintPath
 
@@ -173,7 +173,7 @@ function Assert-IdentityUnchanged {
     if ($LASTEXITCODE -ne 0 -or $currentSource -cne $sourceSha -or $currentDirty.Count -ne 0) {
         throw "source identity changed during deterministic proof"
     }
-    if ((Get-FileSha256 $app) -cne $binaryHashes["rssh-app.exe"] -or (Get-FileSha256 $launcher) -cne $binaryHashes["rssh-bench-launcher.exe"]) {
+    if ((Get-FileSha256 $app) -cne $binaryHashes["rterm.exe"] -or (Get-FileSha256 $launcher) -cne $binaryHashes["rterm-bench-launcher.exe"]) {
         throw "release binary identity changed during deterministic proof"
     }
     if ((Get-FileSha256 $RunnerFingerprintPath) -cne $runnerProofHash) {
@@ -205,7 +205,7 @@ $identity = [ordered]@{
 }
 $proofPath = Join-Path $outputRoot "attribution-deterministic-tests.json"
 $proof = [ordered]@{
-    schema = "rssh.stage7.result/v1"
+    schema = "rterm.stage7.result/v1"
     identity = $identity
     ok = $true
     proof = "attribution-deterministic-tests"
@@ -231,7 +231,7 @@ $entry = [ordered]@{
     artifact_id = "attribution-deterministic-tests"
     role = "proof"
     scope = $scope
-    payload_schema = "rssh.stage7.result/v1"
+    payload_schema = "rterm.stage7.result/v1"
     path = "attribution-deterministic-tests.json"
     sha256 = Get-FileSha256 $proofPath
     size_bytes = [UInt64] (Get-Item -LiteralPath $proofPath).Length
@@ -247,23 +247,23 @@ $entry = [ordered]@{
     children = @()
 }
 $fragment = [ordered]@{
-    schema = "rssh.stage7-artifact-manifest-fragment/v1"
+    schema = "rterm.stage7-artifact-manifest-fragment/v1"
     requested_state = "attribution-ready"
     certified_commit = $sourceSha
     epoch_id = Get-CanonicalSha256 ([ordered]@{
         state = "attribution-ready"
         certified_commit = $sourceSha
-        rssh = $null
+        rterm = $null
         rterm = $null
     })
-    rssh = $null
+    rterm = $null
     rterm = $null
     entries = @($entry)
 }
 Write-AtomicJson -Path (Join-Path $outputRoot "artifact-manifest-fragment.json") -Value $fragment
 
 [ordered]@{
-    schema = "rssh.stage7/attribution-deterministic-tests-run/v1"
+    schema = "rterm.stage7/attribution-deterministic-tests-run/v1"
     ok = $true
     suite_id = $suiteId
     artifact_manifest_fragment = "artifact-manifest-fragment.json"

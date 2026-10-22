@@ -25,26 +25,26 @@ jobs:
         inputs.stage7_gate_only != true &&
         github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
       )
-    runs-on: [self-hosted, Windows, X64, rssh-performance]
+    runs-on: [self-hosted, Windows, X64, rterm-performance]
     environment: performance
     permissions:
       contents: read
     concurrency:
-      group: fixed-performance-${{ vars.RSSH_PERF_BASELINE_MACHINE_CLASS }}
+      group: fixed-performance-${{ vars.RTERM_PERF_BASELINE_MACHINE_CLASS }}
       cancel-in-progress: false
     env:
-      RSSH_PERF_BASELINE_MACHINE_CLASS: ${{ vars.RSSH_PERF_BASELINE_MACHINE_CLASS }}
-      RSSH_PERF_BASELINE_OS: ${{ vars.RSSH_PERF_BASELINE_OS }}
-      RSSH_PERF_BASELINE_ARCH: ${{ vars.RSSH_PERF_BASELINE_ARCH }}
-      RSSH_PERF_BASELINE_CPU: ${{ vars.RSSH_PERF_BASELINE_CPU }}
-      RSSH_PERF_BASELINE_TOOLCHAIN: ${{ vars.RSSH_PERF_BASELINE_TOOLCHAIN }}
-      RSSH_PERF_BASELINE_COMMAND_FINGERPRINT: ${{ vars.RSSH_PERF_BASELINE_COMMAND_FINGERPRINT }}
-      RSSH_PERF_BASELINE_QUERY_BPS: ${{ vars.RSSH_PERF_BASELINE_QUERY_BPS }}
-      RSSH_PERF_BASELINE_PLAIN_BPS: ${{ vars.RSSH_PERF_BASELINE_PLAIN_BPS }}
-      RSSH_PERF_BASELINE_CHUNK_P95_US: ${{ vars.RSSH_PERF_BASELINE_CHUNK_P95_US }}
-      RSSH_PERF_BASELINE_RENDER_P95_US: ${{ vars.RSSH_PERF_BASELINE_RENDER_P95_US }}
-      RSSH_PERF_BASELINE_IDLE_CPU_PERCENT: ${{ vars.RSSH_PERF_BASELINE_IDLE_CPU_PERCENT }}
-      RSSH_PERF_BASELINE_RSS_BYTES: ${{ vars.RSSH_PERF_BASELINE_RSS_BYTES }}
+      RTERM_PERF_BASELINE_MACHINE_CLASS: ${{ vars.RTERM_PERF_BASELINE_MACHINE_CLASS }}
+      RTERM_PERF_BASELINE_OS: ${{ vars.RTERM_PERF_BASELINE_OS }}
+      RTERM_PERF_BASELINE_ARCH: ${{ vars.RTERM_PERF_BASELINE_ARCH }}
+      RTERM_PERF_BASELINE_CPU: ${{ vars.RTERM_PERF_BASELINE_CPU }}
+      RTERM_PERF_BASELINE_TOOLCHAIN: ${{ vars.RTERM_PERF_BASELINE_TOOLCHAIN }}
+      RTERM_PERF_BASELINE_COMMAND_FINGERPRINT: ${{ vars.RTERM_PERF_BASELINE_COMMAND_FINGERPRINT }}
+      RTERM_PERF_BASELINE_QUERY_BPS: ${{ vars.RTERM_PERF_BASELINE_QUERY_BPS }}
+      RTERM_PERF_BASELINE_PLAIN_BPS: ${{ vars.RTERM_PERF_BASELINE_PLAIN_BPS }}
+      RTERM_PERF_BASELINE_CHUNK_P95_US: ${{ vars.RTERM_PERF_BASELINE_CHUNK_P95_US }}
+      RTERM_PERF_BASELINE_RENDER_P95_US: ${{ vars.RTERM_PERF_BASELINE_RENDER_P95_US }}
+      RTERM_PERF_BASELINE_IDLE_CPU_PERCENT: ${{ vars.RTERM_PERF_BASELINE_IDLE_CPU_PERCENT }}
+      RTERM_PERF_BASELINE_RSS_BYTES: ${{ vars.RTERM_PERF_BASELINE_RSS_BYTES }}
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -56,8 +56,8 @@ jobs:
       - name: Build release benchmark
         shell: pwsh
         run: |
-          cargo build --locked --release -p rssh-app
-          cargo build --locked --release -p rssh-diagnostics --bin rssh-bench-launcher
+          cargo build --locked --release -p rterm-app
+          cargo build --locked --release -p rterm-diagnostics --bin rterm-bench-launcher
 
       - name: Collect Stage 0 GUI diagnostics (report-only memory targets)
         shell: pwsh
@@ -193,24 +193,24 @@ jobs:
           }
 
           $baselineNames = @(
-            "RSSH_PERF_BASELINE_QUERY_BPS",
-            "RSSH_PERF_BASELINE_PLAIN_BPS",
-            "RSSH_PERF_BASELINE_CHUNK_P95_US",
-            "RSSH_PERF_BASELINE_RENDER_P95_US",
-            "RSSH_PERF_BASELINE_IDLE_CPU_PERCENT",
-            "RSSH_PERF_BASELINE_RSS_BYTES"
+            "RTERM_PERF_BASELINE_QUERY_BPS",
+            "RTERM_PERF_BASELINE_PLAIN_BPS",
+            "RTERM_PERF_BASELINE_CHUNK_P95_US",
+            "RTERM_PERF_BASELINE_RENDER_P95_US",
+            "RTERM_PERF_BASELINE_IDLE_CPU_PERCENT",
+            "RTERM_PERF_BASELINE_RSS_BYTES"
           )
-          if ([string]::IsNullOrWhiteSpace($env:RSSH_PERF_BASELINE_MACHINE_CLASS)) {
+          if ([string]::IsNullOrWhiteSpace($env:RTERM_PERF_BASELINE_MACHINE_CLASS)) {
             Add-Violation "baseline_machine_class" "missing" "configured and equal to RUNNER_NAME"
-          } elseif ($env:RSSH_PERF_BASELINE_MACHINE_CLASS -ne $env:RUNNER_NAME) {
-            Add-Violation "baseline_machine_class" $env:RUNNER_NAME "== $env:RSSH_PERF_BASELINE_MACHINE_CLASS"
+          } elseif ($env:RTERM_PERF_BASELINE_MACHINE_CLASS -ne $env:RUNNER_NAME) {
+            Add-Violation "baseline_machine_class" $env:RUNNER_NAME "== $env:RTERM_PERF_BASELINE_MACHINE_CLASS"
           }
           foreach ($fingerprint in @(
-            @("baseline_os", $env:RUNNER_OS, $env:RSSH_PERF_BASELINE_OS),
-            @("baseline_arch", $env:RUNNER_ARCH, $env:RSSH_PERF_BASELINE_ARCH),
-            @("baseline_cpu", $cpuFingerprint, $env:RSSH_PERF_BASELINE_CPU),
-            @("baseline_toolchain", $toolchainFingerprint, $env:RSSH_PERF_BASELINE_TOOLCHAIN),
-            @("baseline_command_fingerprint", $commandFingerprint, $env:RSSH_PERF_BASELINE_COMMAND_FINGERPRINT)
+            @("baseline_os", $env:RUNNER_OS, $env:RTERM_PERF_BASELINE_OS),
+            @("baseline_arch", $env:RUNNER_ARCH, $env:RTERM_PERF_BASELINE_ARCH),
+            @("baseline_cpu", $cpuFingerprint, $env:RTERM_PERF_BASELINE_CPU),
+            @("baseline_toolchain", $toolchainFingerprint, $env:RTERM_PERF_BASELINE_TOOLCHAIN),
+            @("baseline_command_fingerprint", $commandFingerprint, $env:RTERM_PERF_BASELINE_COMMAND_FINGERPRINT)
           )) {
             if ([string]::IsNullOrWhiteSpace($fingerprint[2])) {
               Add-Violation $fingerprint[0] "missing baseline" "configured for this fixed runner"
@@ -244,7 +244,7 @@ jobs:
 
           function Invoke-Benchmark([string] $workload) {
             $PSNativeCommandUseErrorActionPreference = $false
-            $json = ./target/release/rssh-app.exe bench --json --workload $workload --bytes 1048576 --chunk-size 8192 --render-frames 30 --idle-ms 1000
+            $json = ./target/release/rterm.exe bench --json --workload $workload --bytes 1048576 --chunk-size 8192 --render-frames 30 --idle-ms 1000
             if ($LASTEXITCODE -ne 0) {
               throw "benchmark process failed with exit code $LASTEXITCODE; output: $json"
             }
@@ -380,12 +380,12 @@ jobs:
           Test-Maximum "idle_cpu_usage_percent" $idleCpu 3.0
           Test-Maximum "process_memory_bytes" $rssBytes 268435456
 
-          $queryBaseline = [double]::Parse($env:RSSH_PERF_BASELINE_QUERY_BPS, [Globalization.CultureInfo]::InvariantCulture)
-          $plainBaseline = [double]::Parse($env:RSSH_PERF_BASELINE_PLAIN_BPS, [Globalization.CultureInfo]::InvariantCulture)
-          $chunkBaseline = [double]::Parse($env:RSSH_PERF_BASELINE_CHUNK_P95_US, [Globalization.CultureInfo]::InvariantCulture)
-          $renderBaseline = [double]::Parse($env:RSSH_PERF_BASELINE_RENDER_P95_US, [Globalization.CultureInfo]::InvariantCulture)
-          $idleBaseline = [double]::Parse($env:RSSH_PERF_BASELINE_IDLE_CPU_PERCENT, [Globalization.CultureInfo]::InvariantCulture)
-          $rssBaseline = [double]::Parse($env:RSSH_PERF_BASELINE_RSS_BYTES, [Globalization.CultureInfo]::InvariantCulture)
+          $queryBaseline = [double]::Parse($env:RTERM_PERF_BASELINE_QUERY_BPS, [Globalization.CultureInfo]::InvariantCulture)
+          $plainBaseline = [double]::Parse($env:RTERM_PERF_BASELINE_PLAIN_BPS, [Globalization.CultureInfo]::InvariantCulture)
+          $chunkBaseline = [double]::Parse($env:RTERM_PERF_BASELINE_CHUNK_P95_US, [Globalization.CultureInfo]::InvariantCulture)
+          $renderBaseline = [double]::Parse($env:RTERM_PERF_BASELINE_RENDER_P95_US, [Globalization.CultureInfo]::InvariantCulture)
+          $idleBaseline = [double]::Parse($env:RTERM_PERF_BASELINE_IDLE_CPU_PERCENT, [Globalization.CultureInfo]::InvariantCulture)
+          $rssBaseline = [double]::Parse($env:RTERM_PERF_BASELINE_RSS_BYTES, [Globalization.CultureInfo]::InvariantCulture)
           Test-Higher-Is-BetterRegression "query_throughput_regression" $queryThroughput $queryBaseline
           Test-Higher-Is-BetterRegression "plain_throughput_regression" $plainThroughput $plainBaseline
           Test-Lower-Is-BetterRegression "chunk_p95_regression" $chunkP95 $chunkBaseline
@@ -457,13 +457,13 @@ jobs:
           needs.fixed-performance.result == 'success'
         )
       )
-    runs-on: [self-hosted, Windows, X64, rssh-performance]
+    runs-on: [self-hosted, Windows, X64, rterm-performance]
     timeout-minutes: 360
     environment: performance
     permissions:
       contents: read
     concurrency:
-      group: stage7-attribution-${{ vars.RSSH_PERF_BASELINE_MACHINE_CLASS }}
+      group: stage7-attribution-${{ vars.RTERM_PERF_BASELINE_MACHINE_CLASS }}
       cancel-in-progress: false
 
     steps:
@@ -478,14 +478,14 @@ jobs:
         run: |
           # Keep all locked-build outputs off the checkout so stale binaries
           # and workspace storage cannot affect the protected benchmark.
-          $targetDirectory = Join-Path $env:RUNNER_TEMP "rssh-stage7-target"
-          $tempDirectory = Join-Path $env:RUNNER_TEMP "rssh-stage7-tmp"
-          $evidenceDirectory = Join-Path $env:RUNNER_TEMP "rssh-stage7-evidence"
+          $targetDirectory = Join-Path $env:RUNNER_TEMP "rterm-stage7-target"
+          $tempDirectory = Join-Path $env:RUNNER_TEMP "rterm-stage7-tmp"
+          $evidenceDirectory = Join-Path $env:RUNNER_TEMP "rterm-stage7-evidence"
           New-Item -ItemType Directory -Force -Path $targetDirectory, $tempDirectory, $evidenceDirectory | Out-Null
           "CARGO_TARGET_DIR=$targetDirectory" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "TEMP=$tempDirectory" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "TMP=$tempDirectory" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "RSSH_STAGE7_EVIDENCE_ROOT=$evidenceDirectory" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RTERM_STAGE7_EVIDENCE_ROOT=$evidenceDirectory" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Collect Stage 7 font cohort and runner fingerprint
         shell: pwsh
@@ -494,7 +494,7 @@ jobs:
           -Profile release
           -Warmups 5
           -MeasuredRounds 30
-          -OutputDirectory "$env:RSSH_STAGE7_EVIDENCE_ROOT/font"
+          -OutputDirectory "$env:RTERM_STAGE7_EVIDENCE_ROOT/font"
 
       - name: Collect Stage 7 cumulative attribution matrix
         shell: pwsh
@@ -503,24 +503,24 @@ jobs:
           -Profile release
           -Warmups 5
           -Samples 30
-          -OutputDirectory "$env:RSSH_STAGE7_EVIDENCE_ROOT/stages"
+          -OutputDirectory "$env:RTERM_STAGE7_EVIDENCE_ROOT/stages"
           -SkipBuild
 
       - name: Run Stage 7 deterministic attribution proofs
         shell: pwsh
         run: >
           ./scripts/ci/run-stage7-attribution-deterministic-tests.ps1
-          -OutputDirectory "$env:RSSH_STAGE7_EVIDENCE_ROOT/tests"
+          -OutputDirectory "$env:RTERM_STAGE7_EVIDENCE_ROOT/tests"
 
       - name: Prove immutable external R-Term Git consumption
         shell: pwsh
         env:
-          CARGO_HOME: ${{ runner.temp }}/rssh-stage7-cargo-home
+          CARGO_HOME: ${{ runner.temp }}/rterm-stage7-cargo-home
         run: >
           python scripts/ci/prove-rterm-external-source.py
           --contract scripts/ci/rterm-external-source-proof.json
           --synthesize
-          --output "$env:RSSH_STAGE7_EVIDENCE_ROOT/external"
+          --output "$env:RTERM_STAGE7_EVIDENCE_ROOT/external"
           --keep-on-failure
 
       - name: Assemble the complete Stage 7 Gate 0 manifest
@@ -529,7 +529,7 @@ jobs:
           python scripts/ci/assemble-stage7-evidence.py
           --contract scripts/ci/stage7-split-contract.json
           --requested-state attribution-ready
-          --evidence-root "$env:RSSH_STAGE7_EVIDENCE_ROOT"
+          --evidence-root "$env:RTERM_STAGE7_EVIDENCE_ROOT"
           --fragment font/artifact-manifest-fragment.json
           --fragment stages/artifact-manifest-fragment.json
           --fragment tests/artifact-manifest-fragment.json
@@ -542,7 +542,7 @@ jobs:
           python scripts/ci/check-stage7-split-gate.py
           --contract scripts/ci/stage7-split-contract.json
           --requested-state attribution-ready
-          --evidence-manifest "$env:RSSH_STAGE7_EVIDENCE_ROOT/stage7-evidence-manifest.json"
+          --evidence-manifest "$env:RTERM_STAGE7_EVIDENCE_ROOT/stage7-evidence-manifest.json"
 
       - name: Upload the complete Stage 7 Gate 0 evidence
         if: always()
@@ -550,7 +550,7 @@ jobs:
         with:
           name: stage7-attribution-matrix-windows-x64
           if-no-files-found: error
-          path: ${{ runner.temp }}/rssh-stage7-evidence
+          path: ${{ runner.temp }}/rterm-stage7-evidence
 
   build-package:
     name: Build and test unsigned package (${{ matrix.runtime_target }})
@@ -569,55 +569,55 @@ jobs:
             rust_target: x86_64-pc-windows-msvc
             runtime_target: windows-x86_64
             pty_backend: windows-conpty
-            package_root: R-SSH-windows-x64-unsigned
-            artifact: R-SSH-windows-x64.zip
-            unsigned_artifact: R-SSH-windows-x64-unsigned.zip
-            binary: target/release/rssh-app.exe
+            package_root: R-Term-windows-x64-unsigned
+            artifact: R-Term-windows-x64.zip
+            unsigned_artifact: R-Term-windows-x64-unsigned.zip
+            binary: target/release/rterm.exe
           - slug: windows-arm64
             runner: windows-11-arm
             rust_target: aarch64-pc-windows-msvc
             runtime_target: windows-aarch64
             pty_backend: windows-conpty
-            package_root: R-SSH-windows-arm64-unsigned
-            artifact: R-SSH-windows-arm64.zip
-            unsigned_artifact: R-SSH-windows-arm64-unsigned.zip
-            binary: target/release/rssh-app.exe
+            package_root: R-Term-windows-arm64-unsigned
+            artifact: R-Term-windows-arm64.zip
+            unsigned_artifact: R-Term-windows-arm64-unsigned.zip
+            binary: target/release/rterm.exe
           - slug: linux-x64
             runner: ubuntu-24.04
             rust_target: x86_64-unknown-linux-gnu
             runtime_target: linux-x86_64
             pty_backend: unix-pty
-            package_root: R-SSH-linux-x64-unsigned
-            artifact: R-SSH-linux-x64.tar.gz
-            unsigned_artifact: R-SSH-linux-x64-unsigned.tar.gz
-            binary: target/release/rssh-app
+            package_root: R-Term-linux-x64-unsigned
+            artifact: R-Term-linux-x64.tar.gz
+            unsigned_artifact: R-Term-linux-x64-unsigned.tar.gz
+            binary: target/release/rterm
           - slug: linux-arm64
             runner: ubuntu-24.04-arm
             rust_target: aarch64-unknown-linux-gnu
             runtime_target: linux-aarch64
             pty_backend: unix-pty
-            package_root: R-SSH-linux-arm64-unsigned
-            artifact: R-SSH-linux-arm64.tar.gz
-            unsigned_artifact: R-SSH-linux-arm64-unsigned.tar.gz
-            binary: target/release/rssh-app
+            package_root: R-Term-linux-arm64-unsigned
+            artifact: R-Term-linux-arm64.tar.gz
+            unsigned_artifact: R-Term-linux-arm64-unsigned.tar.gz
+            binary: target/release/rterm
           - slug: macos-x64
             runner: macos-15-intel
             rust_target: x86_64-apple-darwin
             runtime_target: macos-x86_64
             pty_backend: unix-pty
-            package_root: R-SSH-macos-x64-unsigned
-            artifact: R-SSH-macos-x64.tar.gz
-            unsigned_artifact: R-SSH-macos-x64-unsigned.tar.gz
-            binary: target/release/rssh-app
+            package_root: R-Term-macos-x64-unsigned
+            artifact: R-Term-macos-x64.tar.gz
+            unsigned_artifact: R-Term-macos-x64-unsigned.tar.gz
+            binary: target/release/rterm
           - slug: macos-arm64
             runner: macos-15
             rust_target: aarch64-apple-darwin
             runtime_target: macos-aarch64
             pty_backend: unix-pty
-            package_root: R-SSH-macos-arm64-unsigned
-            artifact: R-SSH-macos-arm64.tar.gz
-            unsigned_artifact: R-SSH-macos-arm64-unsigned.tar.gz
-            binary: target/release/rssh-app
+            package_root: R-Term-macos-arm64-unsigned
+            artifact: R-Term-macos-arm64.tar.gz
+            unsigned_artifact: R-Term-macos-arm64-unsigned.tar.gz
+            binary: target/release/rterm
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -637,7 +637,7 @@ jobs:
         run: |
           set -euo pipefail
           policy_path=/usr/sbin/policy-rc.d
-          backup_path="$RUNNER_TEMP/rssh-policy-rc.d.backup"
+          backup_path="$RUNNER_TEMP/rterm-policy-rc.d.backup"
           policy_existed=false
           restore_policy_rc() {
             phase_status=$?
@@ -690,7 +690,7 @@ jobs:
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
 
       - name: Build native release binary
-        run: cargo build --locked --release -p rssh-app --no-default-features --features production-gui
+        run: cargo build --locked --release -p rterm-app --no-default-features --features production-gui
 
       - name: Verify release binary excludes functional observers
         run: python scripts/ci/check-functional-observer-isolation.py --binary "${{ matrix.binary }}"
@@ -699,8 +699,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         env:
-          RSSH_TEST_APP_EXECUTABLE: ${{ matrix.binary }}
-          RSSH_REQUIRE_OPENSSH: "1"
+          RTERM_TEST_APP_EXECUTABLE: ${{ matrix.binary }}
+          RTERM_REQUIRE_OPENSSH: "1"
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
@@ -728,8 +728,8 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         env:
-          RSSH_TEST_APP_EXECUTABLE: ${{ matrix.binary }}
-          RSSH_REQUIRE_OPENSSH: "1"
+          RTERM_TEST_APP_EXECUTABLE: ${{ matrix.binary }}
+          RTERM_REQUIRE_OPENSSH: "1"
         run: |
           set -euo pipefail
           version=$("${{ matrix.binary }}" version --json | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')
@@ -779,16 +779,16 @@ jobs:
             runner: windows-2025
             runtime_target: windows-x86_64
             pty_backend: windows-conpty
-            package_root: R-SSH-windows-x64
-            artifact: R-SSH-windows-x64.zip
-            unsigned_artifact: R-SSH-windows-x64-unsigned.zip
+            package_root: R-Term-windows-x64
+            artifact: R-Term-windows-x64.zip
+            unsigned_artifact: R-Term-windows-x64-unsigned.zip
           - slug: windows-arm64
             runner: windows-11-arm
             runtime_target: windows-aarch64
             pty_backend: windows-conpty
-            package_root: R-SSH-windows-arm64
-            artifact: R-SSH-windows-arm64.zip
-            unsigned_artifact: R-SSH-windows-arm64-unsigned.zip
+            package_root: R-Term-windows-arm64
+            artifact: R-Term-windows-arm64.zip
+            unsigned_artifact: R-Term-windows-arm64-unsigned.zip
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -819,11 +819,11 @@ jobs:
             }
           }
           Expand-Archive "dist/${{ matrix.unsigned_artifact }}" dist/source -Force
-          $sourceBinary = Get-ChildItem dist/source -Recurse -File -Filter rssh-app.exe | Select-Object -First 1
+          $sourceBinary = Get-ChildItem dist/source -Recurse -File -Filter rterm-app.exe | Select-Object -First 1
           if ($null -eq $sourceBinary) {
-            throw "unsigned package has no rssh-app.exe"
+            throw "unsigned package has no rterm-app.exe"
           }
-          $certificate = Join-Path $env:RUNNER_TEMP "rssh-signing.pfx"
+          $certificate = Join-Path $env:RUNNER_TEMP "rterm-signing.pfx"
           [IO.File]::WriteAllBytes(
             $certificate,
             [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERTIFICATE_BASE64)
@@ -883,7 +883,7 @@ jobs:
             -LiteralPath "dist/${{ matrix.artifact }}" `
             -DestinationPath dist/signed-package-smoke
           $archivedBinary = (Resolve-Path `
-            "dist/signed-package-smoke/${{ matrix.package_root }}/rssh-app.exe").Path
+            "dist/signed-package-smoke/${{ matrix.package_root }}/rterm-app.exe").Path
           signtool verify /pa /all /v $archivedBinary
           $archivedSignature = Get-AuthenticodeSignature -LiteralPath $archivedBinary
           if ($archivedSignature.Status -ne [Management.Automation.SignatureStatus]::Valid) {
@@ -924,16 +924,16 @@ jobs:
             runner: ubuntu-24.04
             runtime_target: linux-x86_64
             pty_backend: unix-pty
-            package_root: R-SSH-linux-x64
-            artifact: R-SSH-linux-x64.tar.gz
-            unsigned_artifact: R-SSH-linux-x64-unsigned.tar.gz
+            package_root: R-Term-linux-x64
+            artifact: R-Term-linux-x64.tar.gz
+            unsigned_artifact: R-Term-linux-x64-unsigned.tar.gz
           - slug: linux-arm64
             runner: ubuntu-24.04-arm
             runtime_target: linux-aarch64
             pty_backend: unix-pty
-            package_root: R-SSH-linux-arm64
-            artifact: R-SSH-linux-arm64.tar.gz
-            unsigned_artifact: R-SSH-linux-arm64-unsigned.tar.gz
+            package_root: R-Term-linux-arm64
+            artifact: R-Term-linux-arm64.tar.gz
+            unsigned_artifact: R-Term-linux-arm64-unsigned.tar.gz
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -952,7 +952,7 @@ jobs:
           set -euo pipefail
           mkdir -p dist/source
           tar -xzf "dist/${{ matrix.unsigned_artifact }}" -C dist/source
-          source_binary=$(find dist/source -type f -name rssh-app -print -quit)
+          source_binary=$(find dist/source -type f -name rterm-app -print -quit)
           test -n "$source_binary"
           version=$("$source_binary" version --json | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')
           bash scripts/ci/package-native.sh \
@@ -991,7 +991,7 @@ jobs:
         run: |
           set -euo pipefail
           policy_path=/usr/sbin/policy-rc.d
-          backup_path="$RUNNER_TEMP/rssh-policy-rc.d.backup"
+          backup_path="$RUNNER_TEMP/rterm-policy-rc.d.backup"
           policy_existed=false
           restore_policy_rc() {
             phase_status=$?
@@ -1050,16 +1050,16 @@ jobs:
             runner: macos-15-intel
             runtime_target: macos-x86_64
             pty_backend: unix-pty
-            package_root: R-SSH-macos-x64
-            artifact: R-SSH-macos-x64.tar.gz
-            unsigned_artifact: R-SSH-macos-x64-unsigned.tar.gz
+            package_root: R-Term-macos-x64
+            artifact: R-Term-macos-x64.tar.gz
+            unsigned_artifact: R-Term-macos-x64-unsigned.tar.gz
           - slug: macos-arm64
             runner: macos-15
             runtime_target: macos-aarch64
             pty_backend: unix-pty
-            package_root: R-SSH-macos-arm64
-            artifact: R-SSH-macos-arm64.tar.gz
-            unsigned_artifact: R-SSH-macos-arm64-unsigned.tar.gz
+            package_root: R-Term-macos-arm64
+            artifact: R-Term-macos-arm64.tar.gz
+            unsigned_artifact: R-Term-macos-arm64-unsigned.tar.gz
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -1094,7 +1094,7 @@ jobs:
           done
           mkdir -p dist/source
           tar -xzf "dist/${{ matrix.unsigned_artifact }}" -C dist/source
-          source_binary=$(find dist/source -type f -name rssh-app -print -quit)
+          source_binary=$(find dist/source -type f -name rterm-app -print -quit)
           test -n "$source_binary"
           version=$("$source_binary" version --json | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')
           bash scripts/ci/package-native.sh \
@@ -1105,9 +1105,9 @@ jobs:
             --pty-backend "${{ matrix.pty_backend }}" \
             --version "$version"
 
-          certificate="$RUNNER_TEMP/rssh-signing.p12"
+          certificate="$RUNNER_TEMP/rterm-signing.p12"
           notary_key="$RUNNER_TEMP/AuthKey_${MACOS_NOTARY_KEY_ID}.p8"
-          keychain="$RUNNER_TEMP/rssh-signing.keychain-db"
+          keychain="$RUNNER_TEMP/rterm-signing.keychain-db"
           keychain_password=$(uuidgen)
           printf '%s' "$MACOS_CERTIFICATE_P12_BASE64" | base64 -D > "$certificate"
           printf '%s' "$MACOS_NOTARY_PRIVATE_KEY_BASE64" | base64 -D > "$notary_key"
@@ -1171,7 +1171,7 @@ jobs:
           set -euo pipefail
           mkdir -p dist/signed-package-smoke
           tar -xzf "dist/${{ matrix.artifact }}" -C dist/signed-package-smoke
-          archived_app="dist/signed-package-smoke/${{ matrix.package_root }}/R-SSH.app"
+          archived_app="dist/signed-package-smoke/${{ matrix.package_root }}/R-Term.app"
           codesign --verify --deep --strict --verbose=2 "$archived_app"
           xcrun stapler validate "$archived_app"
           bash scripts/ci/package-smoke.sh \
@@ -1205,17 +1205,17 @@ jobs:
       matrix:
         include:
           - slug: windows-x64
-            artifact: R-SSH-windows-x64.zip
+            artifact: R-Term-windows-x64.zip
           - slug: windows-arm64
-            artifact: R-SSH-windows-arm64.zip
+            artifact: R-Term-windows-arm64.zip
           - slug: linux-x64
-            artifact: R-SSH-linux-x64.tar.gz
+            artifact: R-Term-linux-x64.tar.gz
           - slug: linux-arm64
-            artifact: R-SSH-linux-arm64.tar.gz
+            artifact: R-Term-linux-arm64.tar.gz
           - slug: macos-x64
-            artifact: R-SSH-macos-x64.tar.gz
+            artifact: R-Term-macos-x64.tar.gz
           - slug: macos-arm64
-            artifact: R-SSH-macos-arm64.tar.gz
+            artifact: R-Term-macos-arm64.tar.gz
 
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -1265,19 +1265,19 @@ jobs:
             exit 1
           fi
           for artifact in \
-            R-SSH-windows-x64.zip \
-            R-SSH-windows-arm64.zip \
-            R-SSH-linux-x64.tar.gz \
-            R-SSH-linux-arm64.tar.gz \
-            R-SSH-macos-x64.tar.gz \
-            R-SSH-macos-arm64.tar.gz
+            R-Term-windows-x64.zip \
+            R-Term-windows-arm64.zip \
+            R-Term-linux-x64.tar.gz \
+            R-Term-linux-arm64.tar.gz \
+            R-Term-macos-x64.tar.gz \
+            R-Term-macos-arm64.tar.gz
           do
             test -f "dist/$artifact"
             test -f "dist/$artifact.SHA256SUMS"
             test -f "dist/$artifact.sbom.spdx.json"
           done
-          test -f dist/R-SSH-linux-x64.tar.gz.sigstore.json
-          test -f dist/R-SSH-linux-arm64.tar.gz.sigstore.json
+          test -f dist/R-Term-linux-x64.tar.gz.sigstore.json
+          test -f dist/R-Term-linux-arm64.tar.gz.sigstore.json
 
       - name: Create a complete draft and publish it atomically
         shell: bash
@@ -1291,7 +1291,7 @@ jobs:
             exit 1
           fi
           gh release create "$RELEASE_TAG" --draft \
-            --title "R-SSH $RELEASE_TAG" \
+            --title "R-Term $RELEASE_TAG" \
             --notes "Certified native terminal builds for Windows, Linux, and macOS on x64 and ARM64." \
             dist/*
           gh release edit "$RELEASE_TAG" --draft=false

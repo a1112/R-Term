@@ -5,15 +5,15 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleDisplayName</key>
-  <string>R-SSH</string>
+  <string>R-Term</string>
   <key>CFBundleExecutable</key>
-  <string>rssh-app</string>
+  <string>rterm</string>
   <key>CFBundleIdentifier</key>
-  <string>io.github.a1112.rssh</string>
+  <string>io.github.a1112.rterm</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
-  <string>R-SSH</string>
+  <string>R-Term</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>

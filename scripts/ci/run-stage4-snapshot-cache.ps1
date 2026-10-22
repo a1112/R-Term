@@ -28,7 +28,7 @@ if ($parserBaseline -le 0) {
 $parserMinimum = [long][Math]::Floor($parserBaseline * 0.98)
 
 if (-not $SkipBuild) {
-    cargo build --locked --release -p rssh-app
+    cargo build --locked --release -p rterm-app
     if ($LASTEXITCODE -ne 0) { throw "release app build failed: $LASTEXITCODE" }
 }
 
@@ -64,7 +64,7 @@ $targetRoot = if ([string]::IsNullOrWhiteSpace($env:CARGO_TARGET_DIR)) {
 } else {
     $env:CARGO_TARGET_DIR
 }
-$binary = Join-Path $targetRoot "$Profile/rssh-app.exe"
+$binary = Join-Path $targetRoot "$Profile/rterm.exe"
 if (-not (Test-Path -LiteralPath $binary -PathType Leaf)) {
     throw "release benchmark binary is missing: $binary"
 }
@@ -118,7 +118,7 @@ if (Test-Path -LiteralPath $Stage0Aggregate -PathType Leaf) {
 
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $report = [ordered]@{
-    schema = 'rssh.stage4-snapshot-cache/v1'
+    schema = 'rterm.stage4-snapshot-cache/v1'
     ok = $true
     snapshot_benchmarks = $snapshotRecords
     parser = [ordered]@{

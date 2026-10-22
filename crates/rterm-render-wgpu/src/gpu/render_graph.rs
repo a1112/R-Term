@@ -24,7 +24,7 @@ use super::{
         GpuTextOwnerMaterialization, GpuTextPrepareReport,
     },
 };
-use rssh_fonts::{FontCatalog, FontConfig};
+use rterm_fonts::{FontCatalog, FontConfig};
 use rterm_render_cpu::{
     DamageRegion, DecodedImage, ImageDrawPlan, ImageTiePolicy, RenderGeometry,
     TerminalRenderSnapshot, TextPaintConfig, gpu_image_draw_plan, image_draw_pixel,
@@ -692,7 +692,7 @@ impl PersistentInstances {
                 self.budget_bytes / INSTANCE_WRITE_ALIGNMENT * INSTANCE_WRITE_ALIGNMENT;
             let capacity = geometric_capacity.min(aligned_budget);
             self.buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("rssh-terminal-layer-instances"),
+                label: Some("rterm-terminal-layer-instances"),
                 size: capacity as wgpu::BufferAddress,
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
@@ -899,7 +899,7 @@ impl TextureCache {
             let byte_len = texture_byte_len(planned.identity.width, planned.identity.height)?;
             let retained_bytes = texture_retained_bytes(byte_len)?;
             let texture = device.create_texture(&wgpu::TextureDescriptor {
-                label: Some("rssh-terminal-inline-image"),
+                label: Some("rterm-terminal-inline-image"),
                 size: wgpu::Extent3d {
                     width: planned.identity.width,
                     height: planned.identity.height,
@@ -933,7 +933,7 @@ impl TextureCache {
             );
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("rssh-terminal-inline-image-bind-group"),
+                label: Some("rterm-terminal-inline-image-bind-group"),
                 layout,
                 entries: &[wgpu::BindGroupEntry {
                     binding: 0,
@@ -1057,11 +1057,11 @@ impl GpuImagePipeline {
         let out_of_memory_scope = device.push_error_scope(wgpu::ErrorFilter::OutOfMemory);
         let validation_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("rssh-terminal-image-shader"),
+            label: Some("rterm-terminal-image-shader"),
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(shader_source)),
         });
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("rssh-terminal-image-bind-group-layout"),
+            label: Some("rterm-terminal-image-bind-group-layout"),
             entries: &[wgpu::BindGroupLayoutEntry {
                 binding: 0,
                 visibility: wgpu::ShaderStages::FRAGMENT,
@@ -1074,7 +1074,7 @@ impl GpuImagePipeline {
             }],
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("rssh-terminal-image-pipeline-layout"),
+            label: Some("rterm-terminal-image-pipeline-layout"),
             bind_group_layouts: &[Some(viewport_bind_group_layout), Some(&bind_group_layout)],
             immediate_size: 0,
         });
@@ -1084,7 +1084,7 @@ impl GpuImagePipeline {
             &pipeline_layout,
             &shader,
             None,
-            "rssh-terminal-image-pipeline",
+            "rterm-terminal-image-pipeline",
         )
         .pipeline;
         let candidate = Self {
@@ -1237,13 +1237,13 @@ impl GpuLayerRenderer {
             ));
         }
         let viewport = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("rssh-terminal-layer-viewport"),
+            label: Some("rterm-terminal-layer-viewport"),
             size: 8,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("rssh-terminal-layer-bind-group-layout"),
+            label: Some("rterm-terminal-layer-bind-group-layout"),
             entries: &[wgpu::BindGroupLayoutEntry {
                 binding: 0,
                 visibility: wgpu::ShaderStages::VERTEX,
@@ -1256,7 +1256,7 @@ impl GpuLayerRenderer {
             }],
         });
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("rssh-terminal-layer-bind-group"),
+            label: Some("rterm-terminal-layer-bind-group"),
             layout: &bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
@@ -1264,11 +1264,11 @@ impl GpuLayerRenderer {
             }],
         });
         let quad_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("rssh-terminal-quad-shader"),
+            label: Some("rterm-terminal-quad-shader"),
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(QUAD_SHADER)),
         });
         let quad_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("rssh-terminal-quad-pipeline-layout"),
+            label: Some("rterm-terminal-quad-pipeline-layout"),
             bind_group_layouts: &[Some(&bind_group_layout)],
             immediate_size: 0,
         });
@@ -1286,7 +1286,7 @@ impl GpuLayerRenderer {
                 &quad_pipeline_layout,
                 &quad_shader,
                 Some(wgpu::BlendState::ALPHA_BLENDING),
-                "rssh-terminal-quad-pipeline",
+                "rterm-terminal-quad-pipeline",
             ),
             images: None,
             instances: PersistentInstances::new(instance_budget_bytes),
@@ -1711,7 +1711,7 @@ impl GpuLayerRenderer {
         self.write_viewport();
 
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("rssh-terminal-layer-headless-target"),
+            label: Some("rterm-terminal-layer-headless-target"),
             size: wgpu::Extent3d {
                 width: graph.width,
                 height: graph.height,
@@ -1726,7 +1726,7 @@ impl GpuLayerRenderer {
         });
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let readback = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("rssh-terminal-layer-readback"),
+            label: Some("rterm-terminal-layer-readback"),
             size: layout.readback_size,
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
@@ -1735,7 +1735,7 @@ impl GpuLayerRenderer {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("rssh-terminal-layer-headless-encoder"),
+                label: Some("rterm-terminal-layer-headless-encoder"),
             });
         self.encode_render_pass(&mut encoder, &view)?;
         encoder.copy_texture_to_buffer(
@@ -1828,7 +1828,7 @@ impl GpuLayerRenderer {
             },
         })];
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("rssh-terminal-layer-render-pass"),
+            label: Some("rterm-terminal-layer-render-pass"),
             color_attachments: &attachments,
             ..wgpu::RenderPassDescriptor::default()
         });
